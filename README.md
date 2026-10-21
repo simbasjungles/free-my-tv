@@ -150,6 +150,10 @@ python3 tools/photos.py <TV IP> beach.jpg hills.jpg Holidays/
 
 They land in the app's own folder on the TV (no permission needed); on Android 11, which keeps adb out of other apps' folders, they go through Free My TV itself. The next time the home screen, the screensaver or Free My TV's settings open, the app imports each one: turned upright, cropped to 16:9, resized for the TV and saved without its GPS and other tags; what was sent is then deleted. The screensaver shows them in the order you sent them, instead of the picks' photos; without a TMDB key, one of them is the home screen's background, a new one every hour. *Home Settings* → *My Photos*: the arrows turn them on or off, OK removes them. Up to 100; JPEG, PNG and WebP, and HEIC on Android 9 and newer.
 
+### Your Plex library (optional)
+
+Set `plex_url` (for example `https://192.168.1.20:32400`) and `plex_token` in `config.properties`, and the newest movies and shows of your Plex server (up to 8 of each kind) join the picks, with their own poster and backdrop, tagged "Plex". Selecting one opens the title's page in the Plex app. The token is on the address of any item's *Get Info → View XML* page in Plex's web app, after `X-Plex-Token=`; it gives access to your Plex account, so keep it private and never commit it. The TV talks to your server directly on your network, and accepts its self-made certificate (for that address only). Plex is also added to the shelf's list of apps. If the server can't be reached, the other picks load as usual.
+
 ## Going back
 
 On the TV: *Free My TV* → *Home Screen* → *Original*. The factory home screen, screensaver and every app come back exactly as they were. If the new home screen ever crashes three times in five minutes, it switches back by itself.
@@ -252,7 +256,7 @@ reference (fix them by hand); the others were machine-made, and corrections from
 
 ## Privacy
 
-No accounts, no analytics, no tracking. The app talks to TMDB, Open-Meteo (with the coordinates you set, or your time zone's main city), and Binance only when `show_crypto=true`, and Watchmode only when you set a `watchmode_key`. Your settings stay on your computer and your TV.
+No accounts, no analytics, no tracking. The app talks to TMDB, Open-Meteo (with the coordinates you set, or your time zone's main city), and Binance only when `show_crypto=true`, Watchmode only when you set a `watchmode_key`, and your Plex server only when you set a `plex_url`. Your settings stay on your computer and your TV.
 
 ## Credits
 
