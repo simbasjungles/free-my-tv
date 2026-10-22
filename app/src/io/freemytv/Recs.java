@@ -12,10 +12,6 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -753,28 +749,9 @@ final class Recs {
         return !Config.PLEX_URL.trim().isEmpty() && !Config.PLEX_TOKEN.trim().isEmpty();
     }
 
-    private static SSLContext plexTls;
-
+    /** The connection to the server, with the usual certificate checks: plex_url is Plex's own https://...plex.direct address. */
     private static HttpURLConnection plexOpen(String path) throws IOException {
         HttpURLConnection c = (HttpURLConnection) new URL(Config.PLEX_URL.trim().replaceAll("/+$", "") + path).openConnection();
-        if (c instanceof HttpsURLConnection) {
-            // ponytail: a Plex server's certificate is self-made, so any is accepted, for this one address only (the
-            // TV's own network); pin its certificate if the server is ever reached over the internet.
-            synchronized (Recs.class) {
-                if (plexTls == null) try {
-                    plexTls = SSLContext.getInstance("TLS");
-                    plexTls.init(null, new TrustManager[] {new X509TrustManager() {
-                        public void checkClientTrusted(java.security.cert.X509Certificate[] c, String a) {}
-                        public void checkServerTrusted(java.security.cert.X509Certificate[] c, String a) {}
-                        public java.security.cert.X509Certificate[] getAcceptedIssuers() { return new java.security.cert.X509Certificate[0]; }
-                    }}, null);
-                } catch (java.security.GeneralSecurityException e) {
-                    throw new IOException(e);
-                }
-            }
-            ((HttpsURLConnection) c).setSSLSocketFactory(plexTls.getSocketFactory());
-            ((HttpsURLConnection) c).setHostnameVerifier((h, s) -> true);
-        }
         c.setConnectTimeout(5000);
         c.setReadTimeout(15000);
         c.setRequestProperty("Accept", "application/json");

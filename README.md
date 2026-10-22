@@ -118,6 +118,7 @@ The first values come from `config.properties`, created by the first build (Goog
 | `tmdb_key` | Your free TMDB key, for the picks | empty |
 | `tmdb_region` | Your country (two letters): which titles are on which app | `US` |
 | `watchmode_key` | Optional, free [Watchmode](https://api.watchmode.com/) key: a pick opens the title's page in its app | empty |
+| `plex_url` and `plex_token` | Optional, your Plex server's `plex.direct` address and token: its newest titles join the picks and open on their page | empty |
 | `latitude`, `longitude` | Your city, for the weather and the sunset | New York |
 | `city` | The name on the weather card | `Weather` |
 | `hide_animation` | Leave cartoons and anime out of the picks | `false` |
@@ -152,7 +153,12 @@ They land in the app's own folder on the TV (no permission needed); on Android 1
 
 ### Your Plex library (optional)
 
-Set `plex_url` (for example `https://192.168.1.20:32400`) and `plex_token` in `config.properties`, and the newest movies and shows of your Plex server (up to 8 of each kind) join the picks, with their own poster and backdrop, tagged "Plex". Selecting one opens the title's page in the Plex app. The token is on the address of any item's *Get Info → View XML* page in Plex's web app, after `X-Plex-Token=`; it gives access to your Plex account, so keep it private and never commit it. The TV talks to your server directly on your network, and accepts its self-made certificate (for that address only). Plex is also added to the shelf's list of apps. If the server can't be reached, the other picks load as usual.
+Set `plex_url` and `plex_token` in `config.properties`, and the newest movies and shows of your Plex server (up to 8 of each kind) join the picks, with their own poster and backdrop, tagged "Plex". Selecting one opens the title's page in the Plex app.
+
+- **`plex_url`** is the server's own `plex.direct` address, which has a valid certificate (the TV checks it as for any site; plain `http` is blocked). It looks like `https://192-168-1-20.0123456789abcdef0123456789abcdef.plex.direct:32400`: your server's local IP with dashes, then its id. Open any item in Plex's web app, *Get Info → View XML*, and the address bar has it, before `/library/...`.
+- **`plex_token`** is on the same address, after `X-Plex-Token=`. It gives access to your Plex account, so keep it private and never commit it.
+
+The TV talks to your server directly on your network. If the server can't be reached, the other picks load as usual.
 
 ## Going back
 
