@@ -795,11 +795,11 @@ final class Recs {
                 p.app = "plex";
                 p.pkg = "com.plexapp.android";
                 List<String> parts = new ArrayList<>();
-                if (kind.equals("tv")) parts.add(Ui.tr("Série", "Series"));
+                if (kind.equals("tv")) parts.add(Ui.tr("Series"));
                 JSONArray genres = m.optJSONArray("Genre");
                 if (genres != null && genres.length() > 0) {
                     String name = genres.getJSONObject(0).optString("tag");
-                    parts.add(Ui.en ? name : genre(name));
+                    parts.add(genre(name));
                 }
                 String length = kind.equals("movie") ? runtime(m.optInt("duration") / 60000) : seasons(m.optInt("childCount"));
                 if (length != null) parts.add(length);
