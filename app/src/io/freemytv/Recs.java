@@ -443,11 +443,12 @@ final class Recs {
         List<Pick> newMovies = new ArrayList<>(), newShows = new ArrayList<>();
         for (int i = 0; i < movies.length(); i++) add(newMovies, movies.getJSONObject(i), "movie");
         for (int i = 0; i < shows.length(); i++) add(newShows, shows.getJSONObject(i), "tv");
-        // Your Plex library (newest first) mixes in with the trending ones.
+        // One title of your Plex library per tab and hour (one of the newest, a different one each hour) among the
+        // trending ones: a surprise, not half the row.
         if (plexOn()) {
             try {
-                hotMovies = interleave(hotMovies, plexPicks("movie"));
-                hotShows = interleave(hotShows, plexPicks("tv"));
+                hotMovies = interleave(hotMovies, oneOf(plexPicks("movie"), p));
+                hotShows = interleave(hotShows, oneOf(plexPicks("tv"), p));
             } catch (Exception e) {
                 AppLog.w("plex: " + e);
             }
@@ -473,6 +474,13 @@ final class Recs {
         if (lang.equals("de")) return "de-DE";   // TMDB's de-AT and de-CH have few translations of their own
         if (lang.indexOf('-') > 0) return lang;
         return lang + "-" + Ui.locale().getCountry();
+    }
+
+    /** A list of just one of `list`, the one this hour's period points at (empty for an empty list). */
+    private static List<Pick> oneOf(List<Pick> list, int period) {
+        List<Pick> out = new ArrayList<>();
+        if (!list.isEmpty()) out.add(list.get(Math.floorMod(period, list.size())));
+        return out;
     }
 
     private static List<Pick> interleave(List<Pick> a, List<Pick> b) {
@@ -754,6 +762,7 @@ final class Recs {
         HttpURLConnection c = (HttpURLConnection) new URL(Config.PLEX_URL.trim().replaceAll("/+$", "") + path).openConnection();
         c.setConnectTimeout(5000);
         c.setReadTimeout(15000);
+        c.setInstanceFollowRedirects(false);   // HttpURLConnection keeps custom headers across hosts: the token must not follow a redirect
         c.setRequestProperty("Accept", "application/json");
         c.setRequestProperty("X-Plex-Token", Config.PLEX_TOKEN.trim());
         return c;

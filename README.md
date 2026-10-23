@@ -153,7 +153,9 @@ They land in the app's own folder on the TV (no permission needed); on Android 1
 
 ### Your Plex library (optional)
 
-Set `plex_url` and `plex_token` in `config.properties`, and the newest movies and shows of your Plex server (up to 8 of each kind) join the picks, with their own poster and backdrop, tagged "Plex". Selecting one opens the title's page in the Plex app.
+Set `plex_url` and `plex_token` in `config.properties`, and one of the newest movies and one of the newest shows of your Plex server (a different one each hour, among the latest 8 of each kind) join the picks, with their own poster and backdrop, tagged "Plex". Selecting one opens the title's page in the Plex app.
+
+This is for Google TV and Android TV, and it needs the TMDB key and at least one streaming app on the TV: without those no picks come at all, Plex included.
 
 - **`plex_url`** is the server's own `plex.direct` address, which has a valid certificate (the TV checks it as for any site; plain `http` is blocked). It looks like `https://192-168-1-20.0123456789abcdef0123456789abcdef.plex.direct:32400`: your server's local IP with dashes, then its id. Open any item in Plex's web app, *Get Info → View XML*, and the address bar has it, before `/library/...`.
 - **`plex_token`** is on the same address, after `X-Plex-Token=`. It gives access to your Plex account, so keep it private and never commit it.
