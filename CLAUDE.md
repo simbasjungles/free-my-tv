@@ -29,7 +29,8 @@ before you do it, and let them do the taps on the TV.
    after `tmdb_key=` in `config.properties` themselves. Don't ask for it in the chat, never print it, never commit
    it. If they paste it in the chat anyway, put it only in `config.properties`.
    Without a key everything works except the picks and the screensaver photos.
-   The same goes for the optional `watchmode_key` (free, watchmode.com; makes picks open the title's page): theirs, secret, only in `config.properties`.
+   The same goes for the optional `watchmode_key` (free, watchmode.com; makes picks open the title's page) and the
+   Plex `plex_token` (with `plex_url`; adds their Plex library to the picks): theirs, secret, only in `config.properties`.
 5. **Build:** `./build.sh` → `FreeMyTV.apk`. Keep `freemytv.keystore`: updates must be signed with the same key.
 6. **Install:** `adb connect <IP>:5555`. The TV asks *Allow USB debugging?*: tell them to accept and tick *Always
    allow*. Then `adb install -r FreeMyTV.apk`. If it hangs, Google Play Protect is asking on the TV (Android 14:

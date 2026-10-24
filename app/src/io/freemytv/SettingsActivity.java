@@ -134,7 +134,7 @@ public class SettingsActivity extends Activity {
 
     static final class SettingsView extends View implements Choreographer.FrameCallback {
         private static final int MAIN = 0, HOME_CHOICE = 1, HOME_SETTINGS = 2, REMOTE_KEYS = 3, PICKER = 4, SHELF_EDIT = 5,
-                POWER = 6;
+                POWER = 6, PICKS = 7;
         private static final float LIST_ROW_H = 68, LIST_ROW_GAP = 6;
         private static final int PICK_VISIBLE = 9;
         private static final float LIST_X = 1000, LIST_R = 1824, LIST_TOP = 186, ROW_GAP = 8, CHOICE_H = 104;
@@ -266,6 +266,7 @@ public class SettingsActivity extends Activity {
                 }
                 case HOME_SETTINGS:
                 case REMOTE_KEYS:
+                case PICKS:
                 case POWER: {
                     boolean keys = screen == REMOTE_KEYS;
                     String[] labels = listLabels(), values = listValues();
@@ -394,6 +395,7 @@ public class SettingsActivity extends Activity {
                 case PICKER: return Math.min(PICK_VISIBLE, pickLabels.size());
                 case SHELF_EDIT: return Math.min(PICK_VISIBLE, shelfRows.size());
                 case POWER: return powerRows().length;
+                case PICKS: return picksLabels().length;
                 default: return Prefs.KEYS.length;
             }
         }
@@ -501,7 +503,7 @@ public class SettingsActivity extends Activity {
             else if (error.equals(Recs.NO_KNOWN_APPS)) line = Ui.tr("None of the TV's streaming apps can give picks.");
             else if (error.equals(Recs.NO_APPS)) line = Ui.trf("TMDB has none of the TV's apps for tmdb_region={region}.", "region", Recs.REGION);
             else if (!error.isEmpty()) line = Ui.trf("Error: {error}.", "error", error);
-            else if (count > 0) line = Ui.trf("On · {n} titles from the TV's apps, 3 new ones every hour.", "n", count);
+            else if (count > 0) line = Ui.trf("On · {n} titles from the TV's apps, new ones every hour.", "n", count);
             else line = Ui.tr("Fetching titles…");
             c.drawText(TextUtils.ellipsize(line, notice, 790 * k, TextUtils.TruncateAt.END).toString(), x, y + 42 * k, notice);
             version.setTextAlign(Paint.Align.LEFT);
@@ -643,7 +645,7 @@ public class SettingsActivity extends Activity {
                 case KeyEvent.KEYCODE_DPAD_RIGHT:
                     if (down && screen == SHELF_EDIT) {
                         moveShelfApp(e.getKeyCode() == KeyEvent.KEYCODE_DPAD_RIGHT ? 1 : -1);
-                    } else if (down && (screen == HOME_SETTINGS || screen == REMOTE_KEYS || screen == POWER)) {
+                    } else if (down && (screen == HOME_SETTINGS || screen == REMOTE_KEYS || screen == POWER || screen == PICKS)) {
                         adjust(e.getKeyCode() == KeyEvent.KEYCODE_DPAD_RIGHT ? 1 : -1);
                     }
                     whyRows = null;   // a value or the rows' order changed: what each row needs may have too
@@ -679,6 +681,10 @@ public class SettingsActivity extends Activity {
                             } else if (screen == PICKER) {
                                 focus = pickFor - 1;
                                 screen = REMOTE_KEYS;
+                            } else if (screen == PICKS) {
+                                focus = PICKS_ROW;
+                                pickScroll = 0;
+                                screen = HOME_SETTINGS;
                             } else {
                                 focus = screen == HOME_SETTINGS ? 2 : screen == SHELF_EDIT ? (editingTop ? 4 : 3)
                                         : screen == REMOTE_KEYS ? 5 : screen == POWER ? 6 : 0;
@@ -698,8 +704,8 @@ public class SettingsActivity extends Activity {
         // MARK: - Home Settings and Remote Buttons
 
         private static final String[] UNITS = {"auto", "C", "F"}, THEMES = {"auto", "light", "dark"};
-        /** Home Settings: language, temperature, theme, my photos, sounds, weather, city, quotes, then one row per coin. */
-        private static final int PHOTOS_ROW = 3, CITY_ROW = 6, COIN_ROWS = 8;
+        /** Home Settings: language, temperature, theme, my photos, sounds, picks, weather, city, quotes, then one row per coin. */
+        private static final int PHOTOS_ROW = 3, PICKS_ROW = 5, CITY_ROW = 7, COIN_ROWS = 9;
         /** Home Settings rows on screen at once (what fits above the hints at 1080p); a longer list scrolls. */
         private static final int SETTINGS_VISIBLE = 10;
 
@@ -714,6 +720,7 @@ public class SettingsActivity extends Activity {
             l.add(Ui.tr("Theme"));
             l.add(Ui.tr("My Photos"));
             l.add(Ui.tr("Navigation sounds"));
+            l.add(Ui.tr("Picks"));
             l.add(Ui.tr("Weather widget"));
             l.add(Ui.tr("City"));
             l.add(Ui.tr("Quotes widget"));
@@ -722,6 +729,14 @@ public class SettingsActivity extends Activity {
             l.add("Solana");
             if (dollar()) l.add(Ui.tr("Dollar"));
             return l.toArray(new String[0]);
+        }
+
+        private String[] picksLabels() {
+            return new String[] {Ui.tr("Picks per tab")};
+        }
+
+        private String[] picksValues() {
+            return new String[] {String.valueOf(Prefs.cards())};
         }
 
         private String[] settingValues() {
@@ -737,9 +752,10 @@ public class SettingsActivity extends Activity {
             v[PHOTOS_ROW] = photos == 0 ? Ui.tr("photos|None")
                     : Prefs.photos() ? Ui.plural("plural|one:{n} photo|other:{n} photos", photos) : Ui.tr("Off");
             v[4] = onOff(Prefs.sounds());
-            v[5] = onOff(Prefs.weather());
+            v[PICKS_ROW] = "›";   // opens its own screen: Picks per tab (and the services, with Picks from)
+            v[6] = onOff(Prefs.weather());
             v[CITY_ROW] = !cityStatus.isEmpty() ? cityStatus : Prefs.city().isEmpty() ? "—" : Prefs.city();
-            v[7] = onOff(Prefs.quotes());
+            v[8] = onOff(Prefs.quotes());
             // No quotes widget, nowhere to show prices: the coins read as off (and stay locked) until it is back on.
             for (int i = COIN_ROWS; i < v.length; i++) v[i] = onOff(Prefs.quotes() && Prefs.coin(i - COIN_ROWS));
             return v;
@@ -896,11 +912,11 @@ public class SettingsActivity extends Activity {
         }
 
         private String[] listLabels() {
-            return screen == REMOTE_KEYS ? keyLabels() : screen == POWER ? powerLabels() : settingLabels();
+            return screen == REMOTE_KEYS ? keyLabels() : screen == POWER ? powerLabels() : screen == PICKS ? picksLabels() : settingLabels();
         }
 
         private String[] listValues() {
-            return screen == REMOTE_KEYS ? keyValues() : screen == POWER ? powerValues() : settingValues();
+            return screen == REMOTE_KEYS ? keyValues() : screen == POWER ? powerValues() : screen == PICKS ? picksValues() : settingValues();
         }
 
         private static String onOff(boolean on) {
@@ -955,6 +971,13 @@ public class SettingsActivity extends Activity {
         /** Changes the focused row's value one step (OK and → go forward, ← goes back). */
         private void adjust(int dir) {
             if (unavailable(focus) != null) return;
+            if (screen == PICKS) {
+                if (focus == 0) {
+                    int n = Prefs.cards() - 3, span = Recs.MAX_CARDS - 3 + 1;
+                    Prefs.setCards(3 + (n + dir + span) % span);
+                }
+                return;
+            }
             if (screen == POWER) {
                 int row = powerRow();
                 if (row == P_SLEEP) {
@@ -996,9 +1019,10 @@ public class SettingsActivity extends Activity {
                     Prefs.setPhotos(!Prefs.photos());
                     return;
                 case 4: Prefs.setSounds(!Prefs.sounds()); break;
-                case 5: Prefs.setWeather(!Prefs.weather()); break;
+                case PICKS_ROW: return;
+                case 6: Prefs.setWeather(!Prefs.weather()); break;
                 case CITY_ROW: return;
-                case 7: Prefs.setQuotes(!Prefs.quotes()); break;
+                case 8: Prefs.setQuotes(!Prefs.quotes()); break;
                 default:
                     if (!Prefs.quotes()) return;
                     Prefs.setCoin(row - COIN_ROWS, !Prefs.coin(row - COIN_ROWS));
@@ -1248,7 +1272,7 @@ public class SettingsActivity extends Activity {
             String[] labels = listLabels();
             String[] values = listValues();
             Paint heading = Ui.text(Ui.displaySemibold, 34 * k, 0xFFFFFFFF);
-            c.drawText(keys ? Ui.tr("Remote Buttons") : screen == POWER ? Ui.tr("Sleep Timer") : Ui.tr("Home Settings"),
+            c.drawText(keys ? Ui.tr("Remote Buttons") : screen == POWER ? Ui.tr("Sleep Timer") : screen == PICKS ? Ui.tr("Picks") : Ui.tr("Home Settings"),
                     LIST_X * k + 30 * k, (LIST_TOP - 24) * k, heading);
             float pitch = LIST_ROW_H + LIST_ROW_GAP;
             int rows = keys ? labels.length : rowCount(), from = keys ? 0 : pickScroll;
@@ -1332,8 +1356,15 @@ public class SettingsActivity extends Activity {
             } else if (screen == HOME_SETTINGS && pickScroll + focus == PHOTOS_ROW) {
                 askRemovePhotos();
                 return;
+            } else if (screen == HOME_SETTINGS && pickScroll + focus == PICKS_ROW) {
+                screen = PICKS;
+                focus = 0;
             } else if (screen == POWER) {
                 activatePower();
+            } else if (screen == PICKS) {
+                adjust(1);
+                invalidate();
+                return;
             } else if (screen == HOME_SETTINGS) {
                 adjust(1);
                 invalidate();
