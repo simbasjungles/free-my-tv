@@ -61,6 +61,11 @@ final class Prefs {
         Ui.applyLanguage();   // the language picked on the TV, now that it can be read
     }
 
+    /** The TV's own 12/24-hour setting (Settings → System → Date & time). */
+    static boolean clock24() {
+        return app != null && android.text.format.DateFormat.is24HourFormat(app);
+    }
+
     /** The app's context in this process (null before App.onCreate). */
     static Context context() {
         return app;
