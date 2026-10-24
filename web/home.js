@@ -297,6 +297,8 @@
     for (i = 0; i < list.length; i++) setClass(list[i], 'focus', st.zone === Z.CARDS && st.card === i);
     list = $('tiles').children;
     for (i = 0; i < list.length; i++) setClass(list[i], 'focus', st.zone === Z.SHELF && st.shelf === i);
+    setClass($('tiles'), 'on', st.zone === Z.SHELF);
+    setClass($('platter'), 'on', st.zone === Z.SHELF);
     revealShelf();
     list = document.querySelectorAll('#drawer .key');
     for (i = 0; i < list.length; i++) setClass(list[i], 'focus', st.zone === Z.DRAWER && st.drawer === i);
