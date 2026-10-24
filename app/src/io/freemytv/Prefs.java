@@ -87,6 +87,11 @@ final class Prefs {
         version++;
     }
 
+    private static void put(String key, int value) {
+        sp().edit().putInt(key, value).apply();
+        version++;
+    }
+
     private static void put(String key, boolean value) {
         sp().edit().putBoolean(key, value).apply();
         version++;
@@ -110,6 +115,50 @@ final class Prefs {
     }
 
     static void setTemperature(String v) { put("temperature", v); }
+
+    /** Picks per tab on the home screen: 3 (as it always was) up to Recs.MAX_CARDS. */
+    static int cards() {
+        return Math.max(3, Math.min(Recs.MAX_CARDS, sp().getInt("cards", 3)));
+    }
+
+    static void setCards(int n) { put("cards", n); }
+
+    // MARK: - Picks from
+
+    private static String offList;
+    private static int offListAt = -1;
+
+    /** The services (Recs' keys: "netflix", "prime"...) whose titles are left out of the picks, as ",a,b,". */
+    private static String offServices() {
+        if (offList == null || offListAt != version) {
+            String saved = sp().getString("servicesOff", null);
+            if (saved == null) {   // not chosen on the TV yet: what hide_services says
+                StringBuilder first = new StringBuilder();
+                for (String key : Config.HIDE_SERVICES.split(",")) {
+                    key = key.trim().toLowerCase(Locale.ROOT);
+                    if (!key.isEmpty()) first.append(first.length() > 0 ? "," : "").append(key);
+                }
+                saved = first.toString();
+            }
+            offList = saved.isEmpty() ? "," : "," + saved + ",";
+            offListAt = version;
+        }
+        return offList;
+    }
+
+    static boolean serviceOff(String key) {
+        return key != null && offServices().contains("," + key + ",");
+    }
+
+    static boolean anyServiceOff() {
+        return offServices().length() > 1;
+    }
+
+    static void setServiceOff(String key, boolean off) {
+        String list = offServices();
+        list = off ? (serviceOff(key) ? list : list + key + ",") : list.replace("," + key + ",", ",");
+        put("servicesOff", list.length() > 1 ? list.substring(1, list.length() - 1) : "");
+    }
 
     /** "auto" (dark from sunset to sunrise), "light" or "dark". */
     static String theme() {
