@@ -54,6 +54,14 @@ var Prefs = (function () {
     shelf: function () { return pick('shelf', null); },
     /** The shelf_apps of the build that last set the shelf, so a new one wins once over the TV's choice. */
     shelfConfig: function () { return pick('shelfConfig', ''); },
+    /** Streaming services (keys like "netflix") whose titles are left out of the picks. */
+    serviceOff: function (key) { return pick('servicesOff', []).indexOf(key) >= 0; },
+    anyServiceOff: function () { return pick('servicesOff', []).length > 0; },
+    setServiceOff: function (key, off) {
+      var list = pick('servicesOff', []).filter(function (k) { return k !== key; });
+      if (off) list.push(key);
+      this.set('servicesOff', list);
+    },
     set: function (name, value) { v[name] = value; save(); this.version++; },
     setCoin: function (i, on) {
       var c = (pick('coins', null) || [true, true, true, true]).slice();
@@ -234,6 +242,16 @@ var Data = (function () {
 
   var installed = [];   // the TV's apps, from TV.apps()
 
+  /** A service whose app is on the TV and that the person hasn't switched off in Home Settings (Picks from). */
+  function usable(key) { return !!appFor(key) && !Prefs.serviceOff(key); }
+
+  /** The streaming services whose app is on this TV, as {key, name}, for Home Settings. */
+  function services() {
+    var out = [];
+    for (var s = 0; s < SERVICES.length; s++) if (appFor(SERVICES[s][1])) out.push({key: SERVICES[s][1], name: SERVICES[s][4]});
+    return out;
+  }
+
   /** The installed app for a service key, or null. */
   function appFor(key) {
     for (var s = 0; s < SERVICES.length; s++) {
@@ -276,7 +294,7 @@ var Data = (function () {
 
   function sourceStamp() {
     var s = KEY.length + ':' + KEY.slice(-6) + ':' + REGION + (CONFIG.hideAnimation ? ':no-animation' : '');
-    for (var i = 0; i < SERVICES.length; i++) s += appFor(SERVICES[i][1]) ? '1' : '0';
+    for (var i = 0; i < SERVICES.length; i++) s += usable(SERVICES[i][1]) ? '1' : '0';
     return s;
   }
 
@@ -292,7 +310,7 @@ var Data = (function () {
     if (!KEY) return list;
     for (var i = 0; i < picks.length; i++) {
       var p = picks[i];
-      if ((kind === null || kind === p.kind) && (!p.detailed || (p.app && appFor(p.app)))) list.push(p);
+      if ((kind === null || kind === p.kind) && (!p.detailed || (p.app && usable(p.app)))) list.push(p);
     }
     if (!list.length) return list;
     var hour = Math.floor(Date.now() / 3600000), out = [], seen = {}, n = Prefs.cards();
@@ -365,7 +383,7 @@ var Data = (function () {
       p.app = null;
       for (var i = 0; flat && i < flat.length && !p.app; i++) {
         var s = service(flat[i].provider_name, flat[i].provider_id);
-        if (s && appFor(s[1])) { p.app = s[1]; p.service = s[4]; }
+        if (s && usable(s[1])) { p.app = s[1]; p.service = s[4]; }
       }
       if (p.service && p.app) parts.push(p.service);
       p.meta = parts.join(' · ');
@@ -429,9 +447,9 @@ var Data = (function () {
       var ids = [];
       for (var i = 0; res.results && i < res.results.length; i++) {
         var s = service(res.results[i].provider_name, res.results[i].provider_id);
-        if (s && appFor(s[1])) ids.push(res.results[i].provider_id);
+        if (s && usable(s[1])) ids.push(res.results[i].provider_id);
       }
-      if (!ids.length) { done(new Error("none of the TV's streaming apps are on TMDB")); return; }
+      if (!ids.length) { done(new Error("none of the TV's streaming apps are on TMDB (or switched on in Picks from)")); return; }
       var common = '&language=' + lang() + '&watch_region=' + REGION + '&with_watch_monetization_types=flatrate&include_adult=false'
           + '&sort_by=popularity.desc&with_watch_providers=' + encodeURIComponent(ids.join('|'))
           + (CONFIG.hideAnimation ? '&without_genres=' + ANIMATION : '');
@@ -521,6 +539,8 @@ var Data = (function () {
     onChange: function (fn) { listeners.push(fn); },
     setApps: function (apps) { installed = apps; },
     appFor: appFor,
+    usable: usable,
+    services: services,
     refresh: function () { refreshWeather(); refreshPrices(); refreshRecs(); },
     settingsChanged: function () { pricesAt = 0; refreshPrices(); changed(); },
     get weather() { return weather; },

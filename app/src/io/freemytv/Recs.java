@@ -202,7 +202,7 @@ final class Recs {
         Map<String, Boolean> have = new HashMap<>();   // one look per app, not per title (this runs every 15 s)
         for (Pick p : picks) {
             if ((kind == null || kind.equals(p.kind))
-                    && (!p.detailed || (p.pkg != null && have.computeIfAbsent(p.pkg, this::installed)))) list.add(p);   // app missing: skip
+                    && (!p.detailed || (p.pkg != null && have.computeIfAbsent(p.pkg, this::installed)))) list.add(p);   // app missing or switched off: skip
         }
         if (list.isEmpty()) return list;
         long hour = System.currentTimeMillis() / 3600_000L;
@@ -607,18 +607,22 @@ final class Recs {
         return first;
     }
 
-    /** Services named in hide_services (config.properties), trimmed and lowercased: never a source of picks. */
-    private static final Set<String> HIDDEN = new HashSet<>();
-    static {
-        for (String s : Config.HIDE_SERVICES.split(",")) {
-            String key = s.trim().toLowerCase(Locale.ROOT);
-            if (!key.isEmpty()) HIDDEN.add(key);
+    /** The streaming services whose app is on this TV, as {key, name}, for Home Settings (Picks from). */
+    static List<String[]> installedServices(Context c) {
+        List<String[]> out = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (String[] s : SERVICES) {
+            if (HomeApps.launchIntent(c.getPackageManager(), s[2]) != null && seen.add(s[1])) out.add(new String[] {s[1], SERVICE_NAME.get(s[1])});
         }
+        return out;
     }
 
-    /** The service's app is on the TV, and the service isn't hidden (an app the TV ships without a subscription, say). */
+    /**
+     * The service's app is on the TV, and the person hasn't switched the service off (Home Settings > Picks from; the
+     * hide_services line of config.properties is where those switches start: an app the TV ships without a subscription).
+     */
     private boolean installed(String pkg) {
-        if (!HIDDEN.isEmpty()) for (String[] s : SERVICES) if (s[2].equals(pkg) && HIDDEN.contains(s[1])) return false;
+        for (String[] s : SERVICES) if (s[2].equals(pkg) && Prefs.serviceOff(s[1])) return false;
         return HomeApps.launchIntent(context.getPackageManager(), pkg) != null;
     }
 
