@@ -103,6 +103,8 @@ final class HomeApps {
         {"hulu", "Hulu", "com.hulu.livingroomplus", "1CE783", "", "1"},
         {"hulu", "Hulu", "com.hulu.plus", "1CE783", "", "1"},
         {"paramount", "Paramount+", "com.cbs.ott", "0064FF", "", "1"},
+        {"paramount", "Paramount+", "com.cbs.ca", "0064FF", "", "1"},          // the build on Sony TVs in the UK
+        {"now", "NOW", "com.bskyb.nowtv.beta", "1B9C8E", "", "1"},              // UK: Sky's NOW
         {"peacock", "Peacock", "com.peacocktv.peacockandroid", "6E55DC", "", "1"},
         {"peacock", "Peacock", "com.peacock.peacockfiretv", "6E55DC", "", "1"},
         {"globoplay", "Globoplay", "com.globo.globotv", "FF5A1F", "tint", "1"},

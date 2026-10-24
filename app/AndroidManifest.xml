@@ -35,6 +35,8 @@
         <package android:name="com.hulu.livingroomplus" />
         <package android:name="com.hulu.plus" />
         <package android:name="com.cbs.ott" />
+        <package android:name="com.cbs.ca" />
+        <package android:name="com.bskyb.nowtv.beta" />
         <package android:name="com.peacocktv.peacockandroid" />
         <package android:name="com.peacock.peacockfiretv" />
         <package android:name="com.globo.globotv" />

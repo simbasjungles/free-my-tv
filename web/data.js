@@ -227,7 +227,8 @@ var Data = (function () {
     ['max', 'max', /hbo|wbd|\.max/, /^(hbo )?max$|hbo max/i, 'Max'],
     ['apple tv', 'appletv', /appletv|apple\.tv/, /apple tv/i, 'Apple TV'],
     ['hotstar', 'hotstar', /hotstar/, /hotstar/i, 'JioHotstar'],
-    ['crunchyroll', 'crunchyroll', /crunchyroll/, /crunchyroll/i, 'Crunchyroll']
+    ['crunchyroll', 'crunchyroll', /crunchyroll/, /crunchyroll/i, 'Crunchyroll'],
+    ['now tv', 'now', /nowtv|now\.tv/, /^now( tv)?$/i, 'NOW']
   ];
 
   var installed = [];   // the TV's apps, from TV.apps()

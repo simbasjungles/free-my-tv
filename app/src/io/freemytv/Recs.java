@@ -72,6 +72,7 @@ final class Recs {
         {"hulu", "hulu", "com.hulu.livingroomplus"},
         {"hulu", "hulu", "com.hulu.plus"},
         {"paramount", "paramount", "com.cbs.ott"},
+        {"paramount", "paramount", "com.cbs.ca"},      // the build on Sony TVs in the UK (and in Canada)
         {"peacock", "peacock", "com.peacocktv.peacockandroid"},
         {"peacock", "peacock", "com.peacock.peacockfiretv"},
         {"globoplay", "globoplay", "com.globo.globotv"},
@@ -83,6 +84,7 @@ final class Recs {
         {"hotstar", "hotstar", "in.startv.hotstar"},   // TMDB: "JioHotstar" (earlier "Disney Plus Hotstar")
         {"okko", "okko", "ru.more.play"},
         {"crunchyroll", "crunchyroll", "com.crunchyroll.crunchyroid"},
+        {"now tv", "now", "com.bskyb.nowtv.beta"},     // UK: Sky's NOW (TMDB: "Now TV", "Now TV Cinema")
         {"oneplay", "oneplay", "net.cme.voyo.cz.tvapp"},    // Czechia: Voyo and O2 TV became Oneplay, same app
     };
     private static final Map<String, String> SERVICE_NAME = new HashMap<>();
@@ -99,6 +101,7 @@ final class Recs {
         SERVICE_NAME.put("hotstar", "JioHotstar");
         SERVICE_NAME.put("okko", "Okko");
         SERVICE_NAME.put("crunchyroll", "Crunchyroll");
+        SERVICE_NAME.put("now", "NOW");
         SERVICE_NAME.put("oneplay", "Oneplay");
     }
     /** Country for "what streams where" (config.properties "tmdb_region", e.g. US, GB, BR). */
