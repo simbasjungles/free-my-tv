@@ -399,17 +399,66 @@ final class HomeApps {
         Collections.sort(out, (a, b) -> a.number.compareTo(b.number));
         // Allwinner's player opens only HDMI 1 (HY300: one port, though the board lists three)
         if (allwinnerInputs(c)) out.removeIf(it -> !"1".equals(it.number));
+        // MIUI TV knows three HDMI ports; a board reporting a fourth leaves it with no way to be opened (a Redmi TV
+        // lists HDMI 4 and answers no number for it), so it isn't shown.
+        else if (xiaomiInputs(c)) out.removeIf(it -> !xiaomiPort(it));
         return out;
     }
 
     /** Allwinner's live TV player (HY300 projectors), the stock home screen's way to HDMI: it ignores the input asked for. */
     private static final ComponentName ALLWINNER_TV = new ComponentName("com.softwinner.awlivetv", "com.softwinner.awlivetv.MainActivity");
+    /** Xiaomi's own source player (MIUI TV, the Chinese firmware): it takes the port as a number of its own. */
+    private static final ComponentName XIAOMI_SOURCES = new ComponentName("com.xiaomi.mitv.tvplayer", "com.xiaomi.mitv.tvplayer.ExternalSourceActivity");
+    private static final String XIAOMI_SOURCES_ACTION = "com.xiaomi.mitv.tvplayer.EXTSRC_PLAY";
+    /** MIUI TV's numbers for HDMI 1 to 3 (VGA is 0 and AV 2). A number it doesn't know drops the TV to no source at all. */
+    private static final int[] XIAOMI_HDMI = {23, 24, 25};
+
+    /** Whether the activity is really there: Intent.resolveActivity hands an explicit component back without looking. */
+    private static boolean exists(Context c, ComponentName component) {
+        return new Intent().setComponent(component).resolveActivityInfo(c.getPackageManager(), 0) != null;
+    }
+
+    /** No app opens a passthrough input, so only the maker's own player can reach the TV's inputs. */
+    private static boolean noPassthrough(Context c) {
+        Intent view = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput("x"));
+        return view.resolveActivity(c.getPackageManager()) == null;
+    }
 
     /** No app opens a passthrough input, but Allwinner's player is there. */
     private static boolean allwinnerInputs(Context c) {
-        PackageManager pm = c.getPackageManager();
-        Intent view = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput("x"));
-        return view.resolveActivity(pm) == null && new Intent().setComponent(ALLWINNER_TV).resolveActivity(pm) != null;
+        return noPassthrough(c) && exists(c, ALLWINNER_TV);
+    }
+
+    /** No app opens a passthrough input, but Xiaomi's source player is there (MIUI TV, a Redmi TV on Android 9 tested). */
+    private static boolean xiaomiInputs(Context c) {
+        return noPassthrough(c) && exists(c, XIAOMI_SOURCES);
+    }
+
+    /** The port's number, from the digit in its name, or 0 when it had none. */
+    private static int port(Item it) {
+        try {
+            return Integer.parseInt(it.number);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /** A port MIUI TV has a number for: the others can't be opened at all, so they aren't shown. */
+    private static boolean xiaomiPort(Item it) {
+        return port(it) >= 1 && port(it) <= XIAOMI_HDMI.length;
+    }
+
+    /**
+     * How to open an HDMI input: the standard passthrough request, or, where no app answers it, the maker's own
+     * player. Xiaomi's takes the port as its own "input" number.
+     */
+    private static Intent inputIntent(Context c, Item it) {
+        if (allwinnerInputs(c)) return new Intent().setComponent(ALLWINNER_TV);
+        if (xiaomiInputs(c) && xiaomiPort(it)) {
+            return new Intent(XIAOMI_SOURCES_ACTION).setComponent(XIAOMI_SOURCES)
+                    .putExtra("input", XIAOMI_HDMI[port(it) - 1]);
+        }
+        return new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(it.inputId));
     }
 
     /** Words in a device's name, by the icon they pick: a game console, a streaming box, a sound system, a TV box. */
@@ -482,8 +531,7 @@ final class HomeApps {
                 intent = liveTv(a);
                 break;
             case INPUT:
-                intent = allwinnerInputs(a) ? new Intent().setComponent(ALLWINNER_TV)
-                        : new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(it.inputId));
+                intent = inputIntent(a, it);
                 break;
             case SETTINGS:
                 intent = new Intent().setComponent(new ComponentName(a, SettingsActivity.class));
