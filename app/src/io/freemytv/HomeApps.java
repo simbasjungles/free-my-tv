@@ -551,20 +551,29 @@ final class HomeApps {
     static String tunerInput(Context c) {
         TvInputManager tim = (TvInputManager) c.getSystemService(Context.TV_INPUT_SERVICE);
         if (tim == null) return null;
-        String system = null, fallback = null;
+        String hardware = null, system = null, fallback = null;
         try {
             for (TvInputInfo info : tim.getTvInputList()) {
                 if (info.getType() != TvInputInfo.TYPE_TUNER || info.isPassthroughInput()) continue;
                 if (info.getServiceInfo() != null && info.getServiceInfo().applicationInfo != null
                         && (info.getServiceInfo().applicationInfo.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0) {
-                    if (info.getId().contains("/HW")) return info.getId();
+                    // Several hardware tuners (MediaTek: Tuner, Cable, Analog): digital antenna first, analog last.
+                    // Haier H32S80EFX lists AnalogInputService/HW1 first, which opens on no channels in DVB-T2 countries.
+                    if (info.getId().contains("/HW") && (hardware == null || tunerRank(info.getId()) < tunerRank(hardware))) {
+                        hardware = info.getId();
+                    }
                     if (system == null) system = info.getId();
                 }
                 if (fallback == null) fallback = info.getId();
             }
         } catch (RuntimeException ignored) {
         }
-        return system != null ? system : fallback;
+        return hardware != null ? hardware : system != null ? system : fallback;
+    }
+
+    private static int tunerRank(String id) {
+        String s = id.toLowerCase(java.util.Locale.ROOT);
+        return s.contains("analog") ? 2 : s.contains("cable") ? 1 : 0;
     }
 
     static List<String[]> launchable(Context c) {
