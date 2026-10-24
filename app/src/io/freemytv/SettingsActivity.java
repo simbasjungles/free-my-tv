@@ -660,9 +660,9 @@ public class SettingsActivity extends Activity {
         // MARK: - Home Settings and Remote Buttons
 
         private static final String[] UNITS = {"auto", "C", "F"}, THEMES = {"auto", "light", "dark"};
-        /** Home Settings: language, temperature, theme, my photos, sounds, weather, city, quotes, then one row per coin. */
-        private static final int PHOTOS_ROW = 3, CITY_ROW = 6, COIN_ROWS = 8;
-        /** Home Settings rows on screen at once (what fits above the hints at 1080p); a longer list scrolls. */
+        /** Home Settings: language, temperature, theme, my photos, sounds, weather, city, quotes, Continue Watching, then coins. */
+        private static final int PHOTOS_ROW = 3, CITY_ROW = 6, WATCH_NEXT_ROW = 8, COIN_ROWS = 9;
+		/** Home Settings rows on screen at once (what fits above the hints at 1080p); a longer list scrolls. */
         private static final int SETTINGS_VISIBLE = 10;
 
         private boolean dollar() {
@@ -679,6 +679,7 @@ public class SettingsActivity extends Activity {
             l.add(Ui.tr("Weather widget"));
             l.add(Ui.tr("City"));
             l.add(Ui.tr("Quotes widget"));
+            l.add(Ui.tr("Continue watching items"));
             l.add("Bitcoin");
             l.add("Ethereum");
             l.add("Solana");
@@ -702,6 +703,7 @@ public class SettingsActivity extends Activity {
             v[5] = onOff(Prefs.weather());
             v[CITY_ROW] = !cityStatus.isEmpty() ? cityStatus : Prefs.city().isEmpty() ? "—" : Prefs.city();
             v[7] = onOff(Prefs.quotes());
+            v[WATCH_NEXT_ROW] = String.valueOf(Prefs.watchNextCount());
             // No quotes widget, nowhere to show prices: the coins read as off (and stay locked) until it is back on.
             for (int i = COIN_ROWS; i < v.length; i++) v[i] = onOff(Prefs.quotes() && Prefs.coin(i - COIN_ROWS));
             return v;
@@ -795,6 +797,9 @@ public class SettingsActivity extends Activity {
                 case 5: Prefs.setWeather(!Prefs.weather()); break;
                 case CITY_ROW: return;
                 case 7: Prefs.setQuotes(!Prefs.quotes()); break;
+                case WATCH_NEXT_ROW:
+                    Prefs.setWatchNextCount(2 + (Prefs.watchNextCount() - 2 + dir + 3) % 3);
+                    break;
                 default:
                     if (!Prefs.quotes()) return;
                     Prefs.setCoin(row - COIN_ROWS, !Prefs.coin(row - COIN_ROWS));

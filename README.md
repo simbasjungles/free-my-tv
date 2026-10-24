@@ -19,6 +19,7 @@ Open source. Built with Claude Code. One button to undo.
 
 - **No ads.** No sponsored rows, banners or autoplaying promos. Not one.
 - **Your apps, front and center.** The streaming apps you actually use, on a glass shelf. Pick them and their order right on the TV.
+- **Continue watching.** Pick up supported shows and movies from the first home-screen tab, with artwork and playback progress when the streaming app shares them with Google TV.
 - **Trending, not sponsored.** Three fresh picks every hour from what's trending this week and the latest releases, only from apps you already have. Movies and Shows get their own tabs.
 - **Weather and markets, one press away.** The hour-by-hour forecast, sunrise and sunset, and live crypto prices.
 - **Light by day, dark by night.** It follows your city's real sunset, the way your phone does.
@@ -130,6 +131,12 @@ The first values come from `config.properties`, created by the first build (Goog
 | `hide_apps` | Apps to leave out of the shelf, All Apps and the picks, by id or name (part of it), comma separated; for apps the TV ships that can't be uninstalled, like Samsung's built-in Netflix. LG and Samsung only | empty |
 
 Changed something? Run `./build.sh` and install again. Keep `freemytv.keystore`: updates are signed with it.
+
+### Continue watching
+
+On Google TV and Android TV, the first home-screen tab can show titles that streaming apps have shared with the TV's **Watch Next** list. Free My TV asks for the TV's *TV listings* permission when needed; allow it so the section can read that list. Use *Home Settings* → *Continue watching items* to choose a list size of 2, 3 or 4. The screen shows two cards at a time; use the remote's left and right buttons to browse the rest.
+
+This uses the TV's shared list, not private viewing history inside each streaming app. A title appears only if its app publishes it to Watch Next and it is still in that list. If the section is empty or has fewer items than the setting, there may simply be fewer shared entries available. Episode or playback progress and artwork appear when the app provides that information. LG webOS and Samsung Tizen builds do not use this Android TV feature.
 
 ### The TMDB key
 

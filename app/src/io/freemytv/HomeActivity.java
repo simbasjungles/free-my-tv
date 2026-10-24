@@ -1,6 +1,7 @@
 package io.freemytv;
 
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -15,7 +16,10 @@ import android.widget.TextView;
  * back to the TV's original one.
  */
 public class HomeActivity extends Activity {
+    private static final int REQUEST_TV_LISTINGS = 1;
+    private static final String TV_LISTINGS_PERMISSION = "android.permission.READ_TV_LISTINGS";
     private HomeView home;
+    private boolean tvListingsAccess;
     private int prefsVersion = Prefs.version;   // settings changed while we were away: start over
 
     @Override protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +52,27 @@ public class HomeActivity extends Activity {
             return;
         }
         if (home != null) home.resume();
+        boolean access = checkSelfPermission(TV_LISTINGS_PERMISSION) == PackageManager.PERMISSION_GRANTED;
+        if (access && !tvListingsAccess && home != null) home.refreshWatchNext();
+        tvListingsAccess = access;
+        requestTvListingsPermission();
+    }
+
+    private void requestTvListingsPermission() {
+        if (checkSelfPermission(TV_LISTINGS_PERMISSION) == PackageManager.PERMISSION_GRANTED) return;
+        android.content.SharedPreferences settings = getSharedPreferences("home-ui", MODE_PRIVATE);
+        if (settings.getBoolean("tvListingsPermissionRequested", false)) return;
+        settings.edit().putBoolean("tvListingsPermissionRequested", true).apply();
+        requestPermissions(new String[] {TV_LISTINGS_PERMISSION}, REQUEST_TV_LISTINGS);
+    }
+
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == REQUEST_TV_LISTINGS && results.length > 0
+                && results[0] == PackageManager.PERMISSION_GRANTED && home != null) {
+            tvListingsAccess = true;
+            home.refreshWatchNext();
+        }
     }
 
     @Override protected void onPause() {

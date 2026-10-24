@@ -210,6 +210,14 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   Comments in English, short, only where the why isn't obvious.
 - Settings come from `config.properties` through the generated `out/gen/io/freemytv/Config.java` (never edit that).
   What the person changes on the TV (`Prefs`: Home Settings, Shelf, Remote Buttons) wins over those first values.
+- Android's first home tab is Continue Watching (`WatchNext`): with the user's `READ_TV_LISTINGS` runtime permission,
+  it reads only the TV's shared `TvContract.WatchNextPrograms` entries of type `CONTINUE`. Streaming apps decide
+  whether to publish entries; this cannot read their private histories, and an empty or short list is valid.
+  `Home Settings` → `Continue watching items` (`Prefs.watchNextCount`, 2–4) sets the maximum entries, not the two
+  cards displayed at once. The D-pad pages through them; adjacent-item edge previews are hidden during the slide
+  animation so a three-item list never briefly duplicates its last item. Episode, playback-position and artwork
+  fields are best-effort provider data. `WatchNext` caches decoded artwork in a bounded URI-keyed LRU and downloads
+  HTTP artwork once per load; this Android provider feature does not apply to the LG/Samsung web app.
 - The remote's app buttons (`RemoteKeys`, `RemoteKeyService`) use each brand's key codes: they run only on TCL,
   Vestel, KTC (NextStar), Sony and Xiaomi TVs and Formovie projectors, the service is on only in Free My TV mode, and *Original* takes it out of the enabled accessibility
   services. The system waits for the service on every key, so it lives alone in the `:keys` process: what it reads is

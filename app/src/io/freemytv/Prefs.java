@@ -149,6 +149,19 @@ final class Prefs {
     static boolean coin(int i) { return sp().getBoolean("coin" + i, true); }
     static void setCoin(int i, boolean on) { put("coin" + i, on); }
 
+    // MARK: - Continue watching
+
+    static int watchNextCount() {
+        int count = sp().getInt("watchNextCount", 4);
+        return count >= 2 && count <= 4 ? count : 4;
+    }
+
+    static void setWatchNextCount(int count) {
+        if (count < 2 || count > 4) throw new IllegalArgumentException("Continue watching count must be 2, 3 or 4");
+        sp().edit().putInt("watchNextCount", count).apply();
+        version++;
+    }
+
     // MARK: - Shelf
 
     /** Packages on the home shelf, in order; null until the user edits it (then the built-in list applies). */
