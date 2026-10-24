@@ -36,6 +36,16 @@ def key_path(ip):
     return os.path.join(os.path.expanduser('~'), '.ssh', 'freemytv_webos_' + ip.replace('.', '_'))
 
 
+def lock(path):
+    """Only this user may read the key: chmod is enough on macOS and Linux, Windows' OpenSSH checks the file's ACL."""
+    os.chmod(path, 0o600)
+    if os.name != 'nt':
+        return
+    # By SID, not name: a domain PC that lost its trust with the domain can't resolve names.
+    sid = subprocess.run(['whoami', '/user', '/fo', 'csv', '/nh'], capture_output=True, text=True).stdout.strip().split(',')[-1].strip('"')
+    subprocess.run(['icacls', path, '/inheritance:r', '/grant:r', '*%s:F' % sid], capture_output=True)
+
+
 def fetch_key(ip):
     """The TV's SSH key from its Key Server, unlocked with the passphrase the TV shows."""
     path = key_path(ip)
@@ -53,13 +63,15 @@ def fetch_key(ip):
     tmp = tempfile.NamedTemporaryFile(delete=False)
     tmp.write(data)
     tmp.close()
-    os.chmod(tmp.name, 0o600)
+    lock(tmp.name)
     unlock = subprocess.run(['ssh-keygen', '-p', '-P', passphrase, '-N', '', '-f', tmp.name], capture_output=True, text=True)
     if unlock.returncode != 0:
         os.unlink(tmp.name)
-        sys.exit('That passphrase didn\'t unlock the key. Check it on the TV (Developer Mode) and try again.')
+        # ssh-keygen's last line says why: a wrong passphrase, or a key file others can read ("bad permissions").
+        reason = (unlock.stderr.strip().splitlines() or [''])[-1]
+        sys.exit('That passphrase didn\'t unlock the key (%s). Check it on the TV (Developer Mode) and try again.' % reason)
     shutil.move(tmp.name, path)
-    os.chmod(path, 0o600)
+    lock(path)
     return path
 
 
