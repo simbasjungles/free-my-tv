@@ -203,6 +203,9 @@ final class Ui {
 
     /** The language's own name, capitalized: "Português", "Deutsch", "Français", "日本語". */
     static String languageName(String code) {
+        // Both Chinese catalogues are "中文" to Java: the script tells them apart.
+        if (code.equalsIgnoreCase("zh-CN")) return "简体中文";
+        if (code.equalsIgnoreCase("zh-TW")) return "繁體中文";
         Locale l = Locale.forLanguageTag(code);
         String name = l.getDisplayLanguage(l);
         if (name.isEmpty()) return code;
@@ -241,9 +244,12 @@ final class Ui {
         }
         Locale tv = Locale.getDefault();
         String lang = base(tv.getLanguage());
-        // Simplified Chinese only where it is the written form (not Taiwan, Hong Kong or Macau).
+        // Taiwan, Hong Kong and Macau write Traditional Chinese: never the Simplified catalogue there.
         if (lang.equals("zh") && ("Hant".equals(tv.getScript()) || "TW".equals(tv.getCountry())
-                || "HK".equals(tv.getCountry()) || "MO".equals(tv.getCountry()))) return "en";
+                || "HK".equals(tv.getCountry()) || "MO".equals(tv.getCountry()))) {
+            for (String code : languages()) if (code.equalsIgnoreCase("zh-TW")) return code;
+            return "en";
+        }
         String code = match(lang);
         return code != null ? code : "en";
     }
