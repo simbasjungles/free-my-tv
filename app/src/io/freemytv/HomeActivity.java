@@ -15,6 +15,8 @@ import android.widget.TextView;
  * back to the TV's original one.
  */
 public class HomeActivity extends Activity {
+    /** Opens All Apps (a remote's All Apps button, RemoteKeys). */
+    static final String EXTRA_ALL_APPS = "io.freemytv.ALL_APPS";
     private HomeView home;
     private int prefsVersion = Prefs.version;   // settings changed while we were away: start over
 
@@ -39,6 +41,7 @@ public class HomeActivity extends Activity {
         home = new HomeView(this);
         setContentView(home);
         getWindow().setBackgroundDrawable(null);
+        if (getIntent().getBooleanExtra(EXTRA_ALL_APPS, false)) home.showAllApps();
     }
 
     @Override protected void onResume() {
@@ -60,7 +63,9 @@ public class HomeActivity extends Activity {
     /** Home button pressed on the home screen: back to the entry state (focus on the first app, sheet closed). */
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        if (home != null) home.reset(true);
+        if (home == null) return;
+        if (intent.getBooleanExtra(EXTRA_ALL_APPS, false)) home.showAllApps();
+        else home.reset(true);
     }
 
     @Override protected void onDestroy() {

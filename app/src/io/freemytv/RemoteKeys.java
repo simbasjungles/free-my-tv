@@ -21,6 +21,8 @@ import android.view.KeyEvent;
  * (partnercustomizer) turns into PatchWall. The filter sees it first, and by default it opens the home screen.
  * On Xiaomi TVs sold in Russia, the Okko, VK, Rutube, KION, Wink and IVI buttons are global keys too, for Xiaomi's
  * hot-key receiver (partnercustomizer's GlobalKeyReceiver).
+ * On Hisense TVs, the Prime Video, YouTube, Disney+, All Apps, Settings (gear) and profile buttons go to Google TV's
+ * home app, which Free My TV mode turns off: without the filter they do nothing. Netflix stays with the system.
  */
 final class RemoteKeys {
     private RemoteKeys() {}
@@ -32,7 +34,8 @@ final class RemoteKeys {
      * The key codes are the brand's own: on other brands they can be other buttons, so nothing here runs there.
      * Vestel builds TVs sold under other brands (F&U...), so BRAND varies: check the maker too.
      */
-    static final boolean TCL = is("TCL"), VESTEL = is("Vestel"), KTC = is("KTC"), SONY = is("Sony"), FORMOVIE = is("Formovie");
+    static final boolean TCL = is("TCL"), VESTEL = is("Vestel"), KTC = is("KTC"), SONY = is("Sony"), FORMOVIE = is("Formovie"),
+            HISENSE = is("Hisense");
     /**
      * Xiaomi TVs (models MiTV-M…; MiTV-MSSP3, MediaTek, Android TV 9 tested). Not the Mi Box or Mi TV Stick, the slowest
      * devices we run on, whose remotes have a Home button; Formovie's Xiaomi projectors have their own remote.
@@ -42,7 +45,7 @@ final class RemoteKeys {
     static final boolean STEM_NETFLIX = VESTEL || FORMOVIE;
 
     static boolean supported() {
-        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI;
+        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || HISENSE;
     }
 
     private static boolean is(String maker) {
@@ -71,9 +74,10 @@ final class RemoteKeys {
         if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
             // Our own package means the home screen in use (Xiaomi's Mi button): ours, or the TV's own after the
             // watchdog handed it back. Not the settings app our launcher icon opens.
-            Intent intent = pkg.equals(HomeMode.PKG)
+            Intent intent = pkg.equals(HomeMode.PKG) || pkg.equals(Prefs.ALL_APPS)
                     ? new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
                     : launchIntent(c.getPackageManager(), pkg);
+            if (pkg.equals(Prefs.ALL_APPS)) intent.putExtra(HomeActivity.EXTRA_ALL_APPS, true);
             AppLog.w("remote key " + e.getKeyCode() + " -> " + pkg + (intent == null ? " (not installed)" : ""));
             if (intent != null) c.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         }

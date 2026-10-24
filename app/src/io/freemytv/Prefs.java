@@ -41,7 +41,18 @@ final class Prefs {
     static final int KEY_XIAOMI_OKKO = KeyEvent.KEYCODE_BUTTON_13, KEY_XIAOMI_VK = KeyEvent.KEYCODE_BUTTON_1,
             KEY_XIAOMI_RUTUBE = KeyEvent.KEYCODE_BUTTON_16, KEY_XIAOMI_KION = KeyEvent.KEYCODE_BUTTON_11,
             KEY_XIAOMI_WINK = KeyEvent.KEYCODE_BUTTON_10, KEY_XIAOMI_IVI = KeyEvent.KEYCODE_BUTTON_12;
-    static final int[] KEYS = RemoteKeys.SONY
+    /**
+     * Hisense's buttons (Q6N, MediaTek, Android TV 12 tested; read from the key filter): global keys for Google TV's
+     * home app (launcherx), or Hisense's 607 for Disney+. The gear sends NOTIFICATION.
+     */
+    static final int KEY_HISENSE_PRIME = 295, KEY_HISENSE_YOUTUBE = KeyEvent.KEYCODE_BUTTON_3, KEY_HISENSE_DISNEY = 607,
+            KEY_HISENSE_APPS = KeyEvent.KEYCODE_ALL_APPS, KEY_HISENSE_SETTINGS = KeyEvent.KEYCODE_NOTIFICATION,
+            KEY_HISENSE_PROFILE = KeyEvent.KEYCODE_PROFILE_SWITCH;
+    /** A button's value that opens this home screen's All Apps. */
+    static final String ALL_APPS = HomeMode.PKG + "#all";
+    static final int[] KEYS = RemoteKeys.HISENSE ? new int[] {KEY_HISENSE_PRIME, KEY_HISENSE_YOUTUBE, KEY_HISENSE_DISNEY,
+                    KEY_HISENSE_APPS, KEY_HISENSE_SETTINGS, KEY_HISENSE_PROFILE}
+            : RemoteKeys.SONY
             ? new int[] {KEY_SONY_CORE, KEY_SONY_NETFLIX, KEY_SONY_DISNEY, KEY_SONY_PRIME, KEY_SONY_YOUTUBE, KEY_SONY_CRUNCHYROLL,
                     KEY_SONY_PLAY}
             : RemoteKeys.STEM_NETFLIX ? new int[] {KEY_STEM_NETFLIX}
@@ -212,6 +223,16 @@ final class Prefs {
     // MARK: - Remote buttons
 
     private static String defaultApp(int keyCode) {
+        if (RemoteKeys.HISENSE) {
+            switch (keyCode) {
+                case KEY_HISENSE_PRIME: return "com.amazon.amazonvideo.livingroom";
+                case KEY_HISENSE_YOUTUBE: return "com.google.android.youtube.tv";
+                case KEY_HISENSE_DISNEY: return "com.disney.disneyplus";
+                case KEY_HISENSE_APPS: return ALL_APPS;
+                case KEY_HISENSE_SETTINGS: return "com.android.tv.settings";
+                default: return "";
+            }
+        }
         switch (keyCode) {
             case KEY_NETFLIX: case KEY_STEM_NETFLIX: return "com.netflix.ninja";
             case KEY_YOUTUBE: return "com.google.android.youtube.tv";

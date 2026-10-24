@@ -435,7 +435,13 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         updatePalette();
         updatePicks();
         updateSleep();      // a timer just set in Settings shows at once, not at the next tick
-        if (sheetOpen) closeSheet();
+        if (allAppsOnResume) {
+            allAppsOnResume = false;
+            reset(false);
+            openSheet();
+        } else if (sheetOpen) {
+            closeSheet();
+        }
         sheet.snap(sheet.target);
         motionDirty = true;
         invalidateAll();
@@ -1818,6 +1824,18 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         retargetGrid(true);
         gridDirty = true;
     }
+
+    /** All Apps from the remote's button. Coming back from another app, resume() opens it (it closes the sheet). */
+    void showAllApps() {
+        if (!running) {
+            allAppsOnResume = true;
+            return;
+        }
+        reset(false);
+        openSheet();
+    }
+
+    private boolean allAppsOnResume;
 
     private void openSheet() {
         sheetOpen = true;
