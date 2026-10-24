@@ -85,7 +85,8 @@ final class HomeApps {
      * Apps on the home shelf, in this order, when installed (the first FEW_APPS): key, name, package, brand color (for
      * its logo on glass) and how to lift the logo from the app's TV art: "tint" = a white logo takes the art's
      * background color (Prime Video, Globoplay); "play" = the white triangle inside the red button stays white
-     * (YouTube); empty = the art's colors as they are. Last, a visual size tweak for the logo. Edit freely.
+     * (YouTube); "white" = only the white of the art, for a white logo over a busy gradient (Kinopoisk); empty = the
+     * art's colors as they are. Last, a visual size tweak for the logo. Edit freely.
      */
     private static final String[][] SHELF = {
         {"netflix", "Netflix", "com.netflix.ninja", "E50914", "", "1"},
@@ -106,7 +107,13 @@ final class HomeApps {
         {"peacock", "Peacock", "com.peacocktv.peacockandroid", "6E55DC", "", "1"},
         {"peacock", "Peacock", "com.peacock.peacockfiretv", "6E55DC", "", "1"},
         {"globoplay", "Globoplay", "com.globo.globotv", "FF5A1F", "tint", "1"},
+        {"kinopoisk", "Кинопоиск", "ru.kinopoisk.tv", "FF5500", "white", "1"},
+        {"okko", "Okko", "ru.more.play", "6D43FF", "", "1"},
+        {"premier", "Premier", "gpm.tnt_premier", "FF2D55", "", "1"},
+        {"amediateka", "Амедиатека", "ru.amediateka", "E31E24", "", "1"},
+        {"wink", "Wink", "ru.rt.video.app.tv", "FF5A1F", "", "1"},
         {"spotify", "Spotify", "com.spotify.tv.android", "1DB954", "", "1"},
+        {"moonlight", "Moonlight", "com.limelight", "5C6B7A", "", "1.3"},   // its banner fills the card edge to edge
     };
     /**
      * Apps the shelf shows at once (it scrolls for the rest): 8, today's smallest tiles (178 wide in HomeView's 1760 of
@@ -608,7 +615,7 @@ final class HomeApps {
             } else if (!extract) {
                 return null;
             } else {
-                logo = bannerLogo(c, pkg, mode.equals("tint"), mode.equals("play"));
+                logo = bannerLogo(c, pkg, mode.equals("tint"), mode.equals("play"), mode.equals("white"));
                 saveLogo(logo, file, none);
             }
         }
@@ -663,10 +670,11 @@ final class HomeApps {
     /**
      * Logo lifted from the app's TV art: the background is removed (estimated from the edges, gradients are fine), the
      * brand colors stay and black turns white (the card is dark). With `tint`, a white logo on a colored background
-     * takes the background's color; with `holes`, holes inside colored shapes (the play triangle) turn white. The
-     * edges are "decontaminated" (no halo from the background).
+     * takes the background's color; with `holes`, holes inside colored shapes (the play triangle) turn white; with
+     * `white`, only what is white is kept (anything colored or dark is background). The edges are "decontaminated" (no
+     * halo from the background).
      */
-    private static Bitmap bannerLogo(Context c, String pkg, boolean tint, boolean holes) {
+    private static Bitmap bannerLogo(Context c, String pkg, boolean tint, boolean holes, boolean white) {
         Drawable d = bannerDrawable(c, pkg);
         if (d == null) return null;
         final int w = 768, h = 432;
@@ -720,23 +728,31 @@ final class HomeApps {
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 int idx = y * w + x;
-                // Is there ink here (the old thresholds, on the nearby ink), and how much of this pixel it covers
-                // (its distance against that ink's): solid parts stay opaque, edges keep their anti-aliasing.
-                float gate = smoothstep(0.07f, 0.22f, near[idx]);
-                if (gate <= 0.004f) continue;
-                float a = gate * clamp((dist[idx] - 0.04f) / (0.85f * (near[idx] - 0.04f)));
-                if (a <= 0.004f) continue;
-                background(bg, x, y, w, h, top, bottom, left, right);
                 int p = px[idx];
                 col[0] = ((p >> 16) & 255) / 255f;
                 col[1] = ((p >> 8) & 255) / 255f;
                 col[2] = (p & 255) / 255f;
-                for (int i = 0; i < 3; i++) col[i] = clamp((col[i] - (1 - a) * bg[i]) / a);   // no background halo
-                float l = lum(col), s = sat(col);
-                if (bgLum > 0.6f && l < 0.42f && s < 0.3f) {
-                    col[0] = col[1] = col[2] = 1f;                  // black text on a light background → white
-                } else if (tint && bgLum <= 0.6f && bgLum > 0.1f && bgSat > 0.35f && l > 0.7f && s < 0.25f) {
-                    vivid(bg, col);                                 // white logo on brand color → that color, vivid
+                float a;
+                if (white) {
+                    // Only what is white is ink: on a busy gradient the distance from the background says nothing.
+                    a = smoothstep(0.55f, 0.85f, lum(col)) * (1 - smoothstep(0.12f, 0.3f, sat(col)));
+                    if (a <= 0.004f) continue;
+                    col[0] = col[1] = col[2] = 1f;
+                } else {
+                    // Is there ink here (the old thresholds, on the nearby ink), and how much of this pixel it covers
+                    // (its distance against that ink's): solid parts stay opaque, edges keep their anti-aliasing.
+                    float gate = smoothstep(0.07f, 0.22f, near[idx]);
+                    if (gate <= 0.004f) continue;
+                    a = gate * clamp((dist[idx] - 0.04f) / (0.85f * (near[idx] - 0.04f)));
+                    if (a <= 0.004f) continue;
+                    background(bg, x, y, w, h, top, bottom, left, right);
+                    for (int i = 0; i < 3; i++) col[i] = clamp((col[i] - (1 - a) * bg[i]) / a);   // no background halo
+                    float l = lum(col), s = sat(col);
+                    if (bgLum > 0.6f && l < 0.42f && s < 0.3f) {
+                        col[0] = col[1] = col[2] = 1f;                  // black text on a light background → white
+                    } else if (tint && bgLum <= 0.6f && bgLum > 0.1f && bgSat > 0.35f && l > 0.7f && s < 0.25f) {
+                        vivid(bg, col);                                 // white logo on brand color → that color, vivid
+                    }
                 }
                 out[idx] = (Math.round(a * 255) << 24) | (Math.round(col[0] * 255) << 16) | (Math.round(col[1] * 255) << 8) | Math.round(col[2] * 255);
                 if (a > 0.5f) opaque++;
