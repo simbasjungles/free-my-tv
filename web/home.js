@@ -653,6 +653,15 @@
     sym(Data.symbol(w.code, w.isDay), now);
     el('span', 'temp', now, Data.degrees(w.temp));
     el('div', 'cond', card, Data.condition(w.code, w.isDay));
+    var extra = [];
+    if (w.rain) {
+      extra.push(w.rain.inMin === null ? tr('No rain in the next 2 hours')
+        : trf('Rain in ~{time}', {time: trf('{n} min', {n: Math.max(5, Math.round(w.rain.inMin / 5) * 5)})}));
+    }
+    if (w.uv >= 3) extra.push(trf('UV {n}', {n: Math.round(w.uv)}));
+    var air = Data.air;
+    if (air && air.aqi !== null && air.aqi !== undefined) extra.push(trf('AQI {n}', {n: Math.round(air.aqi)}));
+    if (extra.length) el('div', 'extra', card, extra.join(' · '));
     el('div', 'range', card, trf('H:{max}', {max: Data.degrees(w.max)}) + '   ' + trf('L:{min}', {min: Data.degrees(w.min)}));
     el('div', 'split', card);
     // Home Settings → Forecast: the next 6 hours or the next 5 days (the hours until a forecast has days).

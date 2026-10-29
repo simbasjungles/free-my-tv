@@ -435,8 +435,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #weather .now { position: absolute; left: 34px; top: 82px; height: 100px; white-space: nowrap; }
 #weather .now .sym { width: 56px; height: 56px; vertical-align: 12px; margin-right: 18px; }
 #weather .now .temp { font-size: 100px; font-weight: 300; line-height: 100px; -webkit-font-feature-settings: 'tnum'; font-feature-settings: 'tnum'; }
-#weather .cond { position: absolute; left: 34px; top: 192px; font-size: 29px; font-weight: 500; white-space: nowrap; }
-#weather .range { position: absolute; left: 34px; top: 236px; font-size: 23px; font-weight: 500; color: #6E6E73; white-space: nowrap; -webkit-font-feature-settings: 'tnum'; font-feature-settings: 'tnum'; }
+#weather .cond { position: absolute; left: 34px; top: 186px; font-size: 27px; font-weight: 500; white-space: nowrap; }
+#weather .extra { position: absolute; left: 34px; top: 224px; font-size: 21px; font-weight: 500; color: #6E6E73; white-space: nowrap; max-width: 352px; overflow: hidden; text-overflow: ellipsis; }
+#weather .range { position: absolute; left: 34px; top: 258px; font-size: 21px; font-weight: 500; color: #6E6E73; white-space: nowrap; -webkit-font-feature-settings: 'tnum'; font-feature-settings: 'tnum'; }
 #weather .split { position: absolute; left: 391px; top: 34px; bottom: 34px; width: 2px; background: rgba(0, 0, 0, 0.1); }
 #weather .hours { position: absolute; left: 422px; right: 30px; top: 74px; height: 140px; }
 #weather .hour { position: absolute; top: 0; text-align: center; -webkit-font-feature-settings: 'tnum'; font-feature-settings: 'tnum'; }
@@ -447,7 +448,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #weather .sun { position: absolute; left: 422px; top: 236px; font-size: 23px; font-weight: 500; color: #6E6E73; white-space: nowrap; }
 #weather .sun .sym { width: 22px; height: 22px; vertical-align: -3px; margin-right: 10px; }
 #weather .sun span { margin-right: 36px; }
-.night #weather .range, .night #weather .hour .t, .night #weather .hour .low, .night #weather .sun { color: rgba(255, 255, 255, 0.68); }
+.night #weather .range, .night #weather .extra, .night #weather .hour .t, .night #weather .hour .low, .night #weather .sun { color: rgba(255, 255, 255, 0.68); }
 .night #weather .split { background: rgba(255, 255, 255, 0.14); }
 
 #prices .coin { position: absolute; left: 34px; right: 34px; height: 40px; font-size: 29px; font-weight: 500; white-space: nowrap; }

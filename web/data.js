@@ -160,8 +160,10 @@ var Data = (function () {
 
   function place() { return Prefs.latitude() + ',' + Prefs.longitude(); }
   // Both forecasts in one answer, the next 48 hours and today plus 5 days: Home Settings → Forecast switches without
-  // asking again, and offline too.
-  var QUERY = '&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,weather_code'
+  // asking again, and offline too. The next two hours in 15-minute steps tell the card whether rain is coming.
+  var QUERY = '&current=temperature_2m,weather_code,is_day'
+      + '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,weather_code,uv_index_max'
+      + '&minutely_15=precipitation,precipitation_probability&forecast_minutely_15=8'
       + '&hourly=temperature_2m,weather_code,is_day&timezone=auto&forecast_days=6&forecast_hours=48';
   var weather = null, weatherAt = 0, fetchingWeather = false;
   (function () {
@@ -183,8 +185,22 @@ var Data = (function () {
     var w = {
       temp: o.current.temperature_2m, code: o.current.weather_code, isDay: o.current.is_day !== 0,
       max: dl.temperature_2m_max[0], min: dl.temperature_2m_min[0],
+      uv: dl.uv_index_max ? dl.uv_index_max[0] : null,
       sunrise: localTime(dl.sunrise[0], off), sunset: localTime(dl.sunset[0], off), hours: [], days: []
     };
+    // The next two hours in 15-minute steps: enough for "rain in ~40 min" without a second request. A slot counts as
+    // rain from a 50% chance or 0.2 mm of it; the first one is when it starts.
+    var mr = o.minutely_15;
+    if (mr && mr.time) {
+      w.rain = {inMin: null};
+      for (var k = 0; k < mr.time.length; k++) {
+        var when = localTime(mr.time[k], off);
+        if (when < now - 7 * 60000) continue;   // the step it's in now
+        var pr = mr.precipitation_probability ? mr.precipitation_probability[k] || 0 : 0;
+        var mm = mr.precipitation ? mr.precipitation[k] || 0 : 0;
+        if (w.rain.inMin === null && (pr >= 50 || mm >= 0.2)) w.rain.inMin = Math.max(0, Math.round((when - now) / 60000));
+      }
+    }
     var hr = o.hourly;
     for (var i = 0; hr && i < hr.time.length && w.hours.length < 6; i++) {
       var at = localTime(hr.time[i], off);
@@ -214,6 +230,36 @@ var Data = (function () {
       weather = parseWeather(body);
       weatherAt = Date.now();
       store('weather', {place: at, body: body, at: weatherAt, query: QUERY});
+      changed();
+    });
+  }
+
+  // MARK: - Air quality
+
+  /**
+   * Open-Meteo's air-quality endpoint, apart from the forecast: its numbers change slowly, so it has its own half-hour
+   * cache and its own key, and a TV that can't reach it still shows the weather.
+   */
+  var AIR_QUERY = 'current=us_aqi,pm2_5&timezone=auto';
+  var air = null, airAt = 0, fetchingAir = false;
+  (function () {
+    var a = stored('air');
+    if (a && a.place === place() && a.query === AIR_QUERY) { air = a.body; airAt = a.at; }
+  })();
+
+  function refreshAir() {
+    var now = Date.now();
+    if (fetchingAir || (now - airAt < 30 * 60000 && now >= airAt)) return;
+    fetchingAir = true;
+    var at = place();
+    getMeteo('air-quality-api.open-meteo.com/v1/air-quality?latitude=' + Prefs.latitude() + '&longitude='
+        + Prefs.longitude() + '&' + AIR_QUERY, function (err, body) {
+      fetchingAir = false;
+      if (at !== place()) { refreshAir(); return; }   // another city was picked meanwhile
+      if (err || !body || !body.current) return;
+      air = {aqi: body.current.us_aqi, pm25: body.current.pm2_5, at: Date.now()};
+      airAt = air.at;
+      store('air', {place: at, body: air, at: airAt, query: AIR_QUERY});
       changed();
     });
   }
@@ -653,12 +699,13 @@ var Data = (function () {
     appFor: appFor,
     usable: usable,
     services: services,
-    refresh: function () { refreshWeather(); refreshPrices(); refreshRecs(); },
+    refresh: function () { refreshWeather(); refreshAir(); refreshPrices(); refreshRecs(); },
     settingsChanged: function () { pricesAt = 0; refreshPrices(); changed(); },
     findCity: findCity,
     /** Another city picked: its weather now (none shown until it comes). */
-    cityChanged: function () { weather = null; weatherAt = 0; refreshWeather(); changed(); },
+    cityChanged: function () { weather = null; weatherAt = 0; air = null; airAt = 0; refreshWeather(); refreshAir(); changed(); },
     get weather() { return weather; },
+    get air() { return air; },
     get weatherAt() { return weatherAt; },
     prices: prices,
     changes: changes,
