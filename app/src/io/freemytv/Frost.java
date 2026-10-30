@@ -58,8 +58,9 @@ final class Frost {
     }
 
     private static float hash(float x, float y) {
-        x = fract(x * 123.34f);
-        y = fract(y * 456.21f);
+        // The shader's scale (43/128, 27/128): exact at a lattice corner, as on the GPU.
+        x = fract(x * 0.3359375f);
+        y = fract(y * 0.2109375f);
         float d = x * (x + 45.32f) + y * (y + 45.32f);
         return fract((x + d) * (y + d));
     }
