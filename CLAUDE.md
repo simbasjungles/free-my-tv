@@ -305,8 +305,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   *Original* revokes it with `pm revoke`. Watch Next pictures load only from the TV (`content://`, `android.resource://`),
   never from the network. The app talks only to TMDB, Open-Meteo, Binance, Watchmode (with a `watchmode_key`), your Plex
   server (with a `plex_url`), your Immich server (with `immich_server` and its key), Trakt (with a `trakt_client_id`,
-  once the person signs in on the TV) and GitHub's releases (Updates): new sources (such as Stremio) must not add
-  network calls without the owner's OK.
+  once the person signs in on the TV), YouTube's public RSS feeds and thumbnails (`www.youtube.com`, `i.ytimg.com`: only
+  with the YouTube tab turned on, only from `:home`, no redirects) and GitHub's releases (Updates): new sources (such as
+  Stremio) must not add network calls without the owner's OK.
 - Trakt (`Trakt`, Google TV only) needs the person's own API app: `trakt_client_id` (the Client ID only: device code
   with PKCE, so no secret is built in). Until they sign in on the Picks screen, nothing talks to `api.trakt.tv`. The
   tokens stay in `:home`'s private `trakt` preferences, are never logged and never follow a redirect, and only `:home`

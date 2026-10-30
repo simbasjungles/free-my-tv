@@ -150,7 +150,7 @@ public class SettingsActivity extends Activity {
 
     static final class SettingsView extends View implements Choreographer.FrameCallback {
         private static final int MAIN = 0, HOME_CHOICE = 1, HOME_SETTINGS = 2, REMOTE_KEYS = 3, PICKER = 4, SHELF_EDIT = 5,
-                POWER = 6, TMDB_KEY = 7, PICKS = 8, PICK_FROM = 9, WATCH_APPS = 10;
+                POWER = 6, TMDB_KEY = 7, PICKS = 8, PICK_FROM = 9, WATCH_APPS = 10, YT_EDIT = 11, MUSIC_EDIT = 12;
         private static final float LIST_ROW_H = 68, LIST_ROW_GAP = 6;
         private static final int PICK_VISIBLE = 9;
         private static final float LIST_X = 1000, LIST_R = 1824, LIST_TOP = 186, ROW_GAP = 8, CHOICE_H = 104;
@@ -183,6 +183,11 @@ public class SettingsActivity extends Activity {
          */
         private final List<String[]> choices = new ArrayList<>();
         private String choiceNow = "";
+        // The YouTube tab's categories (YouTube.CATEGORIES keys).
+        private final List<String> ytPicked = new ArrayList<>();
+        // The Music tab's genres (Deezer ids, Music.GENRES).
+        private final List<String> musicPicked = new ArrayList<>();
+        private String[][] musicList = Music.GENRES;     // in alphabetical order, made when the screen opens
         private final List<String[]> cities = new ArrayList<>();
         private String cityStatus = "";
         private JSONObject updates = new JSONObject();   // Updates' file (the main process writes it), read in poll
@@ -365,6 +370,20 @@ public class SettingsActivity extends Activity {
                     return app[1] + ", " + onOff(!Prefs.watchOff().contains(app[0])) + ", "
                             + Ui.trf("{i} of {n}", "i", at + 1, "n", watchApps.size());
                 }
+                case YT_EDIT: {
+                    int at = pickScroll + row;
+                    if (at == 0) return Ui.tr("YouTube tab") + ", " + onOff(Prefs.youtubeOn());
+                    if (at == YouTube.CATEGORIES.length + 1) return hideAiLabel() + ", " + onOff(Prefs.youtubeHideAi());
+                    if (at > YouTube.CATEGORIES.length + 1) return "";
+                    String[] cat = YouTube.CATEGORIES[at - 1];
+                    return YouTube.name(cat) + ", " + (ytPicked.contains(cat[0]) ? Ui.tr("chosen") : Ui.tr("not chosen"));
+                }
+                case MUSIC_EDIT: {
+                    int at = pickScroll + row;
+                    if (at >= Music.GENRES.length) return "";
+                    String[] g = musicList[at];
+                    return Music.get(getContext()).name(g) + ", " + (musicPicked.contains(g[0]) ? Ui.tr("chosen") : Ui.tr("not chosen"));
+                }
                 case SHELF_EDIT: {
                     int at = pickScroll + row;
                     if (at >= shelfRows.size()) return "";
@@ -538,6 +557,8 @@ public class SettingsActivity extends Activity {
                 case PICKS: return picksLabels().length;
                 case PICK_FROM: return Math.min(PICK_VISIBLE, services.size());
                 case WATCH_APPS: return Math.min(PICK_VISIBLE, listSize());
+                case YT_EDIT: return Math.min(PICK_VISIBLE, YouTube.CATEGORIES.length + 2);
+                case MUSIC_EDIT: return Math.min(PICK_VISIBLE, Music.GENRES.length);
                 default: return Prefs.KEYS.length;
             }
         }
@@ -577,6 +598,8 @@ public class SettingsActivity extends Activity {
             else if (screen == TMDB_KEY) drawKey(c);
             else if (screen == PICK_FROM) drawServices(c);
             else if (screen == WATCH_APPS) drawWatchApps(c);
+            else if (screen == YT_EDIT) drawYouTube(c);
+            else if (screen == MUSIC_EDIT) drawMusic(c);
             else drawList(c);
         }
 
@@ -948,6 +971,16 @@ public class SettingsActivity extends Activity {
                                 focus = WATCH_ROW;   // on the list's first screen
                                 pickScroll = 0;
                                 screen = HOME_SETTINGS;
+                            } else if (screen == YT_EDIT) {
+                                countServicesOff();
+                                pickScroll = 0;
+                                focus = youtubeRow();
+                                screen = PICKS;
+                            } else if (screen == MUSIC_EDIT) {
+                                countServicesOff();
+                                pickScroll = 0;
+                                focus = musicRow();
+                                screen = PICKS;
                             } else {
                                 focus = screen == HOME_SETTINGS ? 2 : screen == SHELF_EDIT ? (editingTop ? 4 : 3)
                                         : screen == REMOTE_KEYS ? 5 : screen == POWER ? 6 : 0;
@@ -1029,17 +1062,28 @@ public class SettingsActivity extends Activity {
         }
 
         private String[] picksLabels() {
-            return Trakt.available() ? new String[] {Ui.tr("Picks per tab"), Ui.tr("Picks from"), "Trakt"}
-                    : new String[] {Ui.tr("Picks per tab"), Ui.tr("Picks from")};
+            return Trakt.available() ? new String[] {Ui.tr("Picks per tab"), Ui.tr("Picks from"), "Trakt", Ui.tr("YouTube tab"), Ui.tr("Music tab")}
+                    : new String[] {Ui.tr("Picks per tab"), Ui.tr("Picks from"), Ui.tr("YouTube tab"), Ui.tr("Music tab")};
         }
 
         private String[] picksValues() {
             String from = someServicesOff ? Ui.tr("services|Some") : Ui.tr("services|All");
-            return Trakt.available() ? new String[] {String.valueOf(Prefs.cards()), from, traktValue()}
-                    : new String[] {String.valueOf(Prefs.cards()), from};
+            String yt = onOff(Prefs.youtubeOn()), music = onOff(!Prefs.musicGenres().isEmpty());
+            return Trakt.available() ? new String[] {String.valueOf(Prefs.cards()), from, traktValue(), yt, music}
+                    : new String[] {String.valueOf(Prefs.cards()), from, yt, music};
         }
 
-        /** The Trakt row on the Picks screen (the last one), only with a Trakt API app in config.properties; else -1. */
+        /** The YouTube tab's row on the Picks screen, the last: ← → turn the tab on or off, OK opens its categories. */
+        private static int youtubeRow() {
+            return Trakt.available() ? 3 : 2;
+        }
+
+        /** The Music tab's row, after YouTube's: OK opens its genres (none picked: no tab). */
+        private static int musicRow() {
+            return youtubeRow() + 1;
+        }
+
+        /** The Trakt row on the Picks screen (the third), only with a Trakt API app in config.properties; else -1. */
         private static int traktRow() {
             return Trakt.available() ? 2 : -1;
         }
@@ -1354,6 +1398,7 @@ public class SettingsActivity extends Activity {
             boolean turnOff = screen == HOME_SETTINGS && pickScroll + focus == PLAYING_ROW && Prefs.nowPlaying();
             if (unavailable(focus) != null && !turnOff) return;
             if (screen == PICKS) {
+                if (focus == youtubeRow()) Prefs.setYoutubeOn(!Prefs.youtubeOn());
                 if (focus == 0) {
                     int n = Prefs.cards() - 3, span = Recs.MAX_CARDS - 3 + 1;
                     Prefs.setCards(3 + (n + dir + span) % span);
@@ -1886,12 +1931,13 @@ public class SettingsActivity extends Activity {
         }
 
         private boolean scrolling() {
-            return screen == PICKER || screen == SHELF_EDIT || screen == HOME_SETTINGS || screen == PICK_FROM || screen == WATCH_APPS;
+            return screen == PICKER || screen == SHELF_EDIT || screen == HOME_SETTINGS || screen == PICK_FROM || screen == WATCH_APPS || screen == YT_EDIT || screen == MUSIC_EDIT;
         }
 
         private int listSize() {
             if (screen == WATCH_APPS) return watchApps == null ? 0 : watchApps.size() + (watchHiddenCount > 0 ? 1 : 0);
-            return screen == SHELF_EDIT ? shelfRows.size() : screen == HOME_SETTINGS ? settingLabels().length : screen == PICK_FROM ? services.size() : pickLabels.size();
+            return screen == SHELF_EDIT ? shelfRows.size() : screen == HOME_SETTINGS ? settingLabels().length : screen == PICK_FROM ? services.size()
+                    : screen == YT_EDIT ? YouTube.CATEGORIES.length + 2 : screen == MUSIC_EDIT ? Music.GENRES.length : pickLabels.size();
         }
 
         // MARK: - Continue Watching apps
@@ -2116,6 +2162,139 @@ public class SettingsActivity extends Activity {
                     LIST_X * k + 30 * k, hy, hint);
         }
 
+        // MARK: - Music genres
+
+        /**
+         * Home Settings > Picks > Music tab: Deezer's genres, up to Music.MAX_GENRES. Their names in the TV's language
+         * come from Deezer only once a genre is picked: until then nothing is asked of Deezer, and the names are ours.
+         */
+        private void openMusic() {
+            musicPicked.clear();
+            musicPicked.addAll(Prefs.musicGenres());
+            musicList = Music.get(getContext()).sorted();
+            if (!musicPicked.isEmpty()) musicNames();
+            pickScroll = 0;
+            focus = 0;
+            screen = MUSIC_EDIT;
+            invalidate();
+            spoken.focusMoved();
+        }
+
+        /** OK: picks the genre or takes it out, saved right away; past the most, nothing is added. */
+        private void toggleMusic() {
+            String id = musicList[pickScroll + focus][0];
+            if (!musicPicked.remove(id) && musicPicked.size() < Music.MAX_GENRES) musicPicked.add(id);
+            Prefs.setMusicGenres(musicPicked);
+            if (!musicPicked.isEmpty()) musicNames();
+        }
+
+        /** Deezer's genre names (once; then kept): the list is sorted again by them, keeping the focused row. */
+        private void musicNames() {
+            Music music = Music.get(getContext());
+            music.fetchNames(() -> handler.post(() -> {
+                if (screen != MUSIC_EDIT) return;
+                String focused = musicList[pickScroll + focus][0];
+                musicList = music.sorted();
+                for (int i = 0; i < musicList.length; i++) {
+                    if (!musicList[i][0].equals(focused)) continue;
+                    pickScroll = Math.max(0, Math.min(i, musicList.length - PICK_VISIBLE));
+                    focus = i - pickScroll;
+                }
+                invalidate();
+            }));
+        }
+
+        private void drawMusic(Canvas c) {
+            Paint heading = Ui.text(Ui.displaySemibold, 34 * k, 0xFFFFFFFF);
+            c.drawText(Ui.tr("Music: which genres?"), LIST_X * k + 30 * k, (LIST_TOP - 24) * k, heading);
+            Music music = Music.get(getContext());
+            int rows = rowCount();
+            for (int i = 0; i < rows; i++) {
+                float y = (LIST_TOP + 20 + i * (LIST_ROW_H + LIST_ROW_GAP)) * k;
+                rowRect.set(LIST_X * k, y, LIST_R * k, y + LIST_ROW_H * k);
+                float f = drawRowBackground(c, i);
+                String[] g = musicList[pickScroll + i];
+                boolean on = musicPicked.contains(g[0]);
+                rowLabel.setColor(blend(on ? 0xF2FFFFFF : 0x99FFFFFF, on ? INK : 0x991C1C1E, f));
+                c.drawText(music.name(g), rowRect.left + 30 * k, rowRect.centerY() + Ui.halfCap(rowLabel), rowLabel);
+                if (on) {
+                    float cw = Symbols.width(getContext(), "check", 26 * k);
+                    Symbols.draw(getContext(), c, "check", rowRect.right - 30 * k - cw / 2, rowRect.centerY(), 26 * k, blend(0xFFFFFFFF, INK, f));
+                }
+            }
+            Paint hint = Ui.text(Ui.regular, 23 * k, 0x8CFFFFFF);
+            float hy = (LIST_TOP + 20 + rows * (LIST_ROW_H + LIST_ROW_GAP) + 36) * k;
+            c.drawText(Ui.trf("OK picks or removes (up to {n}). None: no Music tab. Back saves.", "n", Music.MAX_GENRES),
+                    LIST_X * k + 30 * k, hy, hint);
+        }
+
+        // MARK: - YouTube categories
+
+        /** Home Settings > Picks > YouTube tab: the switch, the categories (none picked: no tab) and Hide AI videos. */
+        private void openYouTube() {
+            List<String> saved = Prefs.youtubeCategories();
+            ytPicked.clear();
+            if (saved != null) ytPicked.addAll(saved);
+            pickScroll = 0;
+            focus = 0;
+            screen = YT_EDIT;
+            invalidate();
+            spoken.focusMoved();
+        }
+
+        /** OK: picks the category or takes it out; saved right away (the home screen fetches the new channels). */
+        private static String hideAiLabel() {
+            return Ui.tr("Hide AI videos");
+        }
+
+        private void toggleYouTube() {
+            int at = pickScroll + focus;
+            if (at == 0) {     // the first row: the tab itself
+                Prefs.setYoutubeOn(!Prefs.youtubeOn());
+                return;
+            }
+            if (at == YouTube.CATEGORIES.length + 1) {     // the last row: Hide AI videos
+                Prefs.setYoutubeHideAi(!Prefs.youtubeHideAi());
+                return;
+            }
+            String key = YouTube.CATEGORIES[at - 1][0];
+            if (!ytPicked.remove(key)) ytPicked.add(key);
+            Prefs.setYoutubeCategories(ytPicked);
+        }
+
+        private void drawYouTube(Canvas c) {
+            Paint heading = Ui.text(Ui.displaySemibold, 34 * k, 0xFFFFFFFF);
+            c.drawText(Ui.tr("YouTube: what do you like?"),
+                    LIST_X * k + 30 * k, (LIST_TOP - 24) * k, heading);
+            int rows = rowCount();
+            for (int i = 0; i < rows; i++) {
+                float y = (LIST_TOP + 20 + i * (LIST_ROW_H + LIST_ROW_GAP)) * k;
+                rowRect.set(LIST_X * k, y, LIST_R * k, y + LIST_ROW_H * k);
+                float f = drawRowBackground(c, i);
+                int at = pickScroll + i;
+                if (at == 0 || at == YouTube.CATEGORIES.length + 1) {     // the first and last rows: switches, not categories
+                    boolean tab = at == 0;
+                    rowLabel.setColor(blend(0xF2FFFFFF, INK, f));
+                    rowValue.setColor(blend(0xB3FFFFFF, 0xB31C1C1E, f));
+                    float base = rowRect.centerY() + Ui.halfCap(rowLabel);
+                    c.drawText(tab ? Ui.tr("YouTube tab") : hideAiLabel(), rowRect.left + 30 * k, base, rowLabel);
+                    c.drawText(onOff(tab ? Prefs.youtubeOn() : Prefs.youtubeHideAi()), rowRect.right - 30 * k, base, rowValue);
+                    continue;
+                }
+                String[] cat = YouTube.CATEGORIES[at - 1];
+                boolean on = ytPicked.contains(cat[0]);
+                rowLabel.setColor(blend(on ? 0xF2FFFFFF : 0x99FFFFFF, on ? INK : 0x991C1C1E, f));
+                c.drawText(YouTube.name(cat), rowRect.left + 30 * k, rowRect.centerY() + Ui.halfCap(rowLabel), rowLabel);
+                if (on) {
+                    float cw = Symbols.width(getContext(), "check", 26 * k);
+                    Symbols.draw(getContext(), c, "check", rowRect.right - 30 * k - cw / 2, rowRect.centerY(), 26 * k, blend(0xFFFFFFFF, INK, f));
+                }
+            }
+            Paint hint = Ui.text(Ui.regular, 23 * k, 0x8CFFFFFF);
+            float hy = (LIST_TOP + 20 + rows * (LIST_ROW_H + LIST_ROW_GAP) + 36) * k;
+            c.drawText(Ui.tr("OK picks or removes. None: no YouTube tab. Back saves."), LIST_X * k + 30 * k, hy, hint);
+        }
+
         private void openPicker(int which) {
             pickFor = which;
             pickLabels.clear();
@@ -2317,6 +2496,16 @@ public class SettingsActivity extends Activity {
                 toggleShelfApp();
                 invalidate();
                 return;
+            } else if (screen == MUSIC_EDIT) {
+                toggleMusic();
+                invalidate();
+                spoken.focusMoved();
+                return;
+            } else if (screen == YT_EDIT) {
+                toggleYouTube();
+                invalidate();
+                spoken.focusMoved();
+                return;
             } else if (screen == WATCH_APPS) {
                 toggleWatchApp();
                 invalidate();
@@ -2363,6 +2552,10 @@ public class SettingsActivity extends Activity {
                 return;
             } else if (screen == POWER) {
                 activatePower();
+            } else if (screen == PICKS && focus == youtubeRow()) {
+                openYouTube();
+            } else if (screen == PICKS && focus == musicRow()) {
+                openMusic();
             } else if (screen == PICKS && focus == traktRow()) {
                 traktOk();
                 invalidate();

@@ -337,9 +337,40 @@ final class Prefs {
     }
 
     static void setShelf(List<String> packages) {
-        StringBuilder sb = new StringBuilder();
-        for (String p : packages) sb.append(sb.length() == 0 ? "" : ",").append(p);
-        put("shelf", sb.toString());
+        put("shelf", String.join(",", packages));
+    }
+
+    // MARK: - YouTube tab
+
+    /** The YouTube tab, off until turned on (Home Settings > Picks > YouTube tab). */
+    static boolean youtubeOn() {
+        return sp().getBoolean("youtube_on", false);
+    }
+
+    static void setYoutubeOn(boolean on) {
+        put("youtube_on", on);
+    }
+
+    /** The YouTube tab's categories (YouTube.CATEGORIES keys); null until picked once (empty: none, the mix). */
+    static List<String> youtubeCategories() {
+        String v = sp().getString("youtube", null);
+        if (v == null) return null;
+        List<String> out = new ArrayList<>();
+        for (String p : v.split(",")) if (!p.isEmpty()) out.add(p);
+        return out;
+    }
+
+    static void setYoutubeCategories(List<String> keys) {
+        put("youtube", String.join(",", keys));
+    }
+
+    /** The YouTube tab leaves out videos whose titles are about AI. */
+    static boolean youtubeHideAi() {
+        return sp().getBoolean("youtube_hide_ai", false);
+    }
+
+    static void setYoutubeHideAi(boolean on) {
+        put("youtube_hide_ai", on);
     }
 
     // MARK: - Sleep timer
@@ -364,6 +395,19 @@ final class Prefs {
     static int sleepPlace() { return sp().getInt("sleepPlace", 0); }
 
     static void setSleepPlace(int place) { sp().edit().putInt("sleepPlace", place).apply(); }
+
+    // MARK: - Music tab
+
+    /** The Music tab's genres (Deezer genre ids, Music.GENRES): none picked, no Music tab. */
+    static List<String> musicGenres() {
+        List<String> out = new ArrayList<>();
+        for (String p : sp().getString("music", "").split(",")) if (!p.isEmpty()) out.add(p);
+        return out;
+    }
+
+    static void setMusicGenres(List<String> ids) {
+        put("music", String.join(",", ids));
+    }
 
     // MARK: - Top buttons
 
