@@ -55,6 +55,7 @@ final class Recs {
         String servicePkg;      // open_in_stremio: the TV's own app it streams on (pkg is then Stremio's)
         String tag;             // Trakt: "Up next: S2 E5", "On your watchlist"…, first in the meta; else null
         int mine;               // Trakt: PROGRESS, LIKED (watchlist, recommended) or 0 (TMDB's)
+        String video;           // YouTube tab (kind "yt"): the video's id
         boolean detailed;
         java.io.File photo;     // one of your own photos (Photos): no title, no caption
     }
@@ -64,7 +65,7 @@ final class Recs {
     // TMDB's own mirror of api.themoviedb.org, on the images' domain: some ISPs block the other name (Jio, #327)
     private static final String API = "https://api.tmdb.org/3";
     /** The most cards per tab and hour (Prefs.cards() picks how many, 3 by default); the home screen shows 3 at a time and scrolls. */
-    static final int MAX_CARDS = 6;
+    static final int MAX_CARDS = 6;   // also the videos in each YouTube row
 
     /** The backdrops: on a 720p UI, TMDB's 1280-wide copy shows the same and is lighter to download and decode. */
     private static final String IMAGES = "https://image.tmdb.org/t/p/" + (Backdrop.W <= 1280 ? "w1280" : "original");
@@ -159,6 +160,8 @@ final class Recs {
         SERVICE_NAME.put("amediateka", "Амедиатека");
         SERVICE_NAME.put("wink", "Wink");
         SERVICE_NAME.put("plex", "Plex");
+        SERVICE_NAME.put("smarttube", "SmartTube");
+        SERVICE_NAME.put("youtube", "YouTube");
     }
     /** Country for "what streams where" (config.properties "tmdb_region", e.g. US, GB, BR). */
     static final String REGION = Place.region();
@@ -326,6 +329,7 @@ final class Recs {
 
     /** This hour's Prefs.cards(), movies only ("movie") or shows only ("tv"); null = both (the home screen tabs). */
     List<Pick> now(String kind) {
+        if ("yt".equals(kind)) return YouTube.get(context).now();
         List<Pick> out = new ArrayList<>();
         if (!hasKey(context)) return out;    // no TMDB key: no recommendations
         List<Pick> progress = new ArrayList<>(), liked = new ArrayList<>(), list = new ArrayList<>();
@@ -402,7 +406,12 @@ final class Recs {
     }
 
     private File imageFile(Pick p) {
-        return new File(new File(context.getCacheDir(), "recs"), p.backdrop.replace("/", ""));
+        return new File(new File(context.getCacheDir(), "recs"), p.backdrop.replaceAll("[^A-Za-z0-9._-]", ""));
+    }
+
+    /** The YouTube tab's feeds: only the home screen asks (never the screensaver, in whichever process it runs). */
+    void refreshTabs() {
+        YouTube.get(context).refreshIfStale(this::notifyListeners);
     }
 
     /** With a key: fetches the list if stale or the time of day (morning/afternoon/night) changed; then the details. */
@@ -496,7 +505,7 @@ final class Recs {
         List<Pick> out = new ArrayList<>();
         if (!hasKey(context)) return out;
         java.util.Set<String> seen = new java.util.HashSet<>();
-        for (Pick p : wanted()) if (hasImage(p) && seen.add(franchise(p.title))) out.add(p);
+        for (Pick p : wanted()) if (!"yt".equals(p.kind) && hasImage(p) && seen.add(franchise(p.title))) out.add(p);
         Map<String, Boolean> have = new HashMap<>();
         for (Pick p : picks) {
             if (p.detailed && p.pkg != null && have.computeIfAbsent(p.pkg, this::installed) && hasImage(p)
@@ -565,9 +574,9 @@ final class Recs {
         return out;
     }
 
-    /** Movies and shows are numbered separately on TMDB: a pick is identified by type + number. */
+    /** Movies and shows are numbered separately on TMDB: a pick is identified by type + number (videos by their id). */
     static String key(Pick p) {
-        return p.kind + ":" + p.id;
+        return p.kind + ":" + (p.video != null ? p.video : String.valueOf(p.id));
     }
 
     private void notifyListeners() {
@@ -1140,13 +1149,33 @@ final class Recs {
         return out.size() > 8 ? out.subList(0, 8) : out;
     }
 
-    // MARK: - Images (TMDB originals on disk, up to 24 so the whole list fits; this hour's kept ready in memory)
+    // MARK: - Images (TMDB originals and YouTube backgrounds on disk, up to 80; this hour's kept ready in memory)
 
     private void download(Pick p) throws IOException {
         File f = imageFile(p);
-        if (!f.exists()) fetchFile(f, p.id < 0
-                ? plexOpen("/photo/:/transcode?width=1920&height=1080&minSize=1&url=" + URLEncoder.encode(p.backdrop, "UTF-8"))
-                : (HttpURLConnection) new URL(IMAGES + p.backdrop).openConnection());
+        if (!f.exists()) {
+            boolean video = p.backdrop.startsWith(YouTube.THUMBS);
+            HttpURLConnection c = p.id < 0
+                    ? plexOpen("/photo/:/transcode?width=1920&height=1080&minSize=1&url=" + URLEncoder.encode(p.backdrop, "UTF-8"))
+                    : (HttpURLConnection) new URL(video ? p.backdrop : IMAGES + p.backdrop).openConnection();
+            if (video) c.setInstanceFollowRedirects(false);   // i.ytimg.com only
+            // A video's full-size thumbnail is missing when it was uploaded below 1080p: then the 720p one, then the small one.
+            for (String smaller : video ? new String[] {"hq720.jpg", "hqdefault.jpg"} : new String[0]) {
+                c.setConnectTimeout(8000);
+                c.setReadTimeout(20000);
+                if (c.getResponseCode() != 404) break;
+                c.disconnect();
+                c = (HttpURLConnection) new URL(p.backdrop.replace("maxresdefault.jpg", smaller)).openConnection();
+                c.setInstanceFollowRedirects(false);
+            }
+            // Not followed, a redirect's own page would be saved as the image.
+            if (video && c.getResponseCode() != 200) {
+                int code = c.getResponseCode();
+                c.disconnect();
+                throw new IOException("HTTP " + code);
+            }
+            fetchFile(f, c);
+        }
         File poster = posterFile(p);
         if (poster == null || poster.exists()) return;
         try {   // the narrow cards: without a poster they crop the backdrop
@@ -1260,9 +1289,10 @@ final class Recs {
             if (parts[i].lastModified() < stale) parts[i].delete();
         }
         File[] files = dir.listFiles((d, name) -> !name.endsWith(".part"));
-        if (files == null || files.length <= FILES) return;
+        int keep = FILES + (Prefs.youtubeOn() ? YouTube.BACKDROPS : 0);   // the tab's backgrounds only while it's on
+        if (files == null || files.length <= keep) return;
         Arrays.sort(files, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
-        for (int i = 0; i < files.length - FILES; i++) {
+        for (int i = 0; i < files.length - keep; i++) {
             //noinspection ResultOfMethodCallIgnored
             files[i].delete();
         }
