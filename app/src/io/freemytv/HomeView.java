@@ -135,8 +135,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private final NowPlaying.Watch playing;
     private final Click click;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    /** The picks take turns by themselves after this long without a key, and then every this long (see autoNext). */
+    private static final long AUTO_MS = 8_000;
     /** The background follows the focused pick once it has been there this long (see bgFollow). */
     private static final long BG_FOLLOW_MS = 500;
+    private long lastKeyAt;
     private final SharedPreferences ui;
     private final TvInputManager tvInputs;
     private final ConnectivityManager connectivity;
@@ -703,6 +706,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         startStatus();
         handler.postDelayed(tick, 15_000);
         playing.start();
+        lastKeyAt = now;
+        handler.removeCallbacks(autoNext);
+        handler.postDelayed(autoNext, AUTO_MS);
         checkNotices();
         hiddenNow.retainAll(Prefs.watchHidden());   // Home Settings may have shown the hidden ones again
         if (!again) reload();
@@ -727,6 +733,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     void pause() {
         if (!running) return;
         running = false;
+        handler.removeCallbacks(autoNext);
         handler.removeCallbacks(bgFollow);
         cancelReorder(true);
         if (recents != null) recents.closeNow();
@@ -2978,6 +2985,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     boolean onKey(KeyEvent e) {
+        lastKeyAt = SystemClock.uptimeMillis();   // any key holds the picks still (autoNext)
         wake();
         if (menuOpen) return menuKey(e);
         boolean down = e.getAction() == KeyEvent.ACTION_DOWN;
@@ -3726,6 +3734,29 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         if (Prefs.quotes() && HomeData.active().length > 0) out.add(1);
         return out;
     }
+
+    /**
+     * As on Netflix and Prime Video: after AUTO_MS without a key, the focus on the picks moves on by one (after the
+     * last, the first), and again every AUTO_MS; with the focus elsewhere, the background goes through them. A key holds
+     * them still until the remote rests that long again. Only while the home screen shows (pause() stops it), not with
+     * the drawer, the app sheet or a move open, and not with TalkBack, where the focus mustn't move by itself.
+     */
+    private final Runnable autoNext = new Runnable() {
+        @Override public void run() {
+            if (!running) return;
+            long wait = AUTO_MS - (SystemClock.uptimeMillis() - lastKeyAt);
+            if (wait <= 0) {
+                if (cards.size() > 1 && !drawerOpen && !sheetOpen && !reordering && !talkBack()
+                        && (zone == Z_SHELF || zone == Z_CARDS || zone == Z_TOP)) {
+                    cardIndex = (cardIndex + 1) % cards.size();
+                    retarget(false);
+                    wake();
+                }
+                wait = AUTO_MS;
+            }
+            handler.postDelayed(this, wait);
+        }
+    };
 
     /**
      * The background is the focused pick's, as on Netflix and Prime Video: once the focus has rested on it BG_FOLLOW_MS,

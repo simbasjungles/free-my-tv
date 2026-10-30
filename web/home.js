@@ -493,8 +493,9 @@
     img.src = url;
   }
 
-  // As HomeView's bgFollow: the background follows the focused pick.
-  var BG_FOLLOW_MS = 500, bgTimer = 0;
+  // As HomeView's autoNext and bgFollow: the background follows the focused pick, and the picks take turns by themselves
+  // while the remote rests.
+  var AUTO_MS = 8000, BG_FOLLOW_MS = 500, bgTimer = 0;
 
   /** The focused pick's photo as the background once the focus has rested on it: a quick run along the row fades once. */
   function followSoon() {
@@ -503,6 +504,24 @@
       if (cards.length) backdrop(Data.image(cards[Math.min(st.card, cards.length - 1)].backdrop, 'w300'));
     }, BG_FOLLOW_MS);
   }
+
+  /**
+   * As on Netflix and Prime Video: after AUTO_MS without a key, the focus on the picks moves on by one (after the last,
+   * the first), and again every AUTO_MS; with the focus elsewhere, the background goes through them. Not during the
+   * screensaver, with the page hidden, or with a sheet or the drawer open.
+   */
+  function autoNext() {
+    var wait = AUTO_MS - (Date.now() - idleAt);
+    if (wait <= 0) {
+      if (cards.length > 1 && !saverOn && !document.hidden && (st.zone === Z.SHELF || st.zone === Z.CARDS || st.zone === Z.TOP)) {
+        st.card = (st.card + 1) % cards.length;
+        updateFocus();
+      }
+      wait = AUTO_MS;
+    }
+    setTimeout(autoNext, wait);
+  }
+  setTimeout(autoNext, AUTO_MS);
 
   function renderClock() {
     var d = new Date(), c = $('clock');
