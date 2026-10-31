@@ -56,6 +56,13 @@ final class RemoteKeys {
      * devices we run on, whose remotes have a Home button; Formovie's Xiaomi projectors have their own remote.
      */
     static final boolean XIAOMI = is("Xiaomi") && !FORMOVIE && (Build.MODEL.startsWith("MiTV-M") || XIAOMI_PATCHWALL_ONLY);
+    /**
+     * Xiaomi's MiTV-AFKR0 (jaws, Amlogic, Android TV 11 tested), whose remote (Xiaomi RC,
+     * Vendor_2717_Product_32b9.kl) has the buttons marked "Mi TV+", Netflix, Prime Video and YouTube. YouTube is
+     * BUTTON_16 here, not BUTTON_3 as on the MiTV-M… remotes, and there is no Rutube button to clash with it. Its
+     * presses come one at a time, so no burst as on the other Xiaomi remotes.
+     */
+    static final boolean XIAOMI_AFKR0 = is("Xiaomi") && Build.MODEL.equals("MiTV-AFKR0");
     /** Brands whose Netflix button is STEM_1, a global key (MediaTek): only that button is ours. */
     static final boolean STEM_NETFLIX = VESTEL || FORMOVIE;
     /**
@@ -70,7 +77,7 @@ final class RemoteKeys {
     private static long lastDown;
 
     static boolean supported() {
-        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || HISENSE || GOOGLE_STREAMER || JVC_SKYWORTH;
+        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || XIAOMI_AFKR0 || HISENSE || GOOGLE_STREAMER || JVC_SKYWORTH;
     }
 
     /** The key service is on only where the filter is safe, and while a button opens something (else it has no work). */
