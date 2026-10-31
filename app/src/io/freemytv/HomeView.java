@@ -254,6 +254,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private int shelfIndex;
     /** The first app the shelf shows: with more apps than fit, it scrolls with the focus. */
     private int shelfFirst;
+    private int recentVersion;   // Recent.version when the shelf was last put in "Last opened first" order
     private final int shelfVisible;
 
     // Moving shelf apps or top buttons: hold OK, then ← → move it, OK drops it, Back cancels. The
@@ -708,6 +709,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         playing.start();
         checkNotices();
         hiddenNow.retainAll(Prefs.watchHidden());   // Home Settings may have shown the hidden ones again
+        if (Prefs.shelfRecent()) reorderRecent();
         if (!again) reload();
         updatePalette();
         updatePicks();
@@ -1585,6 +1587,24 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     // MARK: - Quotes and shelf
+
+    /** "Last opened first": the app just left comes first, focused, before the screen shows (no file or package reads). */
+    private void reorderRecent() {
+        int v = Recent.version;
+        if (v == recentVersion || reordering || pendingOrderSaves > 0) return;   // a move being saved goes first
+        recentVersion = v;
+        showRecent(Recent.orderKnown(shelf));
+    }
+
+    /** The shelf in this order, focused on its first app (nothing changes when it's already so). */
+    private void showRecent(List<HomeApps.Item> ordered) {
+        boolean same = true;
+        for (int i = 0; same && i < ordered.size(); i++) same = ordered.get(i) == shelf.get(i);
+        if (same) return;
+        shelfIndex = 0;
+        shelfFirst = 0;
+        setShelf(ordered);
+    }
 
     private void setShelf(List<HomeApps.Item> list) {
         wake();
@@ -2655,8 +2675,12 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             appsGeneration = Ui.generation;
             appsAt = up;
         }
+        // Without a full reload, "Last opened first" still reads the list again: an app opened from the screensaver in
+        // another process (Android 11 to 12L) changed only the file.
+        final List<HomeApps.Item> from = !apps && Prefs.shelfRecent() ? shelf : null;
         LOADER.execute(() -> {
             final List<HomeApps.Item> s = apps ? HomeApps.shelf(c, true) : null;
+            final List<HomeApps.Item> recent = from != null ? Recent.order(c, from) : null;
             final List<HomeApps.Item> st = statusList(c);
             final List<HomeApps.Item> d = drawerList(c);
             final List<HomeApps.Item> o = apps ? HomeApps.others(c) : null;
@@ -2671,6 +2695,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                 if (top != null && !keepOrder) setLightButtons(top);
                 setTopContent(mode, w, allowed);
                 if (s != null && !keepOrder) setShelf(s);
+                else if (s == null && recent != null && shelf == from && !keepOrder) showRecent(recent);
                 if (apps && keepOrder) appsStale = true;
                 setStatusItems(st);
                 setDrawerItems(d);
@@ -3394,7 +3419,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private boolean canReorder() {
         if (sheetOpen || menuOpen) return false;
         if (zone == Z_TOP) return topIndex >= 3 && topIndex < 3 + lightButtons.size() && lightButtons.size() > 1;
-        if (zone != Z_SHELF || shelfIndex >= shelf.size() || shelf.size() < 2) return false;
+        // "Last opened first" places the shelf's apps itself
+        if (zone != Z_SHELF || shelfIndex >= shelf.size() || shelf.size() < 2 || Prefs.shelfRecent()) return false;
         HomeApps.Item it = shelf.get(shelfIndex);
         return it.kind == HomeApps.APP && it.pkg != null;
     }
@@ -4254,6 +4280,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         if (link != null && link.resolveActivity(activity.getPackageManager()) != null) {
             try {
                 activity.startActivity(link.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                Recent.note(activity, it.pkg);   // the shelf's "Last opened first" counts it too
                 return;
             } catch (ActivityNotFoundException | SecurityException e) {
                 AppLog.w("continue watching link: " + e.getMessage());
@@ -4295,6 +4322,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         if (launch == null) return false;
         try {
             activity.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            Recent.note(activity, it.pkg);
             return true;
         } catch (ActivityNotFoundException | SecurityException e) {
             AppLog.w("couldn't open " + it.pkg + ": " + e.getMessage());

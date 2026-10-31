@@ -411,6 +411,10 @@ final class Prefs {
         put("shelf", sb.toString());
     }
 
+    /** The shelf puts the app last opened from Free My TV first (Recent) instead of keeping the order set in Settings > Shelf. */
+    static boolean shelfRecent() { return sp().getBoolean("shelfRecent", false); }
+    static void setShelfRecent(boolean on) { put("shelfRecent", on); }
+
     // MARK: - Sleep timer
 
     /** When the sleep timer ends (System.currentTimeMillis); SleepTimer's alarm says whether it's still on. */
