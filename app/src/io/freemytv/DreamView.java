@@ -62,12 +62,14 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
         final BitmapShader shader;    // the frosted version, for the clock's glass
         final float lightCaption, lightClock;
         final boolean zoomIn;
+        final boolean whole;          // one of your portraits or panoramas, whole on black: no zoom, which would cut it
         final float panX, panY;
         final Recording caption = Recording.create("caption");
         long startedAt;
 
-        Slide(Recs.Pick pick, Bitmap image, Bitmap frost, float lightCaption, float lightClock, int n) {
+        Slide(Recs.Pick pick, Bitmap image, Bitmap frost, float lightCaption, float lightClock, boolean whole, int n) {
             this.pick = pick;
+            this.whole = whole;
             this.image = image;
             this.frost = frost;
             shader = new BitmapShader(frost, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
@@ -311,7 +313,7 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
         }
         if (last != null && Recs.key(pick).equals(Recs.key(last.pick))) {
             // Only one photo: the same one again, with a different motion.
-            prepared = newSlide(pick, last.image, last.frost, last.lightCaption, last.lightClock);
+            prepared = newSlide(pick, last.image, last.frost, last.lightCaption, last.lightClock, last.whole);
             return;
         }
         File file = pick.photo != null ? (pick.photo.exists() ? pick.photo : null) : recs.readyImage(pick);
@@ -326,13 +328,23 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
         worker.execute(() -> {
             Bitmap[] images = null;
             float[] light = new float[2];
+            // Your portraits and panoramas whole, on black; the picks' photos and yours that fill (Photos.fills: they
+            // lose little) fill the screen
+            boolean whole = false;
             try {
-                images = Backdrop.photo(file, PW, PH, light);
+                if (chosen.photo != null) {
+                    android.graphics.BitmapFactory.Options size = new android.graphics.BitmapFactory.Options();
+                    size.inJustDecodeBounds = true;
+                    android.graphics.BitmapFactory.decodeFile(file.getPath(), size);
+                    whole = !Photos.fills(size.outWidth, size.outHeight);
+                }
+                images = Backdrop.photo(file, PW, PH, light, whole ? 0xFF000000 : 0);
                 images[0] = Backdrop.gpu(withScrims(images[0], chosen.photo == null, light[0], light[1]));
             } catch (Exception | OutOfMemoryError e) {
                 AppLog.w("screensaver: photo for “" + (chosen.photo != null ? chosen.photo.getName() : chosen.title) + "”: " + e.getMessage());
             }
             final Bitmap[] ready = images;
+            final boolean shownWhole = whole;
             handler.post(() -> {
                 if (gen != generation) {
                     // The screensaver closed while the photo was loading: free the memory right away.
@@ -345,14 +357,14 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
                     prepareNext();
                     return;
                 }
-                prepared = newSlide(chosen, ready[0], ready[1], light[0], light[1]);
+                prepared = newSlide(chosen, ready[0], ready[1], light[0], light[1], shownWhole);
                 invalidate();
             });
         });
     }
 
-    private Slide newSlide(Recs.Pick pick, Bitmap image, Bitmap frost, float lightCaption, float lightClock) {
-        Slide s = new Slide(pick, image, frost, lightCaption, lightClock, slides++);
+    private Slide newSlide(Recs.Pick pick, Bitmap image, Bitmap frost, float lightCaption, float lightClock, boolean whole) {
+        Slide s = new Slide(pick, image, frost, lightCaption, lightClock, whole, slides++);
         if (w > 0) recordCaption(s);
         return s;
     }
@@ -400,10 +412,13 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
         glassShader.setInputShader("imageB", incoming != null ? incoming.shader : current.shader);
     }
 
-    /** Photo position and scale now: zoom from 1 to 1.1 (or back) and a pan toward a corner, never showing an edge. */
+    /**
+     * Photo position and scale now: zoom from 1 to 1.1 (or back) and a pan toward a corner, never showing an edge. Your
+     * portraits and panoramas stay still, whole.
+     */
     private void place(Slide s, long up, float[] out) {
         float u = Ui.clamp((up - s.startedAt) / (float) (SHOW_MS + FADE_MS));
-        float f = s.zoomIn ? u : 1 - u;
+        float f = s.whole ? 0 : s.zoomIn ? u : 1 - u;
         float z = 1 + ZOOM * f;
         float rx = w * (z - 1) / 2, ry = h * (z - 1) / 2;
         out[0] = rx * (s.panX * f - 1);
