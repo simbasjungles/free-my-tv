@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -34,6 +35,7 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -175,8 +177,14 @@ public class SettingsActivity extends Activity {
         private boolean editingTop;
         private int pickFor, pickCurrent, pickScroll;   // pickFor: the remote button (index + 1)
         private float touchX, touchY;
+        // The photo's preview in the picker (read in the background: a photo is 2112 px wide).
+        private static final java.util.concurrent.ExecutorService photoWorker = java.util.concurrent.Executors.newSingleThreadExecutor();
+        private final RectF photoRect = new RectF();
+        private final Paint photoPaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
+        private String photoName = "", photoLoading = "";
+        private Bitmap photoImage;
         private static final int PICK_CITY = 0, PICK_LANGUAGE = -1, PICK_SLEEP = -2, PICK_PLACE = -3, PICK_PHOTOS = -4,
-                PICK_ALBUM = -5;
+                PICK_ALBUM = -5, PICK_WALLPAPER = -6, PICK_SAVER_PHOTO = -7;
         /**
          * The pickers from PICK_SLEEP down (Sleep Timer's, then My Photos' with Immich): their choices as {value, name},
          * and the value now.
@@ -927,6 +935,8 @@ public class SettingsActivity extends Activity {
                                 openPhotoSources();
                             } else if (screen == PICKER && pickFor == PICK_PHOTOS) {
                                 showSettingsRow(PHOTOS_ROW);
+                            } else if (screen == PICKER && (pickFor == PICK_WALLPAPER || pickFor == PICK_SAVER_PHOTO)) {
+                                showSettingsRow(pickFor == PICK_WALLPAPER ? WALLPAPER_ROW : SAVER_PHOTO_ROW);
                             } else if (screen == PICKER && pickFor <= PICK_SLEEP) {
                                 focus = powerFocus(pickFor == PICK_SLEEP ? P_SLEEP : P_WHERE);
                                 pickScroll = 0;   // the picker's scroll isn't this short list's
@@ -975,10 +985,11 @@ public class SettingsActivity extends Activity {
          *  Watching's apps, watch from the screensaver, Android apps, status icons, Recent Apps, weather, city, forecast,
          *  now playing, Home Assistant (only on builds with its address), quotes, one row per coin, then the TMDB and Watchmode keys and
          *  updates (the last row). */
-        private static final int CLOCK_ROW = 3, PHOTOS_ROW = 4, TOP_ROW = 6, PICKS_ROW = 7, WATCH_ROW = 8,
-                SAVER_ROW = 9, ANDROID_APPS_ROW = 10, STATUS_ICONS_ROW = 11, RECENTS_ROW = 12, POWER_ON_ROW = 13,
-                WEATHER_ROW = 14, CITY_ROW = 15, FORECAST_ROW = 16, PLAYING_ROW = 17, HOME_ROW = Config.HOME_ASSISTANT ? 18 : -1,
-                QUOTES_ROW = Config.HOME_ASSISTANT ? 19 : 18, COIN_ROWS = QUOTES_ROW + 1;
+        private static final int LANGUAGE_ROW = 0, TEMPERATURE_ROW = 1, THEME_ROW = 2, CLOCK_ROW = 3, PHOTOS_ROW = 4,
+                WALLPAPER_ROW = 5, SAVER_PHOTO_ROW = 6, SOUNDS_ROW = 7, TOP_ROW = 8, PICKS_ROW = 9, WATCH_ROW = 10,
+                SAVER_ROW = 11, ANDROID_APPS_ROW = 12, STATUS_ICONS_ROW = 13, RECENTS_ROW = 14, POWER_ON_ROW = 15,
+                WEATHER_ROW = 16, CITY_ROW = 17, FORECAST_ROW = 18, PLAYING_ROW = 19, HOME_ROW = Config.HOME_ASSISTANT ? 20 : -1,
+                QUOTES_ROW = Config.HOME_ASSISTANT ? 21 : 20, COIN_ROWS = QUOTES_ROW + 1;
         /** No "home" on Xiaomi TVs: their remote sends one Home press as a burst of presses (HomeView.BURST_MS). */
         private static final String[] RECENTS = RemoteKeys.XIAOMI ? new String[] {"off", "drawer"}
                 : new String[] {"off", "drawer", "home"};
@@ -996,6 +1007,8 @@ public class SettingsActivity extends Activity {
             l.add(Ui.tr("Theme"));
             l.add(Ui.tr("Clock"));
             l.add(Ui.tr("My Photos"));
+            l.add(Ui.tr("Wallpaper"));
+            l.add(Ui.tr("Screensaver photo"));
             l.add(Ui.tr("Navigation sounds"));
             l.add(Ui.tr("Top of the screen"));
             l.add(Ui.tr("Picks"));
@@ -1089,18 +1102,20 @@ public class SettingsActivity extends Activity {
             String[] labels = settingLabels();
             String[] v = new String[labels.length];
             String lang = Prefs.language();
-            v[0] = lang.equals("auto") ? Ui.tr("Automatic") : Ui.languageName(lang);
+            v[LANGUAGE_ROW] = lang.equals("auto") ? Ui.tr("Automatic") : Ui.languageName(lang);
             String unit = Prefs.temperature();
-            v[1] = unit.equals("C") ? "°C" : unit.equals("F") ? "°F" : Ui.tr("unit|Automatic");
+            v[TEMPERATURE_ROW] = unit.equals("C") ? "°C" : unit.equals("F") ? "°F" : Ui.tr("unit|Automatic");
             String theme = Prefs.theme();
-            v[2] = theme.equals("light") ? Ui.tr("Light") : theme.equals("dark") ? Ui.tr("Dark") : Ui.tr("Automatic");
+            v[THEME_ROW] = theme.equals("light") ? Ui.tr("Light") : theme.equals("dark") ? Ui.tr("Dark") : Ui.tr("Automatic");
             int photos = Photos.files(getContext()).size();
             v[PHOTOS_ROW] = photos == 0 ? Ui.tr("photos|None")
                     : Prefs.photos() ? Ui.plural("plural|one:{n} photo|other:{n} photos", photos) : Ui.tr("Off");
             if (ImmichPhotos.configured(getContext())) v[PHOTOS_ROW] = immichPhotosValue(photos);
+            v[WALLPAPER_ROW] = photoValue(Prefs.wallpaper());
+            v[SAVER_PHOTO_ROW] = photoValue(Prefs.saverPhoto());
             String clock = Prefs.clockFormat();
             v[CLOCK_ROW] = clock.equals("24") ? Ui.tr("24 hours") : clock.equals("12") ? Ui.tr("12 hours") : Ui.tr("Automatic");
-            v[5] = onOff(Prefs.sounds());
+            v[SOUNDS_ROW] = onOff(Prefs.sounds());
             v[PICKS_ROW] = "›";   // opens its own screen: Picks per tab and Picks from
             v[SAVER_ROW] = onOff(Prefs.saverWatch());
             String top = Prefs.topContent();
@@ -1126,6 +1141,16 @@ public class SettingsActivity extends Activity {
             v[v.length - 2] = keyValue(Recs.watchmodeKey());
             v[v.length - 1] = updatesValue();
             return v;
+        }
+
+        /** The chosen photo's place among the photos ("Automatic" when there is none, or it is gone). */
+        private String photoValue(String name) {
+            List<File> list = Photos.files(getContext());
+            if (list.isEmpty()) return "—";
+            for (int i = 0; i < list.size(); i++) if (list.get(i).getName().equals(name)) {
+                return Ui.trf("{i} of {n}", "i", i + 1, "n", list.size());
+            }
+            return Ui.tr("Automatic");
         }
 
         /** "auto", then English and every language with a catalogue. */
@@ -1432,13 +1457,13 @@ public class SettingsActivity extends Activity {
             }
             int row = pickScroll + focus;
             switch (row) {
-                case 0: break;   // OK opens the language picker.
-                case 1: {
+                case LANGUAGE_ROW: break;   // OK opens the language picker.
+                case TEMPERATURE_ROW: {
                     int at = java.util.Arrays.asList(UNITS).indexOf(Prefs.temperature());
                     Prefs.setTemperature(UNITS[(at + dir + UNITS.length) % UNITS.length]);
                     break;
                 }
-                case 2: {
+                case THEME_ROW: {
                     int at = java.util.Arrays.asList(THEMES).indexOf(Prefs.theme());
                     Prefs.setTheme(THEMES[(at + dir + THEMES.length) % THEMES.length]);
                     SleepOverlay.update(getContext());   // the pill's glass follows
@@ -1449,12 +1474,26 @@ public class SettingsActivity extends Activity {
                     if (Photos.files(getContext()).isEmpty()) return;
                     Prefs.setPhotos(!Prefs.photos());
                     return;
+                case WALLPAPER_ROW:
+                case SAVER_PHOTO_ROW: {
+                    // The photos in turn, with "Automatic" (none) before the first one.
+                    List<File> list = Photos.files(getContext());
+                    if (list.isEmpty()) return;
+                    String now = row == WALLPAPER_ROW ? Prefs.wallpaper() : Prefs.saverPhoto();
+                    int at = -1;
+                    for (int i = 0; i < list.size(); i++) if (list.get(i).getName().equals(now)) at = i;
+                    int pos = (at + 1 + dir + list.size() + 1) % (list.size() + 1);
+                    String name = pos == 0 ? "" : list.get(pos - 1).getName();
+                    if (row == WALLPAPER_ROW) Prefs.setWallpaper(name);
+                    else Prefs.setSaverPhoto(name);
+                    return;
+                }
                 case CLOCK_ROW: {
                     int at = java.util.Arrays.asList(CLOCKS).indexOf(Prefs.clockFormat());
                     Prefs.setClockFormat(CLOCKS[(at + dir + CLOCKS.length) % CLOCKS.length]);
                     break;
                 }
-                case 5: Prefs.setSounds(!Prefs.sounds()); break;
+                case SOUNDS_ROW: Prefs.setSounds(!Prefs.sounds()); break;
                 case PICKS_ROW: return;
                 case SAVER_ROW: Prefs.setSaverWatch(!Prefs.saverWatch()); break;
                 case TOP_ROW: {
@@ -1903,6 +1942,22 @@ public class SettingsActivity extends Activity {
             openChoices(PICK_ALBUM, list, "album".equals(Prefs.photoSource()) ? Prefs.photoAlbum() : "");
         }
 
+        /** OK in the Wallpaper or Screensaver photo row: the photos to choose from (none yet: nothing to choose). */
+        private void openPhotoPicker(int which) {
+            if (Photos.files(getContext()).isEmpty()) return;
+            openPicker(which);
+        }
+
+        /** OK in the photo picker: the photo is chosen ("Automatic" for none), and back to its row. */
+        private void pickPhoto() {
+            int at = pickScroll + focus;
+            List<File> list = Photos.files(getContext());
+            String name = at > 0 && at - 1 < list.size() ? list.get(at - 1).getName() : "";
+            if (pickFor == PICK_WALLPAPER) Prefs.setWallpaper(name);
+            else Prefs.setSaverPhoto(name);
+            showSettingsRow(pickFor == PICK_WALLPAPER ? WALLPAPER_ROW : SAVER_PHOTO_ROW);
+        }
+
         /** OK in My Photos' lists: applied (the sync starts now), and back to its row. */
         private void pickPhotoSource() {
             String[] choice = choices.get(pickScroll + focus);
@@ -2207,6 +2262,14 @@ public class SettingsActivity extends Activity {
                     pickLabels.add(code.equals("auto") ? Ui.tr("Automatic") : Ui.languageName(code));
                 }
                 pickCurrent = java.util.Arrays.asList(choices).indexOf(Prefs.language());
+            } else if (which == PICK_WALLPAPER || which == PICK_SAVER_PHOTO) {
+                // "Automatic" first, then the photos in the order they came.
+                pickLabels.add(Ui.tr("Automatic"));
+                List<File> list = Photos.files(getContext());
+                for (int i = 0; i < list.size(); i++) pickLabels.add(Ui.trf("{i} of {n}", "i", i + 1, "n", list.size()));
+                String now = which == PICK_WALLPAPER ? Prefs.wallpaper() : Prefs.saverPhoto();
+                pickCurrent = -1;
+                for (int i = 0; i < list.size(); i++) if (list.get(i).getName().equals(now)) pickCurrent = i + 1;
             } else if (which <= PICK_SLEEP) {
                 pickCurrent = -1;
                 for (int i = 0; i < choices.size(); i++) {
@@ -2231,6 +2294,7 @@ public class SettingsActivity extends Activity {
                     : pickFor == PICK_LANGUAGE ? Ui.tr("Language")
                     : pickFor == PICK_SLEEP ? Ui.tr("Sleep Timer") : pickFor == PICK_PLACE ? Ui.tr("Position")
                     : pickFor == PICK_PHOTOS ? Ui.tr("My Photos") : pickFor == PICK_ALBUM ? Ui.tr("Immich albums")
+                    : pickFor == PICK_WALLPAPER ? Ui.tr("Wallpaper") : pickFor == PICK_SAVER_PHOTO ? Ui.tr("Screensaver photo")
                     : keyLabels()[pickFor - 1];
             c.drawText(title, LIST_X * k + 30 * k, (LIST_TOP - 24) * k, heading);
             int rows = rowCount();
@@ -2256,6 +2320,48 @@ public class SettingsActivity extends Activity {
             float hy = (LIST_TOP + 20 + rows * (LIST_ROW_H + LIST_ROW_GAP) + 36) * k;
             c.drawText((pickScroll + focus + 1) + " / " + pickLabels.size() + "  ·  " + Ui.tr("OK picks, Back cancels."),
                     LIST_X * k + 30 * k, hy, hint);
+            if (pickFor == PICK_WALLPAPER || pickFor == PICK_SAVER_PHOTO) drawPhotoPreview(c);
+        }
+
+        /**
+         * The focused photo, big, below the list (the list is on the right): read in the background, since a photo is
+         * 2112 px wide.
+         */
+        private void drawPhotoPreview(Canvas c) {
+            int at = pickScroll + focus;
+            List<File> list = Photos.files(getContext());
+            if (at <= 0 || at - 1 >= list.size()) return;   // "Automatic": there is no photo
+            Bitmap b = preview(list.get(at - 1));
+            if (b == null) return;
+            float w = (LIST_R - LIST_X - 60) * k, h = w * 9 / 16;
+            photoRect.set((LIST_X + 30) * k, 470 * k, (LIST_X + 30) * k + w, 470 * k + h);
+            c.drawBitmap(b, null, photoRect, photoPaint);
+        }
+
+        /** The photo's preview, read in the background and kept; null while it is being read. */
+        private Bitmap preview(File f) {
+            String name = f.getName();
+            if (name.equals(photoName)) return photoImage;
+            if (name.equals(photoLoading)) return null;
+            photoLoading = name;
+            photoWorker.execute(() -> {
+                Bitmap b = null;
+                try {
+                    BitmapFactory.Options o = new BitmapFactory.Options();
+                    o.inSampleSize = 2;   // half of 2112 px: enough for the preview
+                    b = BitmapFactory.decodeFile(f.getPath(), o);
+                } catch (RuntimeException | OutOfMemoryError e) {
+                    AppLog.w("settings: preview of " + name + ": " + e.getMessage());
+                }
+                final Bitmap read = b;
+                handler.post(() -> {
+                    photoName = name;
+                    photoImage = read;
+                    photoLoading = "";
+                    invalidate();
+                });
+            });
+            return null;
         }
 
         /** "Some" only when one of the services the TV has is off (one it doesn't have, a typo in hide_services, or one found by name that starts off, doesn't count). */
@@ -2380,6 +2486,8 @@ public class SettingsActivity extends Activity {
                 Prefs.setCity(city[1], city[2], city[3]);
                 HomeData.get(c).settingsChanged();
                 showSettingsRow(CITY_ROW);
+            } else if (screen == PICKER && (pickFor == PICK_WALLPAPER || pickFor == PICK_SAVER_PHOTO)) {
+                pickPhoto();
             } else if (screen == PICKER && (pickFor == PICK_PHOTOS || pickFor == PICK_ALBUM)) {
                 pickPhotoSource();
             } else if (screen == PICKER && pickFor <= PICK_SLEEP) {
@@ -2419,6 +2527,8 @@ public class SettingsActivity extends Activity {
             } else if (screen == HOME_SETTINGS && pickScroll + focus == PHOTOS_ROW) {
                 askRemovePhotos();
                 return;
+            } else if (screen == HOME_SETTINGS && (pickScroll + focus == WALLPAPER_ROW || pickScroll + focus == SAVER_PHOTO_ROW)) {
+                openPhotoPicker(pickScroll + focus == WALLPAPER_ROW ? PICK_WALLPAPER : PICK_SAVER_PHOTO);
             } else if (screen == HOME_SETTINGS && pickScroll + focus == updatesRow()) {
                 updateNow();
                 return;

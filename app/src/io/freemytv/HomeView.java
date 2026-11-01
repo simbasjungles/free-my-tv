@@ -1240,10 +1240,19 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         pickIndex = next;
         heroSlide = dir;
         refreshHero(true);
-        Backdrop b = recs.backdrop(currentPick());
+        Backdrop b = backgroundFor(currentPick());
         if (b != null) showBackdrop(b);
         spoken.focusMoved();
         return true;
+    }
+
+    /**
+     * The background to show: the photo chosen in the settings (it stays whatever card is focused), or the focused
+     * pick's own.
+     */
+    private Backdrop backgroundFor(Recs.Pick pick) {
+        if (!Prefs.wallpaper().isEmpty()) return Photos.backdrop(getContext(), ownReady);
+        return pick == null ? null : recs.backdrop(pick);
     }
 
     /** Swaps the background with a cross-fade (from one image to another, from the gradient to an image, or back). */
@@ -3819,6 +3828,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private final Runnable bgFollow = new Runnable() {
         @Override public void run() {
             if (!running || !picksMode() || cards.isEmpty()) return;
+            if (!Prefs.wallpaper().isEmpty()) return;   // a photo chosen in the settings stays behind
             Backdrop b = recs.backdrop(cards.get(Math.min(cardIndex, cards.size() - 1)));
             // Not built yet (updateCards shows it when it is), or already there: nothing to fade, no frame to draw
             if (b == null || b == bgTo) return;
@@ -4030,8 +4040,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             List<Recs.Pick> other = recs.now(TAB_KIND[t]);
             for (int i = 0; i < Math.min(3, other.size()); i++) recs.backdrop(other.get(i));
         }
-        // Picks bring their own background; without them (no TMDB key), your photo if there is one.
-        boolean own = !picksOn() && Photos.on(getContext());
+        // Picks bring their own background; without them (no TMDB key), your photo if there is one. A photo chosen
+        // in the settings is the background either way.
+        boolean own = !Prefs.wallpaper().isEmpty() || (!picksOn() && Photos.on(getContext()));
         Backdrop b = own ? Photos.backdrop(getContext(), ownReady)
                 : cards.isEmpty() ? null : recs.backdrop(cards.get(Math.min(cardIndex, cards.size() - 1)));
         if (b != null || (cards.isEmpty() && !own)) showBackdrop(b);
