@@ -4,8 +4,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.provider.Settings;
 import android.view.InputDevice;
 import android.view.KeyEvent;
+
+import java.util.Locale;
 
 /**
  * The remote's app buttons on TCL TVs. The stock home screen opens the apps for Netflix, YouTube and Prime (and TCL
@@ -26,6 +29,9 @@ import android.view.KeyEvent;
  * hot-key receiver (partnercustomizer's GlobalKeyReceiver).
  * On Hisense TVs, the Prime Video, YouTube, Disney+, All Apps, Settings (gear) and profile buttons go to Google TV's
  * home app, which Free My TV mode turns off: without the filter they do nothing. Netflix stays with the system.
+ * On the Kalley R10G (MOKA/Realtek) the Netflix, YouTube and Prime buttons are BUTTON_4, BUTTON_3 and BUTTON_8, global
+ * keys for Google TV's home app (launcherx). Its Input, Settings and Profile buttons are handled here too, only while
+ * our home screen is showing; Guide is left to the TV.
  * On Google TV Streamer, YouTube and the custom star button go to that home app too; Netflix goes to Google's service.
  * On onn streamers (Walmart; the 4K Pro, Amlogic, Google TV 14 tested), YouTube goes to Google TV's home app, which Free
  * My TV mode turns off, and so does Free TV; Netflix, Disney+ and Paramount+ go to the box's own receivers (droidlogic,
@@ -65,6 +71,13 @@ final class RemoteKeys {
      */
     static final boolean XIAOMI_PATCHWALL_ONLY = is("Xiaomi") && Build.MODEL.equals("MiTV-AXSO2");
     /**
+     * The Kalley R10G only: Kalley sells TVs from several makers, and these key codes (BUTTON_3, BUTTON_4, BUTTON_8,
+     * Profile) are other brands' buttons too (KTC's Tabii, Xiaomi's Mi, Hisense's YouTube, Sony's own).
+     */
+    static final boolean KALLEY = is("Kalley") && Build.MODEL.toUpperCase(Locale.ROOT).contains("R10G");
+    /** The window last focused, so the action keys below run only over our home screen (set by RemoteKeyService). */
+    static volatile String topWindow;
+    /**
      * Xiaomi TVs (models MiTV-M…; MiTV-MSSP3, MediaTek, Android TV 9 tested). Not the Mi Box or Mi TV Stick, the slowest
      * devices we run on, whose remotes have a Home button; Formovie's Xiaomi projectors have their own remote.
      */
@@ -98,7 +111,7 @@ final class RemoteKeys {
     private static long lastDown;
 
     static boolean supported() {
-        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || XIAOMI_AFKR0 || HISENSE || CHROMECAST_SABRINA
+        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || XIAOMI_AFKR0 || HISENSE || KALLEY || CHROMECAST_SABRINA
                 || GOOGLE_STREAMER || ONN || JVC_SKYWORTH || PHILIPS_GTV;
     }
 
@@ -128,6 +141,16 @@ final class RemoteKeys {
             InputDevice device = InputDevice.getDevice(e.getDeviceId());
             if (device == null || !SabrinaRemote.isRemote(device.getVendorId(), device.getProductId())) return false;
         }
+        if (KALLEY && onActionKey(c, e)) return true;
+        // The R10G's Apps button (BUTTON_6, or ALL_APPS where the system hands it over): our own sheet.
+        if (KALLEY && (e.getKeyCode() == KeyEvent.KEYCODE_ALL_APPS || e.getKeyCode() == KeyEvent.KEYCODE_BUTTON_6)) {
+            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
+                AppLog.w("remote key " + e.getKeyCode() + " -> All Apps");
+                c.startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                        .putExtra(HomeActivity.EXTRA_ALL_APPS, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            }
+            return true;
+        }
         if (HISENSE && e.getKeyCode() == KeyEvent.KEYCODE_TV_INPUT && inputsUnanswered(c)) {
             if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
                 AppLog.w("remote key " + e.getKeyCode() + " -> inputs");
@@ -146,6 +169,11 @@ final class RemoteKeys {
             if (SkyworthRemote.settings(keyCode)) keyCode = Prefs.KEY_JVC_SETTINGS;
             else if (SkyworthRemote.shortcut(keyCode, e.getScanCode())) keyCode = Prefs.KEY_JVC_SHORTCUT;
             else return false;
+        }
+        // Kalley's buttons are other brands' too (BUTTON_3, BUTTON_4, BUTTON_8): key them as its own, like Sony's.
+        if (KALLEY && (keyCode == KeyEvent.KEYCODE_BUTTON_3 || keyCode == KeyEvent.KEYCODE_BUTTON_4
+                || keyCode == KeyEvent.KEYCODE_BUTTON_8)) {
+            keyCode = Prefs.KALLEY_KEY + keyCode;
         }
         // Sony sends BUTTON_9 for five app buttons (BUTTON_4 for Netflix, BUTTON_8 for Google Play): only the scan code
         // tells them apart. The BRAVIA VU31's remote sends BUTTON_2 and BUTTON_15 too (Prefs.sonyKey). The BRAVIA 8 II
@@ -219,4 +247,34 @@ final class RemoteKeys {
         Intent intent = pm.getLeanbackLaunchIntentForPackage(pkg);
         return intent != null ? intent : pm.getLaunchIntentForPackage(pkg);
     }
+
+    /**
+     * The R10G's Input, Settings and Profile buttons, which the disabled stock launcher (and its profile picker) used to
+     * answer. Only over our home screen, and only when there is something to open: an unknown key goes on to the TV
+     * instead of being swallowed. Guide is not one of them: it keeps whatever the TV does with it.
+     */
+    private static boolean onActionKey(Context c, KeyEvent e) {
+        if (!isHome()) return false;
+        Intent intent;
+        switch (e.getKeyCode()) {
+            case KeyEvent.KEYCODE_TV:
+            case KeyEvent.KEYCODE_TV_INPUT: intent = new Intent(VIEW_INPUTS); break;
+            case KeyEvent.KEYCODE_SETTINGS: intent = new Intent(Settings.ACTION_SETTINGS); break;
+            // The Google TV profile picker lived in the stock launcher: this app's settings take its place.
+            case KeyEvent.KEYCODE_PROFILE_SWITCH: intent = new Intent(c, SettingsActivity.class); break;
+            default: return false;
+        }
+        if (intent == null || c.getPackageManager().resolveActivity(intent, 0) == null) return false;
+        if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
+            AppLog.w("remote action key " + e.getKeyCode() + " -> " + intent);
+            c.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }
+        return true;
+    }
+
+    /** The window in front (RemoteKeyService's events, or HomeActivity on resume): true over our home screen. */
+    private static boolean isHome() {
+        return HomeActivity.class.getName().equals(topWindow);
+    }
+
 }
