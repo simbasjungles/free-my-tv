@@ -133,6 +133,8 @@ Older LG TVs (webOS 3) don't let Free My TV see their apps at all, so the shelf 
 python3 webos/apps.py 192.168.1.50 && python3 webos/build.py && python3 webos/install.py 192.168.1.50
 ```
 
+Without a TMDB key, the picks on LG come from [TVMaze](https://www.tvmaze.com), which needs no account or key: the most popular shows with new episodes this week on the TV's streaming apps (shows only, so the Movies tab waits for a key). Type a TMDB key in *Home Settings* and the picks come from TMDB again, movies included.
+
 Developer Mode lasts about 40 days: open the Developer Mode app now and then and press **EXTEND**, or let your computer do it with `python3 webos/renew.py 192.168.1.50` (it needs the TV on and reachable, and the key `install.py` already saved). Run that on a schedule and you never touch EXTEND again — weekly is plenty; `webos/renew.py` shows a cron line for macOS and Linux and a Task Scheduler one for Windows. To remove Free My TV, run `python3 webos/install.py 192.168.1.50 --uninstall`.
 
 ## Samsung TVs (Tizen)
