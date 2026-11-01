@@ -103,6 +103,12 @@ var Prefs = (function () {
       this.set('servicesOff', list);
     },
     openPicks: function () { return pick('openPicks', CONFIG.openPicksIn === 'nuvio' ? 'nuvio' : 'apps'); },
+    /** The input the first top button opens, picked on the TV (Home Settings > Live TV button): 'live' (Live TV)
+     * or 'hdmi1'..'hdmi4'. */
+    boxInput: function () {
+      var k = String(pick('boxInput', 'live')).toLowerCase();
+      return /^hdmi[1-4]$/.test(k) ? k : 'live';
+    },
     set: function (name, value) { v[name] = value; save(); this.version++; },
     setCoin: function (i, on) {
       var c = (pick('coins', null) || [true, true, true, true]).slice();
