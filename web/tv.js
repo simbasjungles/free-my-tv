@@ -185,7 +185,7 @@ var TV = (function () {
   // (a 2016 KU6300, Tizen 2.4) can carry other ids for the same apps.
   var SAMSUNG_ICON_NAMES = {
     youtube: 'icons/youtube.png', primevideo: 'icons/prime.png', amazonprimevideo: 'icons/prime.png',
-    netflix: 'icons/netflix.svg', max: 'icons/max.svg', hbomax: 'icons/max.svg', spotify: 'icons/spotify.svg',
+    netflix: 'icons/netflix.svg', max: 'icons/max.svg', spotify: 'icons/spotify.svg',
     deezer: 'icons/deezer.svg', youtubekids: 'icons/youtubekids.svg', redbulltv: 'icons/redbull.svg', ted: 'icons/ted.svg',
     steamlink: 'icons/steam.svg', jellyfin: 'icons/jellyfin.svg', paramount: 'icons/paramountplus.svg',
     paramountplus: 'icons/paramountplus.svg', crunchyroll: 'icons/crunchyroll.svg', twitch: 'icons/twitch.svg',
