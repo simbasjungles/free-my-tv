@@ -600,7 +600,6 @@ var Data = (function () {
   /** This hour's picks (Prefs.cards()): movies ("movie"), shows ("tv") or both (null). */
   function now(kind) {
     var list = [];
-    if (!KEY) return list;
     for (var i = 0; i < picks.length; i++) {
       var p = picks[i];
       if ((kind === null || kind === p.kind) && (!p.detailed || (p.app && usable(p.app)))) list.push(p);
@@ -773,9 +772,74 @@ var Data = (function () {
     });
   }
 
+  // MARK: - Picks without a key (TVMaze)
+  //
+  // TVMaze (tvmaze.com, data CC BY-SA 4.0) needs no account or key. Without a TMDB key, the picks are the most popular
+  // shows with new episodes in the last week on the TV's streaming apps, with TVMaze's own wide background art.
+  // Shows only: TVMaze has no movies.
+
+  var MAZE = 'https://api.tvmaze.com';
+  var SKIP_TYPES = ['News', 'Talk Show', 'Sports', 'Variety', 'Game Show', 'Award Show', 'Panel Show'];
+
+  /** TVMaze's channel name (Netflix, Disney+, Apple TV, HBO Max…) → one of our services, or null. */
+  function mazeService(name) {
+    var n = (name || '').toLowerCase();
+    for (var i = 0; i < SERVICES.length; i++) {
+      var sv = SERVICES[i];
+      if (sv[1] === 'appletv' ? /apple tv/.test(n) : sv[0] === 'max' ? /\bmax\b/.test(n) : n.indexOf(sv[0]) >= 0) return sv;
+    }
+    return null;
+  }
+
+  function fetchMaze(done) {
+    var shows = {}, list = [], asks = [];
+    // Each day twice: the country's own streaming schedule, and the worldwide one (Netflix, Disney+ and Apple TV list
+    // their shows there, with no country).
+    for (var d = 0; d < 7; d++) { asks.push(day(-d) + '&country=' + REGION); asks.push(day(-d)); }
+    each(asks, function (date, next) {
+      get(MAZE + '/schedule/web?date=' + date, {}, function (err, eps) {
+        for (var i = 0; !err && eps && i < eps.length; i++) {
+          var sh = eps[i]._embedded && eps[i]._embedded.show;
+          if (!sh || shows[sh.id]) continue;
+          var sv = mazeService((sh.webChannel || sh.network || {}).name);
+          if (!sv || !usable(sv[1])) continue;
+          if (SKIP_TYPES.indexOf(sh.type) >= 0) continue;   // news, talk, sports…: not what "picks" are for
+          if (Prefs.hideAnimation() && (sh.type === 'Animation' || (sh.genres || []).indexOf('Anime') >= 0)) continue;
+          shows[sh.id] = true;
+          list.push({sh: sh, sv: sv});
+        }
+        next();
+      });
+    }, function () {
+      list.sort(function (a, b) { return (b.sh.weight || 0) - (a.sh.weight || 0); });
+      var out = [];
+      each(list.slice(0, 20), function (c, next) {
+        get(MAZE + '/shows/' + c.sh.id + '/images', {}, function (err, imgs) {
+          var back = '', poster = c.sh.image ? c.sh.image.medium || c.sh.image.original || '' : '', best = 0;
+          for (var i = 0; !err && imgs && i < imgs.length; i++) {
+            var r = imgs[i].resolutions && imgs[i].resolutions.original;
+            if (imgs[i].type === 'background' && r && r.width > best) { best = r.width; back = r.url; }
+          }
+          if (back) {
+            var meta = [tr('Series')];
+            if (c.sh.genres && c.sh.genres.length) meta.push(genre(c.sh.genres[0]));
+            meta.push(c.sv[4]);
+            out.push({id: 'maze' + c.sh.id, kind: 'tv', title: c.sh.name, backdrop: back, poster: poster,
+              meta: meta.join(' · '), app: c.sv[1], service: c.sv[4], detailed: true});
+          }
+          next();
+        });
+      }, function () {
+        if (!out.length) { done(new Error('TVMaze had no new episodes on the TV\'s apps this week')); return; }
+        picks = out;
+        done(null);
+      });
+    });
+  }
+
   /** Fetches the list when stale (6 h, a new period of the day, language, key or apps), then this hour's details. */
   function refreshRecs() {
-    if (!KEY || fetchingRecs || !installed.length) return;
+    if (fetchingRecs || !installed.length) return;
     var t = Date.now(), p = hourPeriod(new Date()), st = sourceStamp();
     if (st === stamp && failedAt && t - failedAt < 10 * 60000 && t >= failedAt) return;
     var stale = st !== stamp || p !== period || t - listAt > 6 * 3600000 || t < listAt || !picks.length || listLang !== I18N.lang;
@@ -795,7 +859,7 @@ var Data = (function () {
       each(todo, function (x, next) { details(x, function () { next(); }); }, function () { finish(null); });
     }
     if (stale) {
-      fetchList(function (err) {
+      (KEY ? fetchList : fetchMaze)(function (err) {
         if (err) { finish(err); return; }
         listAt = Date.now();
         period = p;
@@ -852,13 +916,16 @@ var Data = (function () {
     get pricesAt() { return pricesAt; },
     activeCoins: activeCoins,
     hasKey: function () { return !!KEY; },
+    /** Picks to show: from TMDB with a key, otherwise from TVMaze (shows only). */
+    hasPicks: function () { return !!KEY || picks.length > 0; },
+    moviesToo: function () { return !!KEY; },
     checkKey: checkKey,
     /** A key typed (or removed) on the TV: the picks come again with it, or go. */
     keyChanged: function () { KEY = Prefs.tmdbKey(); recsError = ''; failedAt = 0; refreshRecs(); changed(); },
     recsError: function () { return recsError; },
     picks: now,
     showcase: all,
-    image: function (path, size) { return path ? 'https://image.tmdb.org/t/p/' + (size || 'w1280') + path : ''; },
+    image: function (path, size) { return !path ? '' : /^https?:/.test(path) ? path : 'https://image.tmdb.org/t/p/' + (size || 'w1280') + path; },
 
     /** Night at the location: from sunset to sunrise (the last forecast; without one, 6:00 and 18:00). */
     isNight: function (at) {
