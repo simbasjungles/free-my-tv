@@ -145,7 +145,6 @@
  "No city with that name.": "その名前の都市はありません。",
  "No connection": "接続できません",
  "No inputs": "入力なし",
- "No rain in the next 2 hours": "今後2時間は雨なし",
  "No streaming apps on this TV.": "このテレビにはストリーミングアプリがありません。",
  "No weather data right now.": "現在、天気データがありません。",
  "None of home_assistant_entities can be a button (see the README).": "home_assistant_entities にボタンにできるものがありません（README を参照）。",

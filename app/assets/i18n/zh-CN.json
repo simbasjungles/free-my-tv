@@ -145,7 +145,6 @@
  "No city with that name.": "没有这个名字的城市。",
  "No connection": "无网络连接",
  "No inputs": "没有输入源",
- "No rain in the next 2 hours": "未来 2 小时无雨",
  "No streaming apps on this TV.": "这台电视上没有流媒体应用。",
  "No weather data right now.": "暂无天气数据。",
  "None of home_assistant_entities can be a button (see the README).": "home_assistant_entities 中没有可以做成按钮的实体（见 README）。",

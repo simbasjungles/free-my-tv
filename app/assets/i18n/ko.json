@@ -145,7 +145,6 @@
  "No city with that name.": "그 이름의 도시가 없습니다.",
  "No connection": "연결 안 됨",
  "No inputs": "입력 없음",
- "No rain in the next 2 hours": "앞으로 2시간 동안 비 없음",
  "No streaming apps on this TV.": "이 TV에 스트리밍 앱이 없습니다.",
  "No weather data right now.": "지금은 날씨 정보가 없습니다.",
  "None of home_assistant_entities can be a button (see the README).": "home_assistant_entities 중 버튼이 될 수 있는 항목이 없습니다(README 참고).",

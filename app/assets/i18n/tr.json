@@ -145,7 +145,6 @@
  "No city with that name.": "Bu adda bir şehir yok.",
  "No connection": "Bağlantı yok",
  "No inputs": "Giriş yok",
- "No rain in the next 2 hours": "Önümüzdeki 2 saatte yağmur yok",
  "No streaming apps on this TV.": "Bu televizyonda akış uygulaması yok.",
  "No weather data right now.": "Şu anda hava durumu verisi yok.",
  "None of home_assistant_entities can be a button (see the README).": "home_assistant_entities içindekilerin hiçbiri düğme olamıyor (README'ye bakın).",

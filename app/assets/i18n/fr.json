@@ -145,7 +145,6 @@
  "No city with that name.": "Aucune ville de ce nom.",
  "No connection": "Pas de connexion",
  "No inputs": "Aucune entrée",
- "No rain in the next 2 hours": "Pas de pluie dans les 2 prochaines heures",
  "No streaming apps on this TV.": "Aucune appli de streaming sur ce téléviseur.",
  "No weather data right now.": "Pas de données météo pour l'instant.",
  "None of home_assistant_entities can be a button (see the README).": "Aucune des home_assistant_entities ne peut devenir un bouton (voir le README).",

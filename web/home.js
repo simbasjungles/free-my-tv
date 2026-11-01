@@ -653,15 +653,12 @@
     sym(Data.symbol(w.code, w.isDay), now);
     el('span', 'temp', now, Data.degrees(w.temp));
     el('div', 'cond', card, Data.condition(w.code, w.isDay));
-    var extra = [];
-    if (w.rain) {
-      extra.push(w.rain.inMin === null ? tr('No rain in the next 2 hours')
-        : trf('Rain in ~{time}', {time: trf('{n} min', {n: Math.max(5, Math.round(w.rain.inMin / 5) * 5)})}));
-    }
-    if (w.uv >= 3) extra.push(trf('UV {n}', {n: Math.round(w.uv)}));
-    var air = Data.air;
-    if (air && air.aqi !== null && air.aqi !== undefined) extra.push(trf('AQI {n}', {n: Math.round(air.aqi)}));
-    if (extra.length) el('div', 'extra', card, extra.join(' · '));
+    var parts = weatherParts(w);
+    extraKey = parts.join(' · ');
+    if (parts.length) extraShown = fitExtra(el('div', 'extra', card, extraKey), parts);
+    else extraShown = '';
+    setClass(card, 'with-extra', !!extraShown);   // the card grows the line only when it has one: otherwise, main's
+    setClass(card, 'with-extra', !!extraShown);   // the card grows the line only when it has one: otherwise, main's
     el('div', 'range', card, trf('H:{max}', {max: Data.degrees(w.max)}) + '   ' + trf('L:{min}', {min: Data.degrees(w.min)}));
     el('div', 'split', card);
     // Home Settings → Forecast: the next 6 hours or the next 5 days (the hours until a forecast has days).
@@ -680,6 +677,42 @@
     if (w.sunrise) { var a = el('span', '', sun); sym('sunrise', a); a.appendChild(document.createTextNode(trf('Sunrise {time}', {time: Data.time(w.sunrise)}))); }
     if (w.sunset) { var b = el('span', '', sun); sym('sunset', b); b.appendChild(document.createTextNode(trf('Sunset {time}', {time: Data.time(w.sunset)}))); }
   }
+
+  var extraShown = '', extraKey = '';
+
+  /**
+   * The line under the condition, part by part: rain in the next two hours, the UV index by day, the air quality from
+   * moderate up. Empty when it has nothing to say (no rain coming, night, clean air): then the card is the one on main.
+   */
+  function weatherParts(w) {
+    var parts = [], rain = Data.rainIn(Date.now());
+    // 0: it rains now, which the line above says; -1: no rain in the two hours ahead; null: the forecast doesn't reach.
+    if (rain > 0) parts.push(trf('Rain in ~{time}', {time: trf('{n} min', {n: Math.max(5, Math.round(rain / 5) * 5)})}));
+    if (w.uv >= 3 && w.isDay) parts.push(trf('UV {n}', {n: Math.round(w.uv)}));   // the day's highest, so not at night
+    var air = Data.air;
+    // 51 is where the US AQI says moderate: good air is what a weather card needn't spell out.
+    if (air && air.aqi !== null && air.aqi !== undefined && air.aqi >= 51) parts.push(trf('AQI {n}', {n: Math.round(air.aqi)}));
+    return parts;
+  }
+
+  /** Never a cut at the edge: the line is set smaller first, and then its last part goes (the air quality, then the UV). */
+  function fitExtra(line, parts) {
+    var sizes = [21, 19];
+    for (var i = 0; i < sizes.length; i++) {
+      line.style.fontSize = sizes[i] + 'px';
+      if (line.scrollWidth <= line.clientWidth + 1) return line.textContent;
+    }
+    while (parts.length > 1 && line.scrollWidth > line.clientWidth + 1) {
+      parts.pop();
+      line.textContent = parts.join(' · ');
+    }
+    return line.textContent;
+  }
+
+  // "Rain in ~40 min" counts down between forecasts: the card is drawn again when its line would read otherwise.
+  setInterval(function () {
+    if (Prefs.weather() && Data.weather && weatherParts(Data.weather).join(' · ') !== extraKey) renderPanels();
+  }, 60000);
 
   function renderPrices(card, coins) {
     el('div', 'head', card, tr('Crypto'));

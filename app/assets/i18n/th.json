@@ -145,7 +145,6 @@
  "No city with that name.": "ไม่พบเมืองชื่อนี้",
  "No connection": "ไม่มีการเชื่อมต่อ",
  "No inputs": "ไม่มีอินพุต",
- "No rain in the next 2 hours": "ไม่มีฝนใน 2 ชั่วโมงข้างหน้า",
  "No streaming apps on this TV.": "ทีวีเครื่องนี้ไม่มีแอปสตรีมมิง",
  "No weather data right now.": "ยังไม่มีข้อมูลสภาพอากาศ",
  "None of home_assistant_entities can be a button (see the README).": "ไม่มี home_assistant_entities ตัวไหนเป็นปุ่มได้ (ดู README)",

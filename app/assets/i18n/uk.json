@@ -145,7 +145,6 @@
  "No city with that name.": "Немає міста з такою назвою.",
  "No connection": "Немає з'єднання",
  "No inputs": "Немає входів",
- "No rain in the next 2 hours": "Дощу в найближчі 2 години не буде",
  "No streaming apps on this TV.": "На цьому телевізорі немає стрімінгових застосунків.",
  "No weather data right now.": "Зараз немає даних про погоду.",
  "None of home_assistant_entities can be a button (see the README).": "Жодна з home_assistant_entities не може бути кнопкою (див. README).",

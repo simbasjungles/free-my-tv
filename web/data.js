@@ -160,10 +160,11 @@ var Data = (function () {
 
   function place() { return Prefs.latitude() + ',' + Prefs.longitude(); }
   // Both forecasts in one answer, the next 48 hours and today plus 5 days: Home Settings → Forecast switches without
-  // asking again, and offline too. The next two hours in 15-minute steps tell the card whether rain is coming.
+  // asking again, and offline too. 14 steps of 15 minutes tell the card whether rain comes in the next two hours, even
+  // from a forecast 30 minutes old (where the time zone is off by half an hour, they start up to 45 minutes back).
   var QUERY = '&current=temperature_2m,weather_code,is_day'
       + '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,weather_code,uv_index_max'
-      + '&minutely_15=precipitation,precipitation_probability&forecast_minutely_15=8'
+      + '&minutely_15=precipitation,precipitation_probability&forecast_minutely_15=14'
       + '&hourly=temperature_2m,weather_code,is_day&timezone=auto&forecast_days=6&forecast_hours=48';
   var weather = null, weatherAt = 0, fetchingWeather = false;
   (function () {
@@ -188,17 +189,15 @@ var Data = (function () {
       uv: dl.uv_index_max ? dl.uv_index_max[0] : null,
       sunrise: localTime(dl.sunrise[0], off), sunset: localTime(dl.sunset[0], off), hours: [], days: []
     };
-    // The next two hours in 15-minute steps: enough for "rain in ~40 min" without a second request. A slot counts as
-    // rain from a 50% chance or 0.2 mm of it; the first one is when it starts.
+    // The 15-minute steps, [start, rain]: a step counts as rain from a 50% chance or 0.2 mm of it. rainIn reads them at
+    // the moment the card is drawn, not when the forecast came.
     var mr = o.minutely_15;
     if (mr && mr.time) {
-      w.rain = {inMin: null};
+      w.steps = [];
       for (var k = 0; k < mr.time.length; k++) {
-        var when = localTime(mr.time[k], off);
-        if (when < now - 7 * 60000) continue;   // the step it's in now
         var pr = mr.precipitation_probability ? mr.precipitation_probability[k] || 0 : 0;
         var mm = mr.precipitation ? mr.precipitation[k] || 0 : 0;
-        if (w.rain.inMin === null && (pr >= 50 || mm >= 0.2)) w.rain.inMin = Math.max(0, Math.round((when - now) / 60000));
+        w.steps.push([localTime(mr.time[k], off), pr >= 50 || mm >= 0.2]);
       }
     }
     var hr = o.hourly;
@@ -216,6 +215,20 @@ var Data = (function () {
         min: dl.temperature_2m_min[j], code: dl.weather_code[j]});
     }
     return w;
+  }
+
+  /**
+   * Rain in the next two hours at `now`: the minutes until it starts, 0 while the step we're in has it, -1 if no step up
+   * to two hours from now has any, null when the steps don't reach that far (an older forecast, offline).
+   */
+  function rainIn(now) {
+    var s = weather && weather.steps, STEP = 15 * 60000, end = now + 2 * 3600000;
+    if (!s || !s.length) return null;
+    for (var i = 0; i < s.length && s[i][0] < end; i++) {
+      if (s[i][0] + STEP <= now) continue;   // already over
+      if (s[i][1]) return Math.max(0, Math.round((s[i][0] - now) / 60000));
+    }
+    return s[s.length - 1][0] + STEP >= end ? -1 : null;
   }
 
   function refreshWeather() {
@@ -241,7 +254,7 @@ var Data = (function () {
    * cache and its own key, and a TV that can't reach it still shows the weather.
    */
   var AIR_QUERY = 'current=us_aqi,pm2_5&timezone=auto';
-  var air = null, airAt = 0, fetchingAir = false;
+  var air = null, airAt = 0, airTried = 0, fetchingAir = false;
   (function () {
     var a = stored('air');
     if (a && a.place === place() && a.query === AIR_QUERY) { air = a.body; airAt = a.at; }
@@ -249,7 +262,9 @@ var Data = (function () {
 
   function refreshAir() {
     var now = Date.now();
-    if (fetchingAir || (now - airAt < 30 * 60000 && now >= airAt)) return;
+    // Only for the weather card; a host that didn't answer is asked again 5 minutes later, not at every 30-second tick.
+    if (!Prefs.weather() || fetchingAir || (now - airAt < 30 * 60000 && now >= airAt) || (now - airTried < 5 * 60000 && now >= airTried)) return;
+    airTried = now;
     fetchingAir = true;
     var at = place();
     getMeteo('air-quality-api.open-meteo.com/v1/air-quality?latitude=' + Prefs.latitude() + '&longitude='
@@ -703,9 +718,10 @@ var Data = (function () {
     settingsChanged: function () { pricesAt = 0; refreshPrices(); changed(); },
     findCity: findCity,
     /** Another city picked: its weather now (none shown until it comes). */
-    cityChanged: function () { weather = null; weatherAt = 0; air = null; airAt = 0; refreshWeather(); refreshAir(); changed(); },
+    cityChanged: function () { weather = null; weatherAt = 0; air = null; airAt = 0; airTried = 0; refreshWeather(); refreshAir(); changed(); },
     get weather() { return weather; },
     get air() { return air; },
+    rainIn: rainIn,
     get weatherAt() { return weatherAt; },
     prices: prices,
     changes: changes,

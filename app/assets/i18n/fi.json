@@ -145,7 +145,6 @@
  "No city with that name.": "Tällä nimellä ei löytynyt kaupunkia.",
  "No connection": "Ei yhteyttä",
  "No inputs": "Ei tuloja",
- "No rain in the next 2 hours": "Ei sadetta seuraavaan 2 tuntiin",
  "No streaming apps on this TV.": "Tässä TV:ssä ei ole suoratoistosovelluksia.",
  "No weather data right now.": "Säätietoja ei juuri nyt ole.",
  "None of home_assistant_entities can be a button (see the README).": "Mikään home_assistant_entities-kohteista ei voi olla painike (katso README).",

@@ -145,7 +145,6 @@
  "No city with that name.": "इस नाम का कोई शहर नहीं।",
  "No connection": "कनेक्शन नहीं है",
  "No inputs": "कोई इनपुट नहीं",
- "No rain in the next 2 hours": "अगले 2 घंटों में बारिश नहीं",
  "No streaming apps on this TV.": "इस TV पर कोई स्ट्रीमिंग ऐप नहीं है।",
  "No weather data right now.": "अभी मौसम की जानकारी नहीं है।",
  "None of home_assistant_entities can be a button (see the README).": "home_assistant_entities में से कोई भी बटन नहीं बन सकता (README देखें)।",
