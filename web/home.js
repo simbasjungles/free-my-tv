@@ -84,7 +84,7 @@
     ['jellyfin', /jellyfin/i, /jellyfin/i, ['#AA5CC3', '#00A4DC']],
     ['spotify', /spotify/, /spotify/i, ['#1DB954', '#0F7A36']]
   ];
-  // Apps shown at once, as on Android: 8 (today's smallest tiles, 178 wide); the shelf scrolls for the rest. The
+  // Apps shown at once, as on Android: 8 (today's smallest tiles, 178 wide); the shelf goes round for the rest. The
   // built-in list keeps 8 too.
   var SHELF_VISIBLE = 8, FEW_APPS = 8;
 
@@ -536,7 +536,7 @@
     tiles.innerHTML = '';
     tileStep = tw + gap;
     tileLeft = left;
-    shelfFirst = Math.max(0, Math.min(shelfFirst, shelf.length - n));
+    if (shelf.length <= SHELF_VISIBLE) shelfFirst = 0;
     for (var i = 0; i < shelf.length; i++) {
       var t = el('div', 'tile', tiles);
       t.style.top = (854 + 126 - th) + 'px';
@@ -558,26 +558,38 @@
     placeTiles();
   }
 
+  /**
+   * Where app i sits on the row. Past what fits, the shelf goes round (shelfFirst counts on past the last app): each
+   * app takes the turn nearest the shown ones, with one slot kept on the left for the app sliding out.
+   */
+  function slot(i) {
+    var len = shelf.length, from = shelfFirst - 1;
+    if (len <= SHELF_VISIBLE) return i;
+    return from + ((i - from) % len + len) % len;
+  }
+
   /** The row slides (a transform on #tiles, which old TVs animate), and the apps it takes past the glass fade out. */
   function placeTiles() {
     var row = $('tiles'), tiles = row.children, n = Math.min(shelf.length, SHELF_VISIBLE);
     for (var i = 0; i < shelf.length; i++) {
-      var shown = i >= shelfFirst && i < shelfFirst + n;
-      tiles[i].style.left = (tileLeft + i * tileStep) + 'px';
+      var v = slot(i), shown = v >= shelfFirst && v < shelfFirst + n;
+      tiles[i].style.left = (tileLeft + v * tileStep) + 'px';
       tiles[i].style.opacity = shown ? '' : '0';
       tiles[i].style.pointerEvents = shown ? '' : 'none';
     }
     row.style.webkitTransform = row.style.transform = 'translateX(' + (-shelfFirst * tileStep) + 'px)';
     var arrows = $('platter').children;
-    arrows[0].style.visibility = shelfFirst > 0 ? '' : 'hidden';
-    arrows[1].style.visibility = shelfFirst + n < shelf.length ? '' : 'hidden';
+    var round = shelf.length > SHELF_VISIBLE ? '' : 'hidden';
+    arrows[0].style.visibility = arrows[1].style.visibility = round;
   }
 
   /** Scrolls the shelf, one app at a time, so the focused app is shown. */
   function revealShelf() {
-    var n = Math.min(shelf.length, SHELF_VISIBLE);
-    var first = Math.max(0, Math.min(Math.max(shelfFirst, st.shelf - n + 1), Math.min(st.shelf, shelf.length - n)));
-    if (first === shelfFirst || !shelf.length) return;
+    if (!shelf.length) return;
+    var n = Math.min(shelf.length, SHELF_VISIBLE), v = slot(st.shelf), first = shelfFirst;
+    if (v < first) first = v;
+    else if (v > first + n - 1) first = v - n + 1;
+    if (first === shelfFirst) return;
     shelfFirst = first;
     placeTiles();
   }
@@ -1340,7 +1352,7 @@
     var tiles = $('tiles').children, cardNodes = $('cards').children;
     switch (st.zone) {
       case Z.SHELF:
-        if (dx) st.shelf = Math.max(0, Math.min(shelf.length - 1, st.shelf + dx));
+        if (dx) st.shelf = (st.shelf + dx + shelf.length) % shelf.length;   // round: past the last app, the first
         else if (dy > 0) { openDrawer(); return; }
         else if (dy < 0) {
           if (cards.length) { st.zone = Z.CARDS; st.card = nearest(cardNodes, centerX(tiles[st.shelf])); }
