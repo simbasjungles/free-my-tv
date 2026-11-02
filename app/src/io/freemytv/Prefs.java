@@ -251,13 +251,13 @@ final class Prefs {
         put("servicesOff", list.length() > 1 ? list.substring(1, list.length() - 1) : "");
     }
 
-    /** "auto" (dark from sunset to sunrise), "light" or "dark". */
+    /** "auto" (the sun), "light", "sunset", "dark" or "schedule" (the fixed 05:30 / 12:00 / 18:00 / 22:00 day). */
     static String theme() {
         String v = sp().getString("theme", Config.THEME.trim());
-        return v.equals("light") || v.equals("dark") ? v : "auto";
+        return Theme.normalize(v);
     }
 
-    static void setTheme(String v) { put("theme", v); }
+    static void setTheme(String v) { put("theme", Theme.normalize(v)); }
 
     /** Wi-Fi/Ethernet, Bluetooth and USB icons at the top-left of the home screen. */
     static boolean statusIcons() { return sp().getBoolean("statusicons", false); }

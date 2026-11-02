@@ -404,21 +404,43 @@ final class HomeData {
     }
 
     /**
-     * Night at your location: from sunset to sunrise (like Apple's "Automatic" appearance: the light design darkens).
-     * Uses the last weather fetched (it moves ~1 min a day); without data, 6:00 and 18:00.
+     * The appearance now: light, sunset, dark or late night. Automatic follows the sun; the fixed schedule follows
+     * 05:30, 12:00, 18:00 and 22:00 (Settings > Theme). Uses the last weather fetched (it moves ~1 min a day); without
+     * data, 6:00 and 18:00.
      */
+    String period(long now) {
+        return period(Prefs.theme(), now, weather.sunrise, weather.sunset);
+    }
+
     boolean isNight(long now) {
-        return isNight(Prefs.theme(), now, weather.sunrise, weather.sunset);
+        return Theme.isNight(Prefs.theme(), minuteOf(now), minuteOf(weather.sunrise, 6 * 60), minuteOf(weather.sunset, 18 * 60), 0, 0);
+    }
+
+    /** The late-night badge's period (22:00–05:29 on the fixed schedule). */
+    boolean isLate(long now) {
+        return Theme.isLate(Prefs.theme(), minuteOf(now), minuteOf(weather.sunrise, 6 * 60), minuteOf(weather.sunset, 18 * 60));
     }
 
     /** The same from what it depends on (SleepOverlay gets these in its Intent). */
+    static String period(String theme, long now, long sunrise, long sunset) {
+        return Theme.period(theme, minuteOf(now), minuteOf(sunrise, 6 * 60), minuteOf(sunset, 18 * 60));
+    }
+
     static boolean isNight(String theme, long now, long sunrise, long sunset) {
-        if (theme.equals("dark")) return true;
-        if (theme.equals("light")) return false;
-        long t = Shaders.timeOfDay(now, 0);
-        long rise = Shaders.timeOfDay(sunrise, 6 * 60 * 60_000L);
-        long set = Shaders.timeOfDay(sunset, 18 * 60 * 60_000L);
-        return t < rise || t >= set;
+        return Theme.isNight(theme, minuteOf(now), minuteOf(sunrise, 6 * 60), minuteOf(sunset, 18 * 60), 0, 0);
+    }
+
+    static boolean isLate(String theme, long now, long sunrise, long sunset) {
+        return Theme.isLate(theme, minuteOf(now), minuteOf(sunrise, 6 * 60), minuteOf(sunset, 18 * 60));
+    }
+
+    /** Minutes from midnight for an epoch time, using the same clock as the sky. */
+    private static int minuteOf(long now) {
+        return (int) (Shaders.timeOfDay(now, 0) / 60_000L);
+    }
+
+    private static int minuteOf(long now, int fallback) {
+        return (int) (Shaders.timeOfDay(now, fallback * 60_000L) / 60_000L);
     }
 
     // MARK: - Formatting

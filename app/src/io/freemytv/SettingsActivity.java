@@ -176,7 +176,7 @@ public class SettingsActivity extends Activity {
         private int pickFor, pickCurrent, pickScroll;   // pickFor: the remote button (index + 1)
         private float touchX, touchY;
         private static final int PICK_CITY = 0, PICK_LANGUAGE = -1, PICK_SLEEP = -2, PICK_PLACE = -3, PICK_PHOTOS = -4,
-                PICK_ALBUM = -5;
+                PICK_ALBUM = -5, PICK_THEME = -6;
         /**
          * The pickers from PICK_SLEEP down (Sleep Timer's, then My Photos' with Immich): their choices as {value, name},
          * and the value now.
@@ -925,6 +925,8 @@ public class SettingsActivity extends Activity {
                                 openPhotoSources();
                             } else if (screen == PICKER && pickFor == PICK_PHOTOS) {
                                 showSettingsRow(PHOTOS_ROW);
+                            } else if (screen == PICKER && pickFor == PICK_THEME) {
+                                showSettingsRow(2);
                             } else if (screen == PICKER && pickFor <= PICK_SLEEP) {
                                 focus = powerFocus(pickFor == PICK_SLEEP ? P_SLEEP : P_WHERE);
                                 pickScroll = 0;   // the picker's scroll isn't this short list's
@@ -967,7 +969,7 @@ public class SettingsActivity extends Activity {
 
         // MARK: - Home Settings and Remote Buttons
 
-        private static final String[] UNITS = {"auto", "C", "F"}, THEMES = {"auto", "light", "dark"},
+        private static final String[] UNITS = {"auto", "C", "F"}, THEMES = Theme.MODES,
                 CLOCKS = {"auto", "24", "12"};
         /** Home Settings: language, temperature, theme, clock, my photos, sounds, top of the screen, picks, Continue
          *  Watching's apps, watch from the screensaver, Android apps, status icons, Recent Apps, weather, city, forecast,
@@ -1091,7 +1093,7 @@ public class SettingsActivity extends Activity {
             String unit = Prefs.temperature();
             v[1] = unit.equals("C") ? "°C" : unit.equals("F") ? "°F" : Ui.tr("unit|Automatic");
             String theme = Prefs.theme();
-            v[2] = theme.equals("light") ? Ui.tr("Light") : theme.equals("dark") ? Ui.tr("Dark") : Ui.tr("Automatic");
+            v[2] = HomeApps.themeName(theme);
             int photos = Photos.files(getContext()).size();
             v[PHOTOS_ROW] = photos == 0 ? Ui.tr("photos|None")
                     : Prefs.photos() ? Ui.plural("plural|one:{n} photo|other:{n} photos", photos) : Ui.tr("Off");
@@ -1264,6 +1266,24 @@ public class SettingsActivity extends Activity {
             choices.addAll(list);
             choiceNow = now;
             openPicker(which);
+        }
+
+        /** OK on Theme: the four fixed looks, or the fixed daily schedule. */
+        private void openTheme() {
+            List<String[]> list = new ArrayList<>();
+            list.add(new String[] {Theme.AUTO, Ui.tr("Automatic")});
+            list.add(new String[] {Theme.LIGHT, Ui.tr("Light")});
+            list.add(new String[] {Theme.SUNSET, Ui.tr("Sunset")});
+            list.add(new String[] {Theme.DARK, Ui.tr("Dark")});
+            list.add(new String[] {Theme.SCHEDULE, Ui.tr("Schedule")});
+            openChoices(PICK_THEME, list, Prefs.theme());
+        }
+
+        /** OK in the Theme picker: applied; the schedule is the fixed 05:30 / 12:00 / 18:00 / 22:00 day. */
+        private void pickTheme() {
+            Prefs.setTheme(choices.get(pickScroll + focus)[0]);
+            SleepOverlay.update(getContext());   // the pill's glass follows
+            showSettingsRow(2);
         }
 
         /** OK in a Sleep Timer picker: applied, and back to its row. */
@@ -2218,6 +2238,7 @@ public class SettingsActivity extends Activity {
                     : pickFor == PICK_LANGUAGE ? Ui.tr("Language")
                     : pickFor == PICK_SLEEP ? Ui.tr("Sleep Timer") : pickFor == PICK_PLACE ? Ui.tr("Position")
                     : pickFor == PICK_PHOTOS ? Ui.tr("My Photos") : pickFor == PICK_ALBUM ? Ui.tr("Immich albums")
+                    : pickFor == PICK_THEME ? Ui.tr("Theme")
                     : keyLabels()[pickFor - 1];
             c.drawText(title, LIST_X * k + 30 * k, (LIST_TOP - 24) * k, heading);
             int rows = rowCount();
@@ -2367,6 +2388,8 @@ public class SettingsActivity extends Activity {
                 showSettingsRow(CITY_ROW);
             } else if (screen == PICKER && (pickFor == PICK_PHOTOS || pickFor == PICK_ALBUM)) {
                 pickPhotoSource();
+            } else if (screen == PICKER && pickFor == PICK_THEME) {
+                pickTheme();
             } else if (screen == PICKER && pickFor <= PICK_SLEEP) {
                 pickPower();
             } else if (screen == PICKER && pickFor == PICK_LANGUAGE) {
@@ -2396,6 +2419,8 @@ public class SettingsActivity extends Activity {
                 openPicker(focus + 1);
             } else if (screen == HOME_SETTINGS && pickScroll + focus == 0) {
                 openPicker(PICK_LANGUAGE);
+            } else if (screen == HOME_SETTINGS && pickScroll + focus == 2) {
+                openTheme();
             } else if (screen == HOME_SETTINGS && pickScroll + focus == CITY_ROW) {
                 askCity();
                 return;

@@ -162,11 +162,16 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private RecentApps recents;
     private int zone = Z_SHELF;
 
-    // Night look (like Apple's "Automatic" appearance): darker from sunset to sunrise, with a 2 s transition.
+    // The appearance walks light (0) → sunset (1) → dark/late night (2) with a 2 s transition. `night` is the dark
+    // half of that (0 by day and sunset, 1 at night); `sunset` is the warm amount (0 → 1 → 0).
     private static final long NIGHT_MS = 2000;
-    private boolean nightTarget;
-    private float night, nightFrom;     // 0 = day, 1 = night
+    private static final int MOOD_LIGHT = 0, MOOD_SUNSET = 1, MOOD_DARK = 2;
+    private int moodTarget;
+    private float mood, moodFrom;       // 0 = light, 1 = sunset, 2 = dark
     private long nightAt;
+    private float night, sunset;        // derived from `mood`
+    private boolean lateNight;          // the fixed schedule's 22:00–05:29 badge
+    private Shader sunsetGradient;
     private final int[] glassNight = new int[Backdrop.GW * Backdrop.GH], frostNight = new int[Backdrop.FW * Backdrop.FH];
     private final int[] neutralGlassPx = new int[Backdrop.GW * Backdrop.GH], neutralFrostPx = new int[Backdrop.FW * Backdrop.FH];
     private boolean nightPair;          // the glass holds both photos (day and night), blended by `night`
@@ -1303,13 +1308,14 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
 
     /** The plain background's colour at height y (0 = top, 1 = bottom), as drawLightSky draws it. */
     private int plainAt(float y, int card) {
-        if (!continueMode()) return blend(0xFFEBEBF0, 0xFF141416, night);
+        if (!continueMode()) return blend(blend(0xFFEBEBF0, 0xFF141416, night), 0xFFFFD6A5, 0.55f * sunset);
         return blend(tintColor(card), 0xFF000000, 0.2f * y);   // under drawTint's shade
     }
 
-    /** The card's colour as a pale tint by day, a deep one at night (drawTint, before its shade). */
+    /** The card's colour as a pale tint by day, a warm one at sunset, a deep one at night (drawTint, before its shade). */
     private int tintColor(int card) {
-        return blend(blend(0xFFEEEFF3, card, 0.34f), blend(0xFF141416, card, 0.3f), night);
+        int day = blend(0xFFEEEFF3, card, 0.34f);
+        return blend(blend(day, 0xFFFFD6A5, 0.28f * sunset), blend(0xFF141416, card, 0.3f), night);
     }
 
     /** The day glass's colour: white, or in Continue Watching white with a little of the background's tint. */
@@ -1329,32 +1335,43 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
 
     // MARK: - Night look
 
-    /** Day or night right now (from the sun at your location); `animate`: with the transition. */
+    /** The appearance right now (from the sun at your location or the fixed schedule); `animate`: with the transition. */
     private void checkNight(boolean animate) {
-        boolean want = data.isNight(System.currentTimeMillis());
-        if (want == nightTarget) return;
-        nightTarget = want;
+        long now = System.currentTimeMillis();
+        String period = data.period(now);
+        int want = Theme.SUNSET.equals(period) ? MOOD_SUNSET
+                : Theme.PERIOD_LIGHT.equals(period) ? MOOD_LIGHT : MOOD_DARK;
+        lateNight = data.isLate(now);
+        if (want == moodTarget) return;
+        moodTarget = want;
         if (animate && running) {
-            nightFrom = night;
+            moodFrom = mood;
             nightAt = SystemClock.uptimeMillis();
         } else {
-            night = want ? 1 : 0;
+            mood = want;
             nightAt = 0;
-            nightChanged();
+            applyMood();
         }
     }
 
-    /** Advances the day ⇄ night transition; true while it runs. */
+    /** Advances the light → sunset → dark transition; true while it runs. */
     private boolean tickNight(long up) {
         if (nightAt == 0) return false;
-        float t = Ui.clamp((up - nightAt) / NIGHT_MS), to = nightTarget ? 1 : 0;
-        night = nightFrom + (to - nightFrom) * t * t * (3 - 2 * t);
+        float t = Ui.clamp((up - nightAt) / NIGHT_MS), to = moodTarget;
+        mood = moodFrom + (to - moodFrom) * t * t * (3 - 2 * t);
         if (t >= 1) {
-            night = to;
+            mood = to;
             nightAt = 0;
         }
-        nightChanged();
+        applyMood();
         return true;
+    }
+
+    /** Derives the dark and warm amounts from the appearance and redraws what follows them. */
+    private void applyMood() {
+        night = Ui.clamp(mood - 1f);
+        sunset = mood <= 1f ? mood : Math.max(0f, 2f - mood);
+        nightChanged();
     }
 
     /** Redraws for the current night value (the glass now reads the lightened, blended or darkened photo). */
@@ -3236,6 +3253,21 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         });
     }
 
+    /**
+     * The Theme button: automatic → light → sunset → dark → the schedule → automatic, with a toast naming the new one.
+     * The screen follows on the next frame (HomeView.tickNight), the pill right away.
+     */
+    private void cycleTheme() {
+        int at = java.util.Arrays.asList(Theme.MODES).indexOf(Prefs.theme());
+        String next = Theme.MODES[(at + 1) % Theme.MODES.length];
+        Prefs.setTheme(next);
+        SleepOverlay.update(getContext());
+        showToast(HomeApps.themeName(next));
+        setLightButtons(HomeApps.topButtons(getContext()));   // the icon follows the mode
+        spoken.readAgain();
+        wake();
+    }
+
     private void activate() {
         wake();
         if (reordering) {   // TalkBack's click while moving an app: drop it
@@ -3291,6 +3323,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         click.open();
         if (it.kind == HomeApps.RECENTS) {
             openRecents();
+            return;
+        }
+        if (it.kind == HomeApps.THEME) {
+            cycleTheme();
             return;
         }
         if (it.kind == HomeApps.HOME_ASSISTANT) {
@@ -4524,6 +4560,13 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                 c.drawRect(screen, fill);
                 fill.setAlpha(255);
             }
+            if (sunset > 0.001f && !continueMode()) {
+                if (sunsetGradient == null) sunsetGradient = Ui.gradient(h, 0xFFFFE0B2, 0xFFF28C6B);
+                fill.setShader(sunsetGradient);
+                fill.setAlpha(Math.round(255 * sunset));
+                c.drawRect(screen, fill);
+                fill.setAlpha(255);
+            }
             fill.setShader(null);
             fill.setColorFilter(null);
         }
@@ -4531,6 +4574,15 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         if (fading && bgFrom != null) drawLightImage(c, bgFrom, bgTo == null ? 1 - e : 1);
         if (bgTo != null) drawLightImage(c, bgTo, fading ? e : 1);
         imagePaint.setColorFilter(null);
+        // A warm cast over a photo too: the sunset period reads as an evening even with a pick's backdrop.
+        if (sunset > 0.001f && !continueMode()) {
+            if (sunsetGradient == null) sunsetGradient = Ui.gradient(h, 0xFFFFE0B2, 0xFFF28C6B);
+            fill.setShader(sunsetGradient);
+            fill.setAlpha(Math.round(110 * sunset));
+            c.drawRect(screen, fill);
+            fill.setAlpha(255);
+            fill.setShader(null);
+        }
     }
 
     /** The card's colour as a pale tint by day, a deep one at night, with a fixed shade toward the bottom. */
@@ -4814,12 +4866,14 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
 
     /** Wi-Fi/Ethernet, Bluetooth (when something is connected) and a USB drive, at the top left. */
     private void drawStatusIcons(Canvas c) {
-        if (!Prefs.statusIcons()) return;
         float height = L_STATUS * k, gap = L_STATUS_GAP * k;
         int color = Ui.alpha(tone(L_INK, 0xEBFFFFFF), 0.85f);
         float x = MARGIN * k;
         // The top title ("For You", or "Continue Watching") is on this line too: the icons start after it, not on it.
         if (!clockMode()) x += lTitle.measureText(picksMode() ? Ui.tr("For You") : Ui.tr("Continue Watching")) + gap;
+        // The late-night notice (22:00–05:29): a moon, whether or not the other status icons are on.
+        if (lateNight) x = drawStatusIcon(c, "bedtime", x, height, gap, color);
+        if (!Prefs.statusIcons()) return;
         if (network != 0) x = drawStatusIcon(c, network == 2 ? "ethernet" : "wifi", x, height, gap, color);
         if (bluetoothConnected) x = drawStatusIcon(c, "bluetooth", x, height, gap, color);
         if (usbConnected) drawStatusIcon(c, "usb", x, height, gap, color);
