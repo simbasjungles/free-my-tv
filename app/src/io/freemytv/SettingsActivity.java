@@ -50,6 +50,12 @@ import java.util.Set;
  * (HomeMode) and this screen only asks for it and follows the state file.
  */
 public class SettingsActivity extends Activity {
+    /**
+     * Opens these settings on Fire TV: the app's icon and Launcher Manager start the home screen there, so only this
+     * extra (the gear on the home screen) keeps the settings themselves open.
+     */
+    static final String EXTRA_SETTINGS = "io.freemytv.SETTINGS";
+
     private SettingsView view;
     private DreamView preview;   // "Screensaver": the screensaver right here, without changing the system setting
 
@@ -66,14 +72,13 @@ public class SettingsActivity extends Activity {
     }
 
     /**
-     * Fire TV: Amazon keeps the Home button, so the app's icon opens the home screen (FireHomeActivity) directly;
-     * the gear on the home screen opens these settings (no launcher category).
+     * Fire TV: Amazon keeps the Home button, so the app's icon and Launcher Manager open the home screen
+     * (FireHomeActivity) directly. Launcher Manager may start this activity by name, without a launcher category, so
+     * every launch goes to the home screen unless it comes from our gear (EXTRA_SETTINGS) or asks for the preview.
      */
     private boolean openFireHome(Intent intent) {
-        if (!HomeMode.AMAZON || intent == null || !(intent.hasCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-                || intent.hasCategory(Intent.CATEGORY_LAUNCHER)) || intent.getBooleanExtra("screensaver", false)) {
-            return false;
-        }
+        if (!HomeMode.AMAZON || intent == null) return false;
+        if (intent.getBooleanExtra("screensaver", false) || intent.getBooleanExtra(EXTRA_SETTINGS, false)) return false;
         startActivity(new Intent(this, FireHomeActivity.class));
         finish();
         return true;

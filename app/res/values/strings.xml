@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Free My TV</string>
-    <string name="remote_key_service">Lets the app buttons on the remote (Netflix, YouTube, Prime Video, TCL Channel) open the apps you picked in Free My TV, from any app. It only reads those buttons.</string>
+    <string name="remote_key_service">Lets the app buttons on the remote (Netflix, YouTube, Prime Video, TCL Channel) open the apps you picked in Free My TV, from any app. On Fire TV it also sees which app is in front, to bring Free My TV back when you press Home. It only reads those buttons and the app\'s name: nothing on the screen.</string>
 </resources>
