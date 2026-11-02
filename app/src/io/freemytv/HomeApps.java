@@ -25,6 +25,7 @@ import android.graphics.drawable.Drawable;
 import android.media.tv.TvContract;
 import android.media.tv.TvInputInfo;
 import android.media.tv.TvInputManager;
+import android.os.Build;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.view.View;
@@ -688,7 +689,8 @@ final class HomeApps {
      * Fire TV (a TV with Fire OS built in): an HDMI input through Amazon's own input switch, as its home screen does.
      * The standard request goes to Vewd's HbbTV player or to Amazon's Live TV, which both play the antenna's last
      * channel (an app's, like RaiPlay's) instead, and Amazon's input player wants a permission only Amazon's apps have.
-     * The switch takes the port's hardware number: HW2 is HDMI 1. Tested on a Xiaomi Fire TV (MediaTek, Fire OS 8).
+     * The switch usually takes the port's hardware number: HW2 is HDMI 1. On the TCL AFTDEC012E, HDMI 4 is
+     * HW5 but Amazon's own menu sends inputType 10; 5 waits for input data and times out.
      */
     private static final Pattern HW = Pattern.compile("/HW(\\d+)$");
 
@@ -699,8 +701,10 @@ final class HomeApps {
                 "com.amazon.tv.inputpreference.service.KaminoInputSwitchService"));
         if (c.getPackageManager().resolveService(sw, 0) == null) return false;
         try {
-            if (c.startService(sw.putExtra("inputType", Integer.parseInt(m.group(1)))) == null) return false;
-            AppLog.w("Fire TV input: HW" + m.group(1) + " for " + it.label);   // another board may number its ports differently
+            int hardware = Integer.parseInt(m.group(1));
+            int inputType = "AFTDEC012E".equalsIgnoreCase(Build.MODEL) && hardware == 5 ? 10 : hardware;
+            if (c.startService(sw.putExtra("inputType", inputType)) == null) return false;
+            AppLog.w("Fire TV input: HW" + hardware + " (type " + inputType + ") for " + it.label);
             return true;
         } catch (RuntimeException e) {
             AppLog.w("Amazon's input switch: " + e.getMessage());
