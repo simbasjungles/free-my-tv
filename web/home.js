@@ -803,6 +803,9 @@
         step: function (d) { cycle('openPicks', ['apps', 'nuvio'], open, d); }});
     }
     rows.push({label: tr('Shelf'), value: '›', shelf: true, step: function (d) { if (d >= 0) openShelfEdit(); }});
+    // LG only: its launcher is what shows when an app opened from here is closed, so the service brings us back.
+    if (TV.canReturn()) rows.push({label: tr('Return to Free My TV'), toggle: Prefs.returnApp(),
+      step: function () { Prefs.set('returnApp', !Prefs.returnApp()); }});
     rows.push({label: tr('About this TV'), value: '›', about: true, step: function (d) { if (d >= 0) openAbout(); }});
     if (TV.canOpenSettings) rows.push({label: tr('TV Settings'), value: '›', step: function (d) { if (d >= 0) tvSettings(); }});
     return rows;
@@ -1686,6 +1689,7 @@
   function reopened() {
     // LG: with handlesRelaunch the app has to come to the front itself, or opening it again while it runs shows nothing.
     if (window.PalmSystem && window.PalmSystem.activate) window.PalmSystem.activate();
+    TV.stopReturn();   // back in front: the service has nothing left to watch
     reset();
     loadApps(function () { renderShelf(); renderDrawer(); restInDrawer(); Data.refresh(); });
   }

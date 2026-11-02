@@ -86,6 +86,8 @@ var Prefs = (function () {
     shelf: function () { return pick('shelf', null); },
     /** The shelf_apps of the build that last set the shelf, so a new one wins once over the TV's choice. */
     shelfConfig: function () { return pick('shelfConfig', ''); },
+    /** LG: come back to Free My TV when an app opened from here is closed (on by default). */
+    returnApp: function () { return pick('returnApp', true) === true; },
     /** The weather's city, picked on the TV (Home Settings → City), or config.properties' (or the time zone's). */
     city: function () { return pick('city', Place.city); },
     latitude: function () { return pick('latitude', Place.lat); },
