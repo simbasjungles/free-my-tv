@@ -58,7 +58,7 @@ function call(uri, clientKey, done) {
       open = true;
       buf = buf.slice(end + 4);
       var payload = {forcePairing: false, pairingType: 'PROMPT',
-        manifest: {manifestVersion: 1, appVersion: '1.0', permissions: ['READ_INSTALLED_APPS']}};
+        manifest: {manifestVersion: 1, appVersion: '1.0', permissions: ['READ_INSTALLED_APPS', 'READ_RUNNING_APPS']}};
       if (clientKey) payload['client-key'] = clientKey;
       send({type: 'register', id: 'register', payload: payload});
     }
@@ -90,6 +90,89 @@ function call(uri, clientKey, done) {
   socket.on('error', function () { finish(null); });
   socket.on('close', function () { finish(null); });
 }
+
+/*
+ * Bringing Free My TV back after another app is closed. The page cannot do it: webOS suspends it when
+ * another app comes to the front (its DevTools target disappears), and this service, a Node process,
+ * keeps running. So the page hands over the client key when it opens an app, and this service watches
+ * the app in the foreground until the person leaves it: on the TV's own launcher, it launches Free My
+ * TV again, which comes back through webOSRelaunch with its screen as it was.
+ *
+ * It asks the remote control API rather than subscribing: getForegroundAppInfo answers
+ * `subscribed: true` and then never sends an update (tested on webOS 7.6, 1 Nov 2026).
+ */
+var watch = null, activity = null;
+
+function stopWatch() {
+  if (watch) {
+    clearInterval(watch.timer);
+    watch = null;
+  }
+  if (activity) {
+    try { activity.releaseKeepAlive ? activity.releaseKeepAlive() : activity.release(); } catch (e) {}
+    activity = null;
+  }
+}
+
+function launchSelf(id) {
+  try {
+    service.call('luna://com.webos.applicationManager/launch', {id: id}, function () {});
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function watchTick() {
+  if (!watch) return;
+  var w = watch;
+  if (Date.now() > w.until) { stopWatch(); return; }   // nobody came back: stop asking
+  call('com.webos.applicationManager/getForegroundAppInfo', w.key, function (result) {
+    if (!watch || watch !== w) return;
+    var payload = result && result.payload ? result.payload : null;
+    var appId = payload ? payload.appId : null;
+    if (!appId) return;
+    if (appId === w.self) {
+      // Back in front: the launch worked, or the app we opened never came up (15 s of grace).
+      if (w.sawTarget || Date.now() - w.armedAt > 15000) stopWatch();
+      return;
+    }
+    if (appId === w.target) { w.sawTarget = true; return; }
+    if (appId === 'com.webos.app.home') {
+      // The person left the app. Two tries in a minute: after that, the TV's home is what they want.
+      w.strikes = Date.now() - w.last < 60000 ? w.strikes + 1 : 1;
+      w.last = Date.now();
+      if (w.strikes > 2) { stopWatch(); return; }
+      if (launchSelf(w.self)) {
+        w.sawTarget = true;
+        w.until = Date.now() + 30000;   // enough for the relaunch to land
+      }
+      return;
+    }
+    stopWatch();   // another app: the person moved on
+  });
+}
+
+service.register('returnWatch', function (message) {
+  var p = message.payload || {};
+  stopWatch();
+  if (!p.on || !p.clientKey) {
+    message.respond({returnValue: true, watching: false});
+    return;
+  }
+  var self = p.self || String(require('./package.json').name).replace(/\.service$/, '');
+  watch = {key: p.clientKey, target: p.appId, self: self, strikes: 0, last: 0, sawTarget: false,
+           armedAt: Date.now(), until: Date.now() + (p.minutes || 15) * 60000};
+  // Without this the TV collects the idle service, and the process goes with it.
+  try {
+    activity = service.activityManager.create('idle');
+    activity.keepAlive();
+  } catch (e) {}
+  watch.timer = setInterval(watchTick, 2000);
+  // The service may have just booted, and the first read is what tells us whether the launch even happened.
+  setTimeout(watchTick, 100);
+  message.respond({returnValue: true, watching: true});
+});
 
 service.register('ssap', function (message) {
   var p = message.payload || {};

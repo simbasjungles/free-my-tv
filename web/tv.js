@@ -52,6 +52,35 @@ var TV = (function () {
     bridge.call(uri, JSON.stringify(params || {}));
   }
 
+  /** The service that watches the TV while this page is suspended (see webos/service/service.js). */
+  var RETURN_SERVICE = 'luna://io.freemytv.service/returnWatch';
+
+  function callReturn(payload) {
+    if (!webos) return;
+    var bridge = new window.PalmServiceBridge();
+    calls.push(bridge);
+    bridge.onservicecallback = function () {
+      var i = calls.indexOf(bridge);
+      if (i >= 0) calls.splice(i, 1);
+    };
+    bridge.call(RETURN_SERVICE, JSON.stringify(payload));
+  }
+
+  /** Opens the watch for the app just launched: apps only (not the inputs, not the TV's own settings). */
+  function armReturn(id) {
+    if (!webos || !id || /^com\.(webos|palm)\./.test(id) || !Prefs.returnApp()) return;
+    var key = '';
+    try { key = localStorage.getItem('fmtv.ssapKey') || ''; } catch (e) {}
+    if (!key) return;
+    callReturn({on: true, appId: id, clientKey: key});
+  }
+
+  /** The person is back, or went somewhere else: no reason to keep watching. */
+  function stopReturn() {
+    if (!webos) return;
+    callReturn({on: false});
+  }
+
   // LG's own screensaver asks every subscribed app first. While Free My TV is on screen and its own screensaver will
   // take over (`hold`, from home.js), it says no; otherwise, and in the background, the TV's runs as before.
   var saverBridge = null;
@@ -563,6 +592,7 @@ var TV = (function () {
         if (done) setTimeout(function () { done(true); }, 0);
         return;
       }
+      armReturn(id);
       luna('luna://com.webos.applicationManager/launch', params ? {id: id, params: params} : {id: id}, function (res) {
         if (done) done(!!res);
       });
@@ -595,6 +625,16 @@ var TV = (function () {
         done(list);
       });
     },
+
+    /**
+     * LG only: after an app is opened from here, asks the service to bring Free My TV back when that app
+     * is closed. Inputs and the TV's own screens are left alone, and no key means no watch (it needs the
+     * remote control API, which is paired on the first launch of an app).
+     */
+    returnToApp: armReturn,
+    stopReturn: stopReturn,
+    /** LG only: whether a setting for it makes sense on this TV. */
+    canReturn: function () { return !!webos; },
 
     /** The TV's own settings; done(ok). */
     settings: function (done) {
