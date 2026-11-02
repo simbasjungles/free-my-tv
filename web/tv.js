@@ -162,11 +162,15 @@ var TV = (function () {
   // Samsung apps whose iconPath is Tizen's generic pinwheel (a valid image, so onerror never fires): our own icons.
   // Seen on a 2018 NU7675 (Tizen 4); Smart Hub draws their real icons from a folder apps can't read. On a 2017
   // MU6100 (Tizen 3) no iconPath loads at all, so common apps get a logo here: Simple Icons' (CC0), cropped and tinted
-  // for the tiles, with a width and height so old WebKit sizes them like PNGs.
+  // for the tiles, with a width and height so old WebKit sizes them like PNGs. Vodafone TV's, Movistar Plus+'s, Disney+'s
+  // and Prime Video's are drawn in white by a contributor (their marks are the brands').
   var SAMSUNG_ICONS = {
     '9Ur5IzDKqV.TizenYouTube': 'icons/youtube.png',
-    'evKhCgZelL.AmazonIgnitionLauncher2': 'icons/prime.png',
-    'org.tizen.primevideo': 'icons/prime.png',
+    '9HNZc2H9Ek.vodafoneuismarttv': 'icons/vodafone.svg',
+    'm52SXlMi8Y.YOMVITIZEN': 'icons/movistarplus.svg',
+    'MCmYXNxgcu.DisneyPlus': 'icons/disneyplus.svg',
+    'evKhCgZelL.AmazonIgnitionLauncher2': 'icons/primevideo.svg',
+    'org.tizen.primevideo': 'icons/primevideo.svg',
     'RN1MCdNq8t.Netflix': 'icons/netflix.svg',
     'org.tizen.netflix-app': 'icons/netflix.svg',
     'NvZ26VG9Yw.HBOGOLAG': 'icons/max.svg',
@@ -184,13 +188,17 @@ var TV = (function () {
   // The same logos by name (lowercase letters and digits only), for app ids the list above doesn't know: older TVs
   // (a 2016 KU6300, Tizen 2.4) can carry other ids for the same apps.
   var SAMSUNG_ICON_NAMES = {
-    youtube: 'icons/youtube.png', primevideo: 'icons/prime.png', amazonprimevideo: 'icons/prime.png',
+    youtube: 'icons/youtube.png', primevideo: 'icons/primevideo.svg', amazonprimevideo: 'icons/primevideo.svg',
     netflix: 'icons/netflix.svg', max: 'icons/max.svg', spotify: 'icons/spotify.svg',
     deezer: 'icons/deezer.svg', youtubekids: 'icons/youtubekids.svg', redbulltv: 'icons/redbull.svg', ted: 'icons/ted.svg',
     steamlink: 'icons/steam.svg', jellyfin: 'icons/jellyfin.svg', paramount: 'icons/paramountplus.svg',
     paramountplus: 'icons/paramountplus.svg', crunchyroll: 'icons/crunchyroll.svg', twitch: 'icons/twitch.svg',
-    plex: 'icons/plex.svg', appletv: 'icons/appletv.svg'
+    plex: 'icons/plex.svg', appletv: 'icons/appletv.svg', vodafonetv: 'icons/vodafone.svg',
+    movistarplus: 'icons/movistarplus.svg', disney: 'icons/disneyplus.svg', disneyplus: 'icons/disneyplus.svg'
   };
+
+  // The tile's color under a white logo of ours, for apps without one in home.js's SHELF.
+  var SAMSUNG_COLORS = {'icons/vodafone.svg': '#E60000', 'icons/movistarplus.svg': '#000000'};
 
   // Names Smart Hub gets wrong: HBO's app has none (so it never reached the shelf), others are long or old.
   var SAMSUNG_TITLES = {
@@ -219,7 +227,7 @@ var TV = (function () {
   // has one, as on Samsung, and otherwise their name on the brand's color: [id, title, logo, color].
   var KNOWN = [
     ['netflix', 'Netflix', 'icons/netflix.svg'], ['youtube.leanback.v4', 'YouTube', 'icons/youtube.png'],
-    ['amazon', 'Prime Video', 'icons/prime.png'], ['com.disney.disneyplus-prod', 'Disney+'],
+    ['amazon', 'Prime Video', 'icons/primevideo.svg'], ['com.disney.disneyplus-prod', 'Disney+'],
     ['com.wbd.stream', 'HBO Max', 'icons/max.svg'], ['com.hbo.hbomax', 'Max', 'icons/max.svg'],
     ['com.apple.appletv', 'Apple TV'], ['hulu', 'Hulu'], ['com.peacock.tv', 'Peacock'], ['com.nfl.app', 'NFL'],
     ['globoplaywebos', 'Globoplay'], ['spotify-beehive', 'Spotify', 'icons/spotify.svg'],
@@ -292,7 +300,7 @@ var TV = (function () {
     if (SAMSUNG_ICONS[a.id] || byName) icon = SAMSUNG_ICONS[a.id] || byName;
     var dial = key === 'netflix' ? 'Netflix' : key === 'youtube' ? 'YouTube' : /^(amazon)?primevideo$/.test(key) ? 'Amazon' : '';
     if (dial) samsungDial[a.id] = dial;
-    return {id: a.id, title: title, icon: icon, color: ''};
+    return {id: a.id, title: title, icon: icon, color: SAMSUNG_COLORS[icon] || ''};
   }
 
   /**
