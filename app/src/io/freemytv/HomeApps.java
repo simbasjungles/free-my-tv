@@ -640,7 +640,9 @@ final class HomeApps {
                 intent = inputIntent(a, it);
                 break;
             case SETTINGS:
-                intent = new Intent().setComponent(new ComponentName(a, SettingsActivity.class));
+                // On Fire TV the settings are reached only this way: any other launch of SettingsActivity opens Home.
+                intent = new Intent().setComponent(new ComponentName(a, SettingsActivity.class))
+                        .putExtra(SettingsActivity.EXTRA_SETTINGS, true);
                 break;
             case ANDROID_SETTINGS:
                 intent = new Intent(Settings.ACTION_SETTINGS);

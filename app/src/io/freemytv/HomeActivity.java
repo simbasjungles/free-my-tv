@@ -24,6 +24,13 @@ public class HomeActivity extends Activity {
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Fire TV: HomeActivity answers HOME too, but its manifest entry keeps resumeWhilePausing, which on Fire OS
+        // leaves window focus on Amazon's paused launcher. Hand every launch to FireHomeActivity, the Fire TV home.
+        if (HomeMode.AMAZON && !(this instanceof FireHomeActivity)) {
+            startActivity(new Intent(this, FireHomeActivity.class));
+            finish();
+            return;
+        }
         Watchdog.install(this);
         SleepTimer.listen(this);
         SleepTimer.check(this);
