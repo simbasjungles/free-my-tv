@@ -184,7 +184,11 @@ final class HomeApps {
     static List<Item> shelf(Context c, boolean extract) {
         List<Item> items = new ArrayList<>();
         PackageManager pm = c.getPackageManager();
+        // The game console (PlayStation, Xbox, Switch) keeps the shelf's last slot: it is the one card that isn't an
+        // app, and its name and icon come from the TV's own HDMI input (Settings > Shelf can't list it).
+        Item console = consoleInput(c);
         int max = maxShelf(c);
+        if (console != null) max = ConsoleShelf.appsWithConsole(max);
         for (String pkg : shelfPackages(c)) {
             if (items.size() >= max) break;
             Intent launch = launchIntent(pm, pkg);
@@ -210,7 +214,37 @@ final class HomeApps {
             }
             items.add(it);
         }
+        if (console != null) {
+            // A stable key (the port may change): the card is cached by it, and the shelf compares keys to redraw.
+            console.key = "console";
+            console.setTile(symbolTile(c, "console", console.symbol));
+            items.add(console);
+        }
         return items;
+    }
+
+    /** The HDMI input a game console is on, from the name the TV gives it ("Console de jogos", "PlayStation 5"), or null. */
+    static Item consoleInput(Context c) {
+        try {
+            return consoleIn(inputs(c, true));
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** The first input whose name says it is a game console (deviceSymbol), or null. */
+    static Item consoleIn(List<Item> inputs) {
+        List<String> symbols = new ArrayList<>(inputs.size());
+        for (Item it : inputs) symbols.add(it.symbol);
+        int i = ConsoleShelf.consoleIndex(symbols);
+        return i < 0 ? null : inputs.get(i);
+    }
+
+    /** The shelf's packages in order, leaving out cards that aren't apps (the console tile), for saving a new order. */
+    static List<String> packagesOf(List<Item> items) {
+        List<String> pkgs = new ArrayList<>(items.size());
+        for (Item it : items) pkgs.add(it.pkg);
+        return ConsoleShelf.packages(pkgs);
     }
 
     private static String[] known(String pkg) {
