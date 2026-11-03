@@ -420,8 +420,10 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   2 steps and a held key gets stuck, #325; turning off only our service fixed it), so the buttons work only where they
   reach our home screen's window.
   Vestel (F&U and other store brands; MediaTek, Android TV 14 tested) maps its Netflix button to `KEYCODE_STEM_1`, a
-  global key (`dumpsys window policy` lists them) that the key filter sees first; its YouTube, Prime Video and Google
-  Play buttons stay with the system. The stock lists needed no Vestel entries.
+  global key (`dumpsys window policy` lists them) that the key filter sees first, and its YouTube button to
+  `KEYCODE_TV_INPUT_COMPOSITE_1` (scan code 484), another global key, for MediaTek's hot-key receiver, which opens
+  YouTube on the key's release; its Prime Video and Google Play buttons stay with the system. The stock lists needed no
+  Vestel entries.
   KTC (NextStar; MediaTek, Google TV 14 tested) maps its Tabii button to `KEYCODE_BUTTON_8`, also a global key, which
   KTC's own hot-key receiver would open Tabii with; its Netflix, YouTube and Prime Video buttons stay with the system.
   Sony (BRAVIA VH22, Android TV 12 tested) sends `KEYCODE_BUTTON_9` for its BRAVIA CORE, Disney+, Prime Video,

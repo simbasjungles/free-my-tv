@@ -347,7 +347,6 @@
  "Xiaomi default": "Xiaomi 預設",
  "Xiaomi default: the button opens what it always did.": "Xiaomi 預設：按鈕會照常開啟原本指定的應用程式。",
  "YouTube button": "YouTube 按鈕",
- "YouTube, Prime Video and Google Play: the TV itself controls those buttons.": "YouTube、Prime Video 和 Google Play：這些按鈕由電視本身控制。",
  "Your TV's home screen and screensaver": "電視的主畫面和螢幕保護程式",
  "debugging is off on the TV (port 5555 closed)": "電視已關閉偵錯功能（連接埠 5555 未開啟）",
  "debugging permission wasn't accepted on the TV": "電視尚未授予偵錯權限",

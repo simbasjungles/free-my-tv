@@ -32,6 +32,8 @@ final class Prefs {
     static final String QUICK_PANEL = HomeMode.PKG + "#panel";
     /** The Netflix button on Vestel TVs and Formovie projectors: STEM_1, which the TV hands to its Netflix key receiver (dumpsys window policy). */
     static final int KEY_STEM_NETFLIX = KeyEvent.KEYCODE_STEM_1;
+    /** Vestel's YouTube button: TV_INPUT_COMPOSITE_1, a global key MediaTek's hot-key receiver turns into YouTube. */
+    static final int KEY_VESTEL_YOUTUBE = KeyEvent.KEYCODE_TV_INPUT_COMPOSITE_1;
     /** KTC's (NextStar) Tabii button: BUTTON_8, which the TV hands to its hot-key receiver (its log: "keycode = 195"). */
     static final int KEY_KTC_TABII = KeyEvent.KEYCODE_BUTTON_8;
     /** Xiaomi's Mi button: BUTTON_4, which the TV hands to its GlobalKeyReceiver for PatchWall (its log: "keyCode = 191"). */
@@ -122,6 +124,7 @@ final class Prefs {
             : RemoteKeys.SONY
             ? new int[] {KEY_SONY_CORE, KEY_SONY_NETFLIX, KEY_SONY_DISNEY, KEY_SONY_PRIME, KEY_SONY_YOUTUBE, KEY_SONY_CRUNCHYROLL,
                     KEY_SONY_PLAY, KEY_SONY_LIV, KEY_SONY_SETTINGS}
+            : RemoteKeys.VESTEL ? new int[] {KEY_STEM_NETFLIX, KEY_VESTEL_YOUTUBE}
             : RemoteKeys.STEM_NETFLIX ? new int[] {KEY_STEM_NETFLIX}
             : RemoteKeys.KTC ? new int[] {KEY_KTC_TABII}
             : RemoteKeys.XIAOMI_PATCHWALL_ONLY ? new int[] {KEY_XIAOMI_PATCHWALL}
@@ -583,7 +586,7 @@ final class Prefs {
         }
         switch (keyCode) {
             case KEY_NETFLIX: case KEY_STEM_NETFLIX: return "com.netflix.ninja";
-            case KEY_YOUTUBE: return "com.google.android.youtube.tv";
+            case KEY_YOUTUBE: case KEY_VESTEL_YOUTUBE: return "com.google.android.youtube.tv";
             case KEY_PRIME: return "com.amazon.amazonvideo.livingroom";
             case KEY_TCL_CHANNEL: return "";
             case KEY_TCL_SETTINGS: return "com.android.tv.settings";   // TV Settings, as from our home screen (#289)

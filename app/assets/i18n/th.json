@@ -347,7 +347,6 @@
  "Xiaomi default": "ค่าเริ่มต้นของ Xiaomi",
  "Xiaomi default: the button opens what it always did.": "ค่าเริ่มต้นของ Xiaomi: ปุ่มเปิดแอปเดิมตามปกติ",
  "YouTube button": "ปุ่ม YouTube",
- "YouTube, Prime Video and Google Play: the TV itself controls those buttons.": "YouTube, Prime Video และ Google Play: ทีวีควบคุมปุ่มเหล่านี้เอง",
  "Your TV's home screen and screensaver": "หน้าหลักและสกรีนเซฟเวอร์ของทีวี",
  "debugging is off on the TV (port 5555 closed)": "การแก้ไขข้อบกพร่องปิดอยู่บนทีวี (พอร์ต 5555 ปิด)",
  "debugging permission wasn't accepted on the TV": "ทีวียังไม่ได้อนุญาตการแก้ไขข้อบกพร่อง",

@@ -12,8 +12,9 @@ import android.view.KeyEvent;
  * Channel); with it off, the keys still arrive, so we open the app the person picked (Settings > Remote Buttons).
  * Disney and Globoplay are opened by the system itself, so they are not listed. The YouTube button (BUTTON_3) never
  * reaches an app's window; only the accessibility service's key filter (RemoteKeyService) sees it.
- * On Vestel TVs and Formovie (Xiaomi) projectors only the Netflix button is ours: the system opens Netflix itself (a
- * global key, after the filter).
+ * On Vestel TVs and Formovie (Xiaomi) projectors the Netflix button is ours: the system opens Netflix itself (a
+ * global key, after the filter). On Vestel, YouTube too: TV_INPUT_COMPOSITE_1, which MediaTek's hot-key receiver turns
+ * into YouTube.
  * On KTC TVs (NextStar) only the Tabii button is ours, a global key too: the TV's hot-key receiver opens Tabii with it.
  * On Sony TVs, the app buttons (and the Google Play button of older remotes) are global keys for Sony's own receiver;
  * the filter sees them first, the same way.
