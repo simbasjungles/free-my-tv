@@ -1,7 +1,6 @@
 name: My TV (works or doesn't)
 description: Tell us how Free My TV runs on your TV, so the next person with the same model knows what to expect.
 title: "[TV] Brand Model (platform and version)"
-labels: ["tv-report"]
 body:
   - type: markdown
     attributes:

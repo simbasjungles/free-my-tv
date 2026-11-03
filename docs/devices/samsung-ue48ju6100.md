@@ -8,7 +8,7 @@ Report: [#317](https://github.com/simbasjungles/free-my-tv/issues/317).
 
 ## Install
 
-- The only change needed was `required_version="2.4"` → `"2.3"` in `tizen/config.xml`. `web/` needed no changes.
+- The only change needed was `required_version="2.4"` → `"2.3"` in `tizen/config.xml` (already applied: `main` has `2.3`). `web/` needed no changes.
 - A plain self-signed Tizen certificate was accepted: no Samsung account, no DUID.
 - `tizen/install.py` worked unmodified. The TV reports no `sdk_toolpath`, so it pushed to `/opt/usr/apps/tmp`.
 - `secure_protocol: enabled` did not interfere. Updates signed with the same certificate install over the old build.
