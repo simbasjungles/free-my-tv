@@ -778,6 +778,8 @@ final class Recs {
         List<Pick> newMovies = new ArrayList<>(), newShows = new ArrayList<>();
         for (int i = 0; i < movies.length(); i++) add(newMovies, movies.getJSONObject(i), "movie");
         for (int i = 0; i < shows.length(); i++) add(newShows, shows.getJSONObject(i), "tv");
+        newMovies.removeIf(x -> watched.contains(key(x)));
+        newShows.removeIf(x -> watched.contains(key(x)));
         // Services with mostly older titles (free ones like Pluto TV) have few or no new ones: their most popular
         // fill the rest, so a tab doesn't show empty cards.
         if (newMovies.size() < MAX_CARDS) {
