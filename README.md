@@ -256,6 +256,10 @@ The TV talks to your server directly on your network. If the server can't be rea
 usage (screen-content recognition, telemetry), and others whose name suggests it. It only reads: nothing on the TV is
 changed. Free My TV mode already turns off the known ones on the brands that ship them; for the rest the choice is yours.
 
+`python3 tools/adb_check.py <TV IP>` tells you whether the TV's adb port (5555) answers from your computer. Free My TV
+itself needs adb on the TV while it runs, so it is open while USB debugging is on; the tool only reports what the rest of
+your network can reach, and changes nothing.
+
 ## Going back
 
 On the TV: *Free My TV* → *Home Screen* → *Original*. The factory home screen, screensaver and every app come back exactly as they were. If the new home screen ever crashes three times in five minutes, it switches back by itself.
