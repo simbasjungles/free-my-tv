@@ -250,6 +250,12 @@ This is for Google TV and Android TV, and it needs the TMDB key and at least one
 
 The TV talks to your server directly on your network. If the server can't be reached, the other picks load as usual.
 
+## Checking a TV for apps that watch you
+
+`python3 tools/privacy_scan.py <TV IP>` lists the apps on your TV that this project knows watch what's on screen or report
+usage (screen-content recognition, telemetry), and others whose name suggests it. It only reads: nothing on the TV is
+changed. Free My TV mode already turns off the known ones on the brands that ship them; for the rest the choice is yours.
+
 ## Going back
 
 On the TV: *Free My TV* → *Home Screen* → *Original*. The factory home screen, screensaver and every app come back exactly as they were. If the new home screen ever crashes three times in five minutes, it switches back by itself.
