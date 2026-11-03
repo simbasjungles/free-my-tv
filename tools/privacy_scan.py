@@ -58,7 +58,7 @@ def adb(*args):
 
 def main():
     ap = argparse.ArgumentParser(description='Read-only scan of a TV for tracking apps.')
-    ap.add_argument('ip', nargs='?', help='the TV\'s IP address (adb connects to ip:5555)')
+    ap.add_argument('ip', nargs='?', help='the TV\'s IP address, or ip:port (default port 5555)')
     ap.add_argument('--packages', help='a saved `pm list packages` instead of asking the TV')
     ap.add_argument('--disabled', help='a saved `pm list packages -d`, with --packages')
     args = ap.parse_args()
@@ -74,8 +74,9 @@ def main():
             sys.exit('adb is not installed. Install the Android platform tools, or use --packages with a saved list.')
         serial = []
         if args.ip:
-            serial = ['-s', args.ip + ':5555']
-            out = adb('connect', args.ip + ':5555')
+            target = args.ip if args.ip.rpartition(':')[2].isdigit() else args.ip + ':5555'
+            serial = ['-s', target]
+            out = adb('connect', target)
             if 'connected' not in out.stdout:
                 sys.exit('Could not connect to %s:5555: %s' % (args.ip, (out.stdout + out.stderr).strip()))
         listed = adb(*serial, 'shell', 'pm', 'list', 'packages')

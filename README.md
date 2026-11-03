@@ -257,7 +257,7 @@ usage (screen-content recognition, telemetry), and others whose name suggests it
 changed. Free My TV mode already turns off the known ones on the brands that ship them; for the rest the choice is yours.
 
 `python3 tools/adb_check.py <TV IP>` tells you whether the TV's adb port (5555) answers from your computer. Free My TV
-itself needs adb on the TV while it runs, so it is open while USB debugging is on; the tool only reports what the rest of
+itself needs adb on the TV while it runs, so the port is normally open while USB debugging is on; the tool only reports what the rest of
 your network can reach, and changes nothing.
 
 ## Going back

@@ -1,4 +1,6 @@
 """Run with: python3 tests/adb_check_test.py (from anywhere)."""
+import contextlib
+import io
 import os
 import socket
 import sys
@@ -24,8 +26,14 @@ class AdbCheckTest(unittest.TestCase):
     def test_unresolvable_host_is_no_answer(self):
         self.assertEqual(ac.check('no-such-host.invalid', 5555, 2), ac.NO_ANSWER)
 
-    def test_exit_codes(self):
-        self.assertEqual(ac.main(['adb_check.py']), 2)
+    def test_usage_exit_code(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(ac.main(['adb_check.py']), 2)
+
+    def test_split_host(self):
+        self.assertEqual(ac.split_host('192.168.1.50'), ('192.168.1.50', 5555))
+        self.assertEqual(ac.split_host('192.168.1.50:5556'), ('192.168.1.50', 5556))
+        self.assertEqual(ac.split_host('fe80::1'), ('fe80::1', 5555))
 
 
 if __name__ == '__main__':
