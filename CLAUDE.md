@@ -311,8 +311,16 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   *Original* revokes it with `pm revoke`. Watch Next pictures load only from the TV (`content://`, `android.resource://`),
   never from the network. The app talks only to TMDB, Open-Meteo, Binance, Watchmode (with a `watchmode_key`), your Plex
   server (with a `plex_url`), your Immich server (with `immich_server` and its key), Trakt (with a `trakt_client_id`,
-  once the person signs in on the TV) and GitHub's releases (Updates): new sources (such as Stremio) must not add
-  network calls without the owner's OK.
+  once the person signs in on the TV), Plex's account and your Plex server (once the person signs in to Plex on the
+  TV) and GitHub's releases (Updates): new sources (such as Stremio) must not add network calls without the owner's OK.
+- Plex sign-in (`Plex`, `:home` only, like Trakt): Plex's own row in *Continue Watching apps* (always listed when Plex
+  is installed) opens a small menu, sign in or out and on or off, and shows Plex's TV code (plex.tv/link) while
+  signing in. When Plex is on there but no one signed in and the row has nothing from Plex, the home screen says
+  where to sign in (`plexHint`). The token stays in `:home`'s private `plex` preferences, only travels in the `X-Plex-Token` header,
+  never follows a redirect and is never logged. Continue Watching then starts with the server's in-progress titles
+  (Plex's order, beyond `PER_APP`) and ends with the Plex Watchlist; Plex's own Watch Next rows are dropped then, and
+  its pictures (`Plex.PICTURE` keys in `WatchArt`) are the one exception to "only from the TV": Plex gave them. Plex
+  shares its own row only through Google TV's Engage, which Android TV models never get (a Sony BRAVIA VH1).
 - Trakt (`Trakt`, Google TV only) needs the person's own API app: `trakt_client_id` (the Client ID only: device code
   with PKCE, so no secret is built in). Until they sign in on the Picks screen, nothing talks to `api.trakt.tv`. The
   tokens stay in `:home`'s private `trakt` preferences, are never logged and never follow a redirect, and only `:home`

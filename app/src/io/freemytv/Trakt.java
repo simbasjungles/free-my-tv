@@ -88,7 +88,8 @@ final class Trakt {
 
     private static volatile Boolean home;
 
-    private static boolean inHome() {
+    /** This is the :home process (Plex keeps its account here too). */
+    static boolean inHome() {
         if (home == null) {
             String name = "";
             try (FileInputStream in = new FileInputStream("/proc/self/cmdline")) {

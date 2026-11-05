@@ -20,7 +20,8 @@ import java.util.Set;
  * What you were watching in your apps, from Android TV's own lists (TvContract, needs READ_TV_LISTINGS): the system
  * Watch Next list, where Prime Video, Disney+, HBO Max, Plex and others note what you left half-way, and the home
  * screen channels some apps publish under the name "Continue Watching" instead (Stremio). Newest first, a few per app,
- * so one show doesn't fill the row.
+ * so one show doesn't fill the row. Signed in to Plex (Plex.java), what Plex has in progress comes first, in Plex's
+ * order, and the Plex Watchlist last.
  */
 final class WatchNext {
     private WatchNext() {}
@@ -52,6 +53,19 @@ final class WatchNext {
             bannerKey = "banner:" + pkg;
         }
 
+        /** From Plex (Plex.java): the picture is Plex's (a server path or Plex's https artwork), "" for the banner. */
+        static Item plex(String image) {
+            return new Item(image);
+        }
+
+        private Item(String image) {
+            pkg = Plex.PKG;
+            picture = image.isEmpty() ? null : image;
+            pictureUri = null;
+            pictureKey = image.isEmpty() ? null : Plex.PICTURE + image;
+            bannerKey = "banner:" + pkg;
+        }
+
         /** The picture for a 16:9 card: the thumbnail (usually 16:9) before the poster. */
         String picture() {
             return picture;
@@ -75,13 +89,21 @@ final class WatchNext {
 
     /** Everything to show, newest first (off the main thread: these are content provider queries). */
     static List<Item> load(Context c) {
-        if (!allowed(c)) return Collections.emptyList();
-        ContentResolver cr = c.getContentResolver();
-        List<Item> all = new ArrayList<>(read(cr, TvContract.WatchNextPrograms.CONTENT_URI));
-        for (long channel : continueChannels(cr, c.getPackageName())) {
-            all.addAll(read(cr, TvContract.buildPreviewProgramsUriForChannel(channel)));
+        Plex.Lists plex = Plex.lists(c);   // signed in to Plex, with or without the TV's lists
+        if (!allowed(c) && plex.watching.isEmpty() && plex.watchlist.isEmpty()) return Collections.emptyList();
+        List<Item> all = new ArrayList<>();
+        if (allowed(c)) {
+            ContentResolver cr = c.getContentResolver();
+            all.addAll(read(cr, TvContract.WatchNextPrograms.CONTENT_URI));
+            for (long channel : continueChannels(cr, c.getPackageName())) {
+                all.addAll(read(cr, TvContract.buildPreviewProgramsUriForChannel(channel)));
+            }
         }
         Set<String> off = Prefs.watchOff(), hidden = Prefs.watchHidden();
+        if (!plex.watching.isEmpty() || !plex.watchlist.isEmpty()) {
+            // Plex's own list is the better one: what Plex shares on the TV would only repeat it.
+            for (java.util.Iterator<Item> i = all.iterator(); i.hasNext(); ) if (Plex.PKG.equals(i.next().pkg)) i.remove();
+        }
         for (java.util.Iterator<Item> i = all.iterator(); i.hasNext(); ) {
             Item it = i.next();
             if (off.contains(it.pkg) || hidden.contains(hideKey(it))) i.remove();
@@ -90,6 +112,15 @@ final class WatchNext {
         List<Item> out = new ArrayList<>();
         Map<String, Integer> perApp = new HashMap<>();
         Set<String> seen = new HashSet<>();
+        if (!off.contains(Plex.PKG)) {
+            String name = appName(c, Plex.PKG);
+            for (Item it : plex.watching) {
+                if (hidden.contains(hideKey(it)) || !seen.add(it.pkg + "|" + it.title) || out.size() >= MAX) continue;
+                it.app = name;
+                out.add(it);
+            }
+            perApp.put(Plex.PKG, PER_APP);   // Plex's in-progress titles are in; Plex's own Watch Next ones aren't needed
+        }
         for (Item it : all) {
             String key = it.pkg + "|" + (it.intent != null ? it.intent : it.title);
             int n = perApp.containsKey(it.pkg) ? perApp.get(it.pkg) : 0;
@@ -98,6 +129,16 @@ final class WatchNext {
             it.app = appName(c, it.pkg);
             out.add(it);
             if (out.size() >= MAX) break;
+        }
+        // The watchlist after what you're in the middle of, in every app.
+        if (!off.contains(Plex.PKG)) {
+            String name = appName(c, Plex.PKG);
+            for (Item it : plex.watchlist) {
+                if (out.size() >= MAX) break;
+                if (hidden.contains(hideKey(it)) || !seen.add(it.pkg + "|" + it.title)) continue;
+                it.app = name;
+                out.add(it);
+            }
         }
         return out;
     }
@@ -125,6 +166,7 @@ final class WatchNext {
             // Home screen rows (not the tuner's channels): apps write these, and Watch Next, without any permission.
             packages(cr, TvContract.Channels.CONTENT_URI, TvContract.Channels.COLUMN_PACKAGE_NAME, TvContract.Channels.COLUMN_TYPE, pkgs);
         }
+        if (Plex.available()) pkgs.add(Plex.PKG);   // its row signs in to Plex too (kept only if it's installed)
         pkgs.remove(c.getPackageName());
         // Only apps you can open from the TV: leaves out system pieces (Shell) and home screens (other launchers),
         // which ask for the permission but have nothing to resume.

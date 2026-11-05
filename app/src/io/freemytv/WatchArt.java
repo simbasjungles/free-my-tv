@@ -29,8 +29,10 @@ import java.util.concurrent.Executors;
  * The "Continue watching" cards' pictures, decoded in the background once, at the card's size on screen (16:9,
  * centre-cropped), and kept in memory. Drawing only reuses them. Only pictures already on the TV are read (content:// and
  * android.resource://, from the apps themselves): the app never downloads an address another app wrote (http, https),
- * since it only talks to TMDB, Open-Meteo and Binance, and never opens files (file://). Anything else, or a picture that
- * can't be read, shows the app's TV banner instead, and isn't tried again for a while.
+ * since it only talks to TMDB, Open-Meteo and Binance, and never opens files (file://). The one exception is Plex, once
+ * you sign in to it on the TV (Plex.java): its titles' pictures come from your own Plex server or Plex's artwork, the
+ * addresses Plex itself gave, never one another app wrote. Anything else, or a picture that can't be read, shows the
+ * app's TV banner instead, and isn't tried again for a while.
  */
 final class WatchArt {
     /** The card in the 1920×1080 layout; the pictures are made at this times the UI's scale (setScale). */
@@ -69,7 +71,7 @@ final class WatchArt {
      * onLoaded runs on the main thread when it's in).
      */
     Bitmap get(Uri uri, String key, String bannerKey, String pkg) {
-        if (uri != null) {
+        if (uri != null || key != null && key.startsWith(Plex.PICTURE)) {
             Bitmap b = fetch(key, uri, pkg);
             if (b != null || !failedRecently(key)) return b;
         }
@@ -137,7 +139,8 @@ final class WatchArt {
             if (closed) return;
             Bitmap b = null;
             try {
-                b = uri == null ? banner(pkg) : load(uri);
+                b = uri != null ? load(read(uri)) : key.startsWith(Plex.PICTURE)
+                        ? load(Plex.picture(app, key.substring(Plex.PICTURE.length()))) : banner(pkg);
             } catch (IOException | RuntimeException | OutOfMemoryError e) {
                 AppLog.w("continue watching picture: " + e.getMessage());
             }
@@ -159,8 +162,7 @@ final class WatchArt {
         return null;
     }
 
-    private Bitmap load(Uri uri) throws IOException {
-        byte[] data = read(uri);
+    private Bitmap load(byte[] data) throws IOException {
         BitmapFactory.Options bounds = new BitmapFactory.Options();
         bounds.inJustDecodeBounds = true;
         BitmapFactory.decodeByteArray(data, 0, data.length, bounds);

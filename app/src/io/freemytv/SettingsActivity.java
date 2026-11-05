@@ -363,7 +363,7 @@ public class SettingsActivity extends Activity {
                     if (watchApps == null || at >= listSize()) return "";
                     if (at == watchApps.size()) return hiddenLabel();
                     String[] app = watchApps.get(at);
-                    return app[1] + ", " + onOff(!Prefs.watchOff().contains(app[0])) + ", "
+                    return app[1] + ", " + watchValue(app[0]) + ", "
                             + Ui.trf("{i} of {n}", "i", at + 1, "n", watchApps.size());
                 }
                 case SHELF_EDIT: {
@@ -2025,6 +2025,56 @@ public class SettingsActivity extends Activity {
             return Ui.trf("Show hidden items ({n})", "n", watchHiddenCount);
         }
 
+        /** Plex's row also holds its sign-in (Plex.java), only in :home where the account is. */
+        private static boolean isPlex(String pkg) {
+            return Plex.PKG.equals(pkg) && Plex.available();
+        }
+
+        /**
+         * An app row's value: On or Off; Plex's also says who is signed in ("On · chase"), "Sign in" when no one is,
+         * and the code while signing in.
+         */
+        private String watchValue(String pkg) {
+            boolean on = !Prefs.watchOff().contains(pkg);
+            if (!isPlex(pkg)) return onOff(on);
+            Context c = getContext();
+            String code = Plex.code();
+            if (code != null) return Ui.trf("{url}, code {code}", "url", Plex.url(), "code", code);
+            if (Plex.busy()) return Ui.tr("Connecting…");
+            if (!Plex.message().isEmpty()) return Plex.message();
+            if (!on) return onOff(false);
+            String who = Plex.signedIn(c) ? (Plex.user(c).isEmpty() ? Ui.tr("Signed in") : Plex.user(c)) : Ui.tr("Sign in");
+            return onOff(true) + " · " + who;
+        }
+
+        /** OK on Plex: sign in (or out), and on or off in Continue Watching, in one small menu. */
+        private void plexMenu() {
+            Context c = getContext();
+            boolean signedIn = Plex.signedIn(c), on = !Prefs.watchOff().contains(Plex.PKG);
+            String[] items = {signedIn ? Ui.tr("Sign out") : Ui.tr("Sign in"), on ? Ui.tr("Turn off") : Ui.tr("Turn on")};
+            new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setTitle(signedIn && !Plex.user(c).isEmpty() ? "Plex · " + Plex.user(c) : "Plex")
+                    .setItems(items, (d, which) -> {
+                        if (which == 0 && signedIn) {
+                            Plex.signOut(c);
+                        } else if (which == 0) {
+                            // TalkBack reads the row again at each step: the code as it appears, then who signed in.
+                            Plex.signIn(c, () -> handler.post(() -> {
+                                invalidate();
+                                spoken.focusMoved();
+                            }));
+                        } else {
+                            Set<String> off = Prefs.watchOff();
+                            if (!off.remove(Plex.PKG)) off.add(Plex.PKG);
+                            Prefs.setWatchOff(off);
+                        }
+                        invalidate();
+                        spoken.focusMoved();
+                    })
+                    .setNegativeButton(Ui.tr("Cancel"), null)
+                    .show();
+        }
+
         private void openWatchApps() {
             watchHiddenCount = Prefs.watchHidden().size();
             pickScroll = 0;
@@ -2046,8 +2096,12 @@ public class SettingsActivity extends Activity {
                 spoken.focusMoved();
                 return;
             }
-            Set<String> off = Prefs.watchOff();
             String pkg = watchApps.get(at)[0];
+            if (isPlex(pkg)) {
+                plexMenu();
+                return;
+            }
+            Set<String> off = Prefs.watchOff();
             if (!off.remove(pkg)) off.add(pkg);
             Prefs.setWatchOff(off);
             spoken.focusMoved();
@@ -2075,9 +2129,14 @@ public class SettingsActivity extends Activity {
                 rowLabel.setColor(blend(on ? 0xF2FFFFFF : 0x80FFFFFF, on ? INK : 0x801C1C1E, f));
                 rowValue.setColor(blend(0xB3FFFFFF, 0xB31C1C1E, f));
                 float base = rowRect.centerY() + Ui.halfCap(rowLabel);
+                boolean plex = !hiddenRow && isPlex(watchApps.get(at)[0]);
                 String label = hiddenRow ? hiddenLabel() : watchApps.get(at)[1];
-                c.drawText(TextUtils.ellipsize(label, new TextPaint(rowLabel), 560 * k, TextUtils.TruncateAt.END).toString(), rowRect.left + 30 * k, base, rowLabel);
-                if (!hiddenRow) c.drawText(onOff(on), rowRect.right - 30 * k, base, rowValue);
+                c.drawText(TextUtils.ellipsize(label, new TextPaint(rowLabel), plex ? 260 * k : 560 * k, TextUtils.TruncateAt.END).toString(), rowRect.left + 30 * k, base, rowLabel);
+                if (!hiddenRow) {
+                    String value = watchValue(watchApps.get(at)[0]);
+                    c.drawText(TextUtils.ellipsize(value, new TextPaint(rowValue), plex ? 500 * k : 260 * k, TextUtils.TruncateAt.END).toString(),
+                            rowRect.right - 30 * k, base, rowValue);
+                }
             }
             float hy = (LIST_TOP + 20 + rows * (LIST_ROW_H + LIST_ROW_GAP) + 36) * k;
             c.drawText(Ui.tr("OK turns an app on or off in Continue Watching."), LIST_X * k + 30 * k, hy, hint);
