@@ -133,6 +133,27 @@ final class HomeMode {
         // KTC (NextStar; MediaTek)
         "tv.anoki.acr.controller",                                                    // Anoki ACR: watches what's on screen
         "com.mediatek.tv.retaildemo", "com.electronic.manual",                        // store demo, manual
+        // Sony BRAVIA (BRAVIA_UR3, MediaTek, Android TV 10 tested; CleanYourTV's examples/sony-bravia-4k-ur3 list,
+        // reboot-checked there on four sets)
+        "tv.samba.ssm",                                                               // Samba TV ACR: watches what's on screen
+        "com.qterics.da.product", "com.sony.dtv.da.service",                          // device agents (remote support)
+        "com.sonyericsson.idd.agent", "com.sony.dtv.sonybugreportsys",                // usage data, bug-report uploader
+        "com.sony.dtv.usercontext",                                                   // viewing context for recommendations
+        "com.sony.dtv.promos", "com.sony.dtv.sonyselect",                             // promo apps
+        "com.sony.dtv.demosupport", "com.sony.dtv.demosystemsupport", "com.sony.dtv.multiscreendemo",   // store demo
+        // and from CleanYourTV's UR3 display-only list: always running, nothing a home viewer uses
+        "com.sony.dtv.interactivetvutil", "com.sony.dtv.interactivetvutil.output",    // action and app log collectors
+        "com.sony.dtv.videoframeserver",                                              // reads Samba TV's data and the EPG
+        "com.sony.dtv.b2b.hotelmode", "com.sony.dtv.b2b.rs232csupport",               // hotel mode, RS-232 control
+        "com.sony.dtv.livingfit",                                                     // Living Decor (art mode)
+        "com.sony.dtv.notificationcenter", "com.sony.dtv.bivlinfo",                   // BRAVIA notices and info
+        "com.sony.dtv.customersupport", "com.sony.dtv.smarthelp", "com.sony.dtv.helpguidecontents",   // help, manual
+        "android.autoinstalls.config.sony.bravia",                                    // Play auto-installs partner apps
+        "com.google.android.feedback", "com.google.android.tv.bugreportsender",       // feedback and bug-report senders
+        "com.google.android.partnersetup", "com.google.android.videos",               // install attribution, Play Movies
+        // (com.sony.dtv.smarthomesettings asks for TV_INPUT_HARDWARE, so neededByTv keeps it on)
+        "com.sony.dtv.seeds.auth", "com.sony.dtv.seeds.iot", "com.sony.dtv.seeds.iot.remotestart",   // Alexa, Google Home
+        "com.sony.huey.dlna.module", "com.sony.huey.dlna.renderersettings", "com.sonyericsson.dlna",   // DLNA receiver
         // HY300 projectors (Amlogic txhd2, Android 13): JmLauncher opens it from the Home button (JM_HOME); off only
         // once JM_HOME is ours
         HTC_HOME,                                                                     // the stock home (and an ad SDK)
@@ -206,6 +227,17 @@ final class HomeMode {
         "com.onn.bluetoothconnect", "com.onn.btpairoverlay", "com.onn.updatenotification", "com.gretzky.GlobalKey",
         "com.gretzky.hwinfo", "com.droidlogic", "com.droidlogic.tv.settings", "com.droidlogic.mictoggle",
         "com.droidlogic.launcher.provider", "com.droidlogic.android.tv.connecteddevices",
+        // Sony BRAVIA (MediaTek, Android TV 10): inputs and tuner, TV API and live TV, system and vendor services
+        // (the remote's keys), settings, Bravia Sync (HDMI-CEC), picture and sound, updates, IP control, AirPlay and
+        // HomeKit with the Vewd core (persistent: AirPlay crash-loops without it, CleanYourTV's UR3 list)
+        "com.sony.dtv.tvinput.external", "com.sony.dtv.tvinput.hardwaremanager", "com.sony.dtv.tvinput.provider",
+        "com.sony.dtv.tvinput.tuner", "com.sony.dtv.tvapi", "com.sony.dtv.tvx", "com.sony.dtv.sonysystemservice",
+        "com.sony.dtv.sonyvendorservice", "com.sony.dtv.settingsprovider", "com.sony.dtv.braviasyncmenu",
+        "com.sony.dtv.braviasyncservice", "com.sony.dtv.braviasyncsetting", "com.sony.dtv.panelsettings",
+        "com.sony.dtv.audiooutput", "com.sony.dtv.acousticautocalibration", "com.sony.dtv.imeproxy",
+        "com.sony.dtv.update", "com.sony.dtv.systemupdate", "com.sony.dtv.oadservice", "com.sony.dtv.otaurlprovisioning",
+        "com.sony.dtv.upgradesetup", "com.sony.dtv.webapi.core", "com.sony.dtv.airplayapp", "com.sony.dtv.homekit",
+        "com.vewd.core.service",
         // Wanbo projectors (T2 Ultra: a Skyworth board, Amlogic, Android TV 11): remote pairing and reconnect, Amlogic
         // overlay, settings and customization, projector service, Skyworth and OEM services, factory and QA tests
         "com.droidlogic.ble", "com.droidlogic.overlay", "com.mft.rcupair", "com.mtf.blereconnect", "com.mtf.customization",
@@ -509,6 +541,101 @@ final class HomeMode {
         Capabilities.prove(c, Capabilities.LISTENER, works);
     }
 
+    // MARK: - Ad blocking (Private DNS)
+
+    /** AdGuard's public DNS: ad and tracker domains answer 0.0.0.0, everything else as usual. */
+    static final String AD_DNS = "dns.adguard-dns.com";
+    private static final Pattern DNS_HOST = Pattern.compile("[A-Za-z0-9][A-Za-z0-9.-]*");
+    private static final Pattern AD_DNS_VALIDATED = Pattern.compile("PrivateDnsServerName: " + Pattern.quote(AD_DNS)
+            + " ValidatedPrivateDnsAddresses: \\[\\s*[^\\]\\s]");
+
+    /**
+     * Home Settings' Ad blocking points the TV's Private DNS (DNS over TLS, Android 9+) at AdGuard DNS, for every app.
+     * Only while the row is on, in Free My TV mode: the TV's own setting is recorded first ("dnsBefore") and put back
+     * when the row goes off, by Original and by the watchdog's revert. In strict mode a server that doesn't answer leaves
+     * the TV with no names at all, so the switch waits for Android to validate it, and otherwise puts the old setting
+     * back (the row then shows Unavailable until it's turned off). A Private DNS the person set themselves, with no
+     * record, is never touched.
+     */
+    static void adBlockingAccess(Context c) {
+        ModeJob.schedule(c, ModeJob.AD_BLOCKING, null, 0);
+    }
+
+    static void adBlockingNow(Context app) {
+        synchronized (RUN) {   // after a switch or a revert, never in the middle of one
+            JSONObject s = state(app);
+            if (!FREE.equals(s.optString("mode")) || s.optBoolean("homeReverted")) return;
+            try (Adb adb = Adb.connect(app, 10_000, null)) {
+                adBlocking(app, adb, adBlockingOn());
+            } catch (IOException | JSONException e) {
+                AppLog.w("ad blocking: " + e.getMessage());
+            }
+        }
+    }
+
+    /** The row as Home Settings (:home) saved it. */
+    private static boolean adBlockingOn() {
+        Prefs.reload();
+        return Prefs.adBlocking();
+    }
+
+    private static void adBlocking(Context c, Adb adb, boolean on) throws IOException, JSONException {
+        if (Build.VERSION.SDK_INT < 28) return;   // no Private DNS before Android 9
+        String mode = adb.shell("settings get global private_dns_mode").trim();
+        String host = adb.shell("settings get global private_dns_specifier").trim();
+        boolean ours = "hostname".equals(mode) && AD_DNS.equals(host);
+        JSONObject s = state(c);
+        if (!on) {
+            Capabilities.forget(c, Capabilities.PRIVATE_DNS);   // tried again when it's next turned on
+            if (!s.has("dnsBefore")) return;
+            if (ours) putBackDns(adb, s.optJSONObject("dnsBefore"));
+            s.remove("dnsBefore");
+            save(c, s);
+            AppLog.w("ad blocking off");
+            return;
+        }
+        // Refused here: not again (a boot would cut the names off for the check) until the row goes off and on.
+        if (ours || Capabilities.refused(c, Capabilities.PRIVATE_DNS)) return;
+        JSONObject before = new JSONObject().put("mode", mode).put("host", host);
+        s.put("dnsBefore", before);
+        save(c, s);
+        adb.shell("settings put global private_dns_specifier " + AD_DNS);
+        adb.shell("settings put global private_dns_mode hostname");
+        boolean works = adDnsValidated(adb);
+        if (!works) {
+            putBackDns(adb, before);
+            JSONObject latest = state(c);
+            latest.remove("dnsBefore");
+            save(c, latest);
+            notice(c, Ui.tr("AdGuard DNS didn't answer on this network, so the TV kept its own DNS."));
+        }
+        AppLog.w("ad blocking " + (works ? "on" : "refused: the server didn't validate"));
+        Capabilities.prove(c, Capabilities.PRIVATE_DNS, works);
+    }
+
+    /** Android validated AdGuard's server (dumpsys lists it among a network's validated Private DNS addresses). */
+    private static boolean adDnsValidated(Adb adb) throws IOException {
+        for (int i = 0; i < 15; i++) {
+            SystemClock.sleep(1000);
+            String out = adb.shell("dumpsys connectivity | grep -o"
+                    + " 'PrivateDnsServerName: [^ ]* ValidatedPrivateDnsAddresses: \\[[^]]*\\]'");
+            if (AD_DNS_VALIDATED.matcher(out).find()) return true;
+        }
+        return false;
+    }
+
+    /** The TV's own Private DNS as recorded before Ad blocking; without a usable record, Android's default (automatic). */
+    private static void putBackDns(Adb adb, JSONObject before) throws IOException {
+        String mode = before == null ? "" : before.optString("mode"), host = before == null ? "" : before.optString("host");
+        boolean hostOk = !host.equals("null") && DNS_HOST.matcher(host).matches();
+        adb.shell(hostOk ? "settings put global private_dns_specifier " + host : "settings delete global private_dns_specifier");
+        if (mode.equals("off") || mode.equals("opportunistic") || (mode.equals("hostname") && hostOk)) {
+            adb.shell("settings put global private_dns_mode " + mode);
+        } else {
+            adb.shell("settings delete global private_dns_mode");
+        }
+    }
+
     // MARK: - Switches (main process, from ModeJob)
 
     static void applyNow(Context c, String mode) {
@@ -642,6 +769,13 @@ final class HomeMode {
                     AppLog.w("remote buttons service: " + e.getMessage());
                 }
             }
+            if (adBlockingOn()) {   // the person's choice from before Original, back with the mode
+                try {
+                    adBlocking(c, adb, true);
+                } catch (IOException | JSONException e) {
+                    AppLog.w("ad blocking: " + e.getMessage());
+                }
+            }
             wakeWatch(adb, true);
             notice(c, Ui.trf("Free My TV is on: new home screen and screensaver, {n} apps turned off.", "n", disabled.size()));
             busy(c, Ui.tr("Measuring Free My TV…"));
@@ -710,6 +844,11 @@ final class HomeMode {
                 nowPlaying(c, adb, false);
             } catch (IOException e) {
                 AppLog.w("now playing: " + e.getMessage());
+            }
+            try {
+                adBlocking(c, adb, false);   // the TV's own DNS again
+            } catch (IOException | JSONException e) {
+                AppLog.w("ad blocking: " + e.getMessage());
             }
             s = state(c);
             s.put("mode", ORIGINAL).put("since", System.currentTimeMillis()).put("homeReverted", false)
@@ -823,6 +962,12 @@ final class HomeMode {
                 } catch (IOException e) {
                     AppLog.w("now playing: " + e.getMessage());
                 }
+                try {
+                    adBlocking(app, adb, false);   // and Ad blocking's
+                } catch (IOException | JSONException e) {
+                    AppLog.w("ad blocking: " + e.getMessage());
+                }
+                s = state(app);   // adBlocking saved its own change
                 s.put("homeReverted", true).put("disabled", kept);
                 save(app, s);
                 notice(app, Ui.tr("Free My TV's home screen crashed 3 times in a row; I switched back to the original one."));
@@ -862,6 +1007,11 @@ final class HomeMode {
                     nowPlaying(app, adb, !s.optBoolean("homeReverted") && nowPlayingOn());
                 } catch (IOException e) {
                     AppLog.w("now playing: " + e.getMessage());
+                }
+                try {   // a TV update can reset the Private DNS
+                    adBlocking(app, adb, !s.optBoolean("homeReverted") && adBlockingOn());
+                } catch (IOException | JSONException e) {
+                    AppLog.w("ad blocking: " + e.getMessage());
                 }
                 Set<String> present = packages(adb, "");
                 Set<String> disabledNow = packages(adb, "-d");
