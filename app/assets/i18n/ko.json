@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "TV의 ADB가 응답하지 않았습니다",
  "the TV's factory home screen": "TV의 출고 시 홈 화면",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "TV의 초기 설정이 Wi-Fi를 저장해서, 이를 끄면 해당 네트워크가 지워집니다. 설정 → 네트워크 및 인터넷에서 네트워크를 삭제하고 다시 연결한 뒤(범위 밖의 네트워크는 거기 보이지 않습니다. Claude Code로 컴퓨터에서 지울 수 있습니다) 다시 시도하세요.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "TV의 홈 화면이 Wi-Fi를 저장해서, 이를 끄면 해당 네트워크가 지워집니다. 설정 → 네트워크 및 인터넷에서 네트워크를 삭제하고 다시 연결한 뒤(범위 밖의 네트워크는 거기 보이지 않습니다. Claude Code로 컴퓨터에서 지울 수 있습니다) 다시 시도하세요.",
  "the home screen": "홈 화면",
  "the original home screen": "원래 홈 화면",
  "the screensaver": "화면 보호기",

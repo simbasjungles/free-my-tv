@@ -104,11 +104,15 @@ before you do it, and let them do the taps on the TV.
    127.0.0.1 with its own key, so the TV asks once more to allow debugging. Don't switch modes from the computer.
    Before they switch, run `adb disconnect <IP>:5555` (connect again for step 9): on Android 8 to 10 the TV can hand
    its answer to a computer that's still connected (#221).
-   If the TV's Wi-Fi was saved during its first setup, the switch stops before changing anything and asks them to
-   forget the network and connect again in Settings (Network & Internet); then the switch goes through. Saved
-   networks out of range don't show in Settings: find the ones with `cname=com.google.android.tungsten.setupwraith`
-   in `adb shell dumpsys wifi` (each block starts with its `ID:`), and with their OK remove them with
-   `adb shell cmd wifi forget-network <id>`.
+   If the TV's Wi-Fi was saved during its first setup (or by its stock home screen: the message says which), the
+   switch stops before changing anything and asks them to forget the network and connect again in Settings (Network &
+   Internet); then the switch goes through. `adb logcat -s FreeMyTV` names every app that saved one ("Wi-Fi networks
+   saved by"). Saved networks out of range don't show in Settings: find the ones with
+   `cname=com.google.android.tungsten.setupwraith` (or the home screen's package) in `adb shell dumpsys wifi` (each
+   block starts with its `ID:`), and with their OK remove them with `adb shell cmd wifi forget-network <id>`. The
+   check reads every `cname=` in that dump: from Android 11 each network shows up more than once (ConfigurationMap's
+   `mPerId=` holds every user's, which `forget-network` can't reach), and a Passpoint profile's block has one too
+   (#411).
 9. **Check:** `adb logcat -s FreeMyTV` shows what the switch did.
 
 ## Installing it on an LG TV (webOS)

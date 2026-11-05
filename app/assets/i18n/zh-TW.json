@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "電視的 ADB 沒有回應",
  "the TV's factory home screen": "電視的出廠主畫面",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "電視在初始設定期間儲存了 Wi-Fi 網路，停用相關功能可能會刪除這些網路。請前往「設定 → 網路和網際網路」，選取該網路並點選「忘記」，再重新連線（不在訊號範圍內的網路不會顯示在清單中；可使用 Claude Code 從電腦移除這些網路），然後再試一次。",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "電視的主畫面儲存了 Wi-Fi 網路，停用它會刪除這些網路。請前往「設定 → 網路和網際網路」，選取該網路並點選「忘記」，再重新連線（不在訊號範圍內的網路不會顯示在清單中；可使用 Claude Code 從電腦移除這些網路），然後再試一次。",
  "the home screen": "主畫面",
  "the original home screen": "原始主畫面",
  "the screensaver": "螢幕保護程式",

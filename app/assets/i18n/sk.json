@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "ADB televízora neodpovedalo",
  "the TV's factory home screen": "továrenská plocha televízora",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "prvé nastavenie televízora uložilo Wi-Fi a jeho vypnutie by tieto siete vymazalo. V Nastaveniach → Sieť a internet sieť zabudnite a znova sa pripojte (siete mimo dosahu sa tam nezobrazujú: Claude Code ich odstráni z počítača), potom to skúste znova.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "domovská obrazovka televízora uložila Wi-Fi a jej vypnutie by tieto siete vymazalo. V Nastaveniach → Sieť a internet sieť zabudnite a znova sa pripojte (siete mimo dosahu sa tam nezobrazujú: Claude Code ich odstráni z počítača), potom to skúste znova.",
  "the home screen": "plochu",
  "the original home screen": "pôvodnú plochu",
  "the screensaver": "šetrič obrazovky",

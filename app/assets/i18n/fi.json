@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "television ADB ei vastannut",
  "the TV's factory home screen": "television tehtaan aloitusnäyttö",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "television ensiasennus tallensi Wi-Fi-verkon, ja sen kytkeminen pois poistaisi verkot. Unohda verkko kohdassa Asetukset → Verkko ja internet ja yhdistä uudelleen (kantaman ulkopuoliset verkot eivät näy siellä: Claude Code voi poistaa ne tietokoneelta), ja yritä sitten uudelleen.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "television aloitusnäyttö tallensi Wi-Fi-verkon, ja sen kytkeminen pois poistaisi verkot. Unohda verkko kohdassa Asetukset → Verkko ja internet ja yhdistä uudelleen (kantaman ulkopuoliset verkot eivät näy siellä: Claude Code voi poistaa ne tietokoneelta), ja yritä sitten uudelleen.",
  "the home screen": "aloitusnäyttö",
  "the original home screen": "alkuperäinen aloitusnäyttö",
  "the screensaver": "näytönsäästäjä",

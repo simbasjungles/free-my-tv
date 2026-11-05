@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "TV'nin ADB'si yanıt vermedi",
  "the TV's factory home screen": "TV'nin fabrika ana ekranı",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "Wi-Fi ağlarını TV'nin ilk kurulumu kaydetti ve onu kapatmak bu ağları siler. Ayarlar → Ağ ve İnternet'te ağı unutup yeniden bağlanın (kapsama dışındaki ağlar orada görünmez: Claude Code bunları bilgisayardan kaldırabilir), sonra yeniden deneyin.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "Wi-Fi ağlarını TV'nin ana ekranı kaydetti ve onu kapatmak bu ağları siler. Ayarlar → Ağ ve İnternet'te ağı unutup yeniden bağlanın (kapsama dışındaki ağlar orada görünmez: Claude Code bunları bilgisayardan kaldırabilir), sonra yeniden deneyin.",
  "the home screen": "ana ekran",
  "the original home screen": "orijinal ana ekran",
  "the screensaver": "ekran koruyucu",

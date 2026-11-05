@@ -577,7 +577,8 @@ final class HomeMode {
             if (jm && !jmBefore.equals(PKG)) latest.put("originalJmHome", jmBefore.matches("[\\w.]*") ? jmBefore : "");
             save(c, latest);
             // Turning off an app makes Android delete the Wi-Fi networks it saved (#14), and Original can't bring them
-            // back. The TV's first setup usually saved the network: then stop here, before anything changes.
+            // back. The TV's first setup usually saved the network (or its home screen did, which goes off too):
+            // then stop here, before anything changes.
             Set<String> owners = wifiOwners(adb);
             if (owners == null) {
                 // Nobody can tell who saved the networks: on Wi-Fi, stop before anything changes.
@@ -586,9 +587,16 @@ final class HomeMode {
                 }
                 owners = new HashSet<>();
             }
+            // By name, for adb logcat: the message only says whether it was the setup app or the home screen (#411).
+            if (!owners.isEmpty()) AppLog.w("Wi-Fi networks saved by " + String.join(", ", sorted(owners)));
             boolean setupHome = setupIsHome(adb);
-            if ((setupHome && owners.contains(GOOGLE_SETUP)) || owners.contains(packageOf(home))) {
+            if (setupHome && owners.contains(GOOGLE_SETUP)) {
                 throw new IOException(Ui.tr("the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. "
+                        + "In Settings → Network & Internet, forget the network and connect again (networks out of range don't "
+                        + "show there: Claude Code can remove them from your computer), then try once more."));
+            }
+            if (owners.contains(packageOf(home))) {
+                throw new IOException(Ui.tr("the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. "
                         + "In Settings → Network & Internet, forget the network and connect again (networks out of range don't "
                         + "show there: Claude Code can remove them from your computer), then try once more."));
             }

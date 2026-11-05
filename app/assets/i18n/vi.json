@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "ADB của TV không phản hồi",
  "the TV's factory home screen": "màn hình chính gốc của TV",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "lần cài đặt đầu tiên của TV đã lưu Wi-Fi, và tắt nó sẽ xóa các mạng đó. Vào Cài đặt → Mạng và Internet, xóa mạng rồi kết nối lại (mạng ngoài vùng phủ sóng không hiện ở đó: Claude Code có thể xóa chúng từ máy tính), rồi thử lại.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "màn hình chính của TV đã lưu Wi-Fi, và tắt nó sẽ xóa các mạng đó. Vào Cài đặt → Mạng và Internet, xóa mạng rồi kết nối lại (mạng ngoài vùng phủ sóng không hiện ở đó: Claude Code có thể xóa chúng từ máy tính), rồi thử lại.",
  "the home screen": "màn hình chính",
  "the original home screen": "màn hình chính gốc",
  "the screensaver": "trình bảo vệ màn hình",

@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "el ADB del TV no respondió",
  "the TV's factory home screen": "la pantalla de inicio de fábrica del TV",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "la configuración inicial del TV guardó el Wi-Fi, y desactivarla borraría esas redes. En Ajustes → Red e Internet, olvida la red y vuelve a conectarte (las fuera de alcance no aparecen ahí: Claude Code las borra desde la computadora) y vuelve a intentarlo.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "la pantalla de inicio del TV guardó el Wi-Fi, y desactivarla borraría esas redes. En Ajustes → Red e Internet, olvida la red y vuelve a conectarte (las fuera de alcance no aparecen ahí: Claude Code las borra desde la computadora) y vuelve a intentarlo.",
  "the home screen": "la pantalla de inicio",
  "the original home screen": "la pantalla de inicio original",
  "the screensaver": "el protector de pantalla",

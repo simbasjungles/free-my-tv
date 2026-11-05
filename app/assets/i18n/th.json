@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "ADB ของทีวีไม่ตอบสนอง",
  "the TV's factory home screen": "หน้าหลักเดิมของทีวี",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "แอปตั้งค่าครั้งแรกของทีวีบันทึก Wi-Fi ไว้ การปิดแอปนั้นจะลบเครือข่ายเหล่านี้ ไปที่ ตั้งค่า → เครือข่ายและอินเทอร์เน็ต ลืมเครือข่ายแล้วเชื่อมต่อใหม่ (เครือข่ายที่อยู่นอกระยะจะไม่แสดงที่นั่น: Claude Code ลบออกจากคอมพิวเตอร์ของคุณได้) แล้วลองอีกครั้ง",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "แอปหน้าหลักของทีวีบันทึก Wi-Fi ไว้ การปิดแอปนั้นจะลบเครือข่ายเหล่านี้ ไปที่ ตั้งค่า → เครือข่ายและอินเทอร์เน็ต ลืมเครือข่ายแล้วเชื่อมต่อใหม่ (เครือข่ายที่อยู่นอกระยะจะไม่แสดงที่นั่น: Claude Code ลบออกจากคอมพิวเตอร์ของคุณได้) แล้วลองอีกครั้ง",
  "the home screen": "หน้าหลัก",
  "the original home screen": "หน้าหลักเดิม",
  "the screensaver": "สกรีนเซฟเวอร์",

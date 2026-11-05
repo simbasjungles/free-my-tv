@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "टीवी के ADB ने जवाब नहीं दिया",
  "the TV's factory home screen": "TV की फ़ैक्ट्री होम स्क्रीन",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "TV के पहले सेटअप ने Wi-Fi सेव किया है, और उसे बंद करने से वे नेटवर्क मिट जाएँगे। सेटिंग → नेटवर्क और इंटरनेट में नेटवर्क भूलें और फिर से कनेक्ट करें (रेंज से बाहर वाले नेटवर्क वहाँ नहीं दिखते: Claude Code उन्हें कंप्यूटर से हटा सकता है), फिर दोबारा कोशिश करें।",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "TV की होम स्क्रीन ने Wi-Fi सेव किया है, और उसे बंद करने से वे नेटवर्क मिट जाएँगे। सेटिंग → नेटवर्क और इंटरनेट में नेटवर्क भूलें और फिर से कनेक्ट करें (रेंज से बाहर वाले नेटवर्क वहाँ नहीं दिखते: Claude Code उन्हें कंप्यूटर से हटा सकता है), फिर दोबारा कोशिश करें।",
  "the home screen": "होम स्क्रीन",
  "the original home screen": "मूल होम स्क्रीन",
  "the screensaver": "स्क्रीनसेवर",

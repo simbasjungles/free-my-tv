@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "ADB-ul televizorului nu a răspuns",
  "the TV's factory home screen": "ecranul de pornire din fabrică",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "configurarea inițială a televizorului a salvat rețeaua Wi-Fi, iar dezactivarea ei ar șterge acele rețele. În Setări → Rețea și internet, elimină rețeaua și conectează-te din nou (rețelele din afara razei nu apar acolo: Claude Code le poate șterge de pe computer), apoi încearcă din nou.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "ecranul de pornire al televizorului a salvat rețeaua Wi-Fi, iar dezactivarea lui ar șterge acele rețele. În Setări → Rețea și internet, elimină rețeaua și conectează-te din nou (rețelele din afara razei nu apar acolo: Claude Code le poate șterge de pe computer), apoi încearcă din nou.",
  "the home screen": "ecranul de pornire",
  "the original home screen": "ecranul de pornire original",
  "the screensaver": "screensaverul",

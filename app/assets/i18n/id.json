@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "ADB TV tidak merespons",
  "the TV's factory home screen": "layar utama bawaan pabrik TV",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "penyiapan awal TV menyimpan Wi-Fi, dan mematikannya akan menghapus jaringan itu. Di Setelan → Jaringan & Internet, lupakan jaringan lalu sambungkan lagi (jaringan di luar jangkauan tidak muncul di sana: Claude Code bisa menghapusnya dari komputer), lalu coba sekali lagi.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "layar utama TV menyimpan Wi-Fi, dan mematikannya akan menghapus jaringan itu. Di Setelan → Jaringan & Internet, lupakan jaringan lalu sambungkan lagi (jaringan di luar jangkauan tidak muncul di sana: Claude Code bisa menghapusnya dari komputer), lalu coba sekali lagi.",
  "the home screen": "layar utama",
  "the original home screen": "layar utama asli",
  "the screensaver": "screensaver",

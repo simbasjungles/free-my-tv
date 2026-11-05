@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "de ADB van de tv reageerde niet",
  "the TV's factory home screen": "het fabrieksstartscherm van de tv",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "de eerste installatie van de tv heeft de wifi opgeslagen, en die uitzetten zou die netwerken wissen. Vergeet het netwerk in Instellingen → Netwerk en internet en maak opnieuw verbinding (netwerken buiten bereik staan daar niet: Claude Code kan ze vanaf je computer verwijderen), en probeer het dan nog eens.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "het startscherm van de tv heeft de wifi opgeslagen, en dat uitzetten zou die netwerken wissen. Vergeet het netwerk in Instellingen → Netwerk en internet en maak opnieuw verbinding (netwerken buiten bereik staan daar niet: Claude Code kan ze vanaf je computer verwijderen), en probeer het dan nog eens.",
  "the home screen": "het startscherm",
  "the original home screen": "het originele startscherm",
  "the screensaver": "de schermbeveiliging",

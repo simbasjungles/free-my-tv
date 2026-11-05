@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "το ADB της τηλεόρασης δεν απάντησε",
  "the TV's factory home screen": "η εργοστασιακή αρχική οθόνη της TV",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "η αρχική ρύθμιση της τηλεόρασης αποθήκευσε το Wi-Fi και η απενεργοποίησή της θα έσβηνε αυτά τα δίκτυα. Στις Ρυθμίσεις → Δίκτυο και διαδίκτυο, ξεχάστε το δίκτυο και συνδεθείτε ξανά (όσα είναι εκτός εμβέλειας δεν εμφανίζονται εκεί: το Claude Code μπορεί να τα αφαιρέσει από τον υπολογιστή), και δοκιμάστε ξανά.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "η αρχική οθόνη της τηλεόρασης αποθήκευσε το Wi-Fi και η απενεργοποίησή της θα έσβηνε αυτά τα δίκτυα. Στις Ρυθμίσεις → Δίκτυο και διαδίκτυο, ξεχάστε το δίκτυο και συνδεθείτε ξανά (όσα είναι εκτός εμβέλειας δεν εμφανίζονται εκεί: το Claude Code μπορεί να τα αφαιρέσει από τον υπολογιστή), και δοκιμάστε ξανά.",
  "the home screen": "η αρχική οθόνη",
  "the original home screen": "η αρχική οθόνη της TV",
  "the screensaver": "η προφύλαξη οθόνης",

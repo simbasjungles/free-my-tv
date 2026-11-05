@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "ADB телевизора не ответил",
  "the TV's factory home screen": "заводской главный экран телевизора",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "Сети Wi-Fi сохранены приложением первоначальной настройки телевизора. Его отключение удалит эти сети. В разделе «Настройки → Сеть и Интернет» забудьте сеть и подключитесь заново, затем повторите попытку. Недоступные сети там не отображаются: Claude Code может удалить их с компьютера.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "Сети Wi-Fi сохранены приложением главного экрана телевизора. Его отключение удалит эти сети. В разделе «Настройки → Сеть и Интернет» забудьте сеть и подключитесь заново, затем повторите попытку. Недоступные сети там не отображаются: Claude Code может удалить их с компьютера.",
  "the home screen": "главный экран",
  "the original home screen": "заводской главный экран",
  "the screensaver": "заставка",

@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "ADB telewizora nie odpowiedział",
  "the TV's factory home screen": "fabryczny ekran główny telewizora",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "pierwsza konfiguracja telewizora zapisała Wi-Fi, a jej wyłączenie usunęłoby te sieci. W Ustawienia → Sieć i internet zapomnij sieć i połącz się ponownie (sieci poza zasięgiem nie są tam widoczne: Claude Code usunie je z komputera), potem spróbuj jeszcze raz.",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "ekran główny telewizora zapisał Wi-Fi, a jego wyłączenie usunęłoby te sieci. W Ustawienia → Sieć i internet zapomnij sieć i połącz się ponownie (sieci poza zasięgiem nie są tam widoczne: Claude Code usunie je z komputera), potem spróbuj jeszcze raz.",
  "the home screen": "ekran główny",
  "the original home screen": "fabryczny ekran główny",
  "the screensaver": "wygaszacz",

@@ -411,6 +411,7 @@
  "the TV's ADB didn't respond": "テレビの ADB が応答しませんでした",
  "the TV's factory home screen": "テレビの工場出荷時のホーム画面",
  "the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "テレビの初期設定がWi-Fiを保存しているため、オフにするとそのネットワークが消えてしまいます。設定 → ネットワークとインターネットでネットワークを削除して接続し直し（圏外のネットワークはそこに表示されません。Claude Codeでパソコンから削除できます）、もう一度お試しください。",
+ "the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. In Settings → Network & Internet, forget the network and connect again (networks out of range don't show there: Claude Code can remove them from your computer), then try once more.": "テレビのホーム画面がWi-Fiを保存しているため、オフにするとそのネットワークが消えてしまいます。設定 → ネットワークとインターネットでネットワークを削除して接続し直し（圏外のネットワークはそこに表示されません。Claude Codeでパソコンから削除できます）、もう一度お試しください。",
  "the home screen": "ホーム画面",
  "the original home screen": "元のホーム画面",
  "the screensaver": "スクリーンセーバー",
