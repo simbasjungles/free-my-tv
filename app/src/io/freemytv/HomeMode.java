@@ -133,6 +133,14 @@ final class HomeMode {
         // KTC (NextStar; MediaTek)
         "tv.anoki.acr.controller",                                                    // Anoki ACR: watches what's on screen
         "com.mediatek.tv.retaildemo", "com.electronic.manual",                        // store demo, manual
+        // Sony BRAVIA (BRAVIA_UR3, MediaTek, Android TV 10 tested; CleanYourTV's examples/sony-bravia-4k-ur3 list,
+        // reboot-checked there on four sets)
+        "tv.samba.ssm",                                                               // Samba TV ACR: watches what's on screen
+        "com.qterics.da.product", "com.sony.dtv.da.service",                          // device agents (remote support)
+        "com.sonyericsson.idd.agent", "com.sony.dtv.sonybugreportsys",                // usage data, bug-report uploader
+        "com.sony.dtv.usercontext",                                                   // viewing context for recommendations
+        "com.sony.dtv.promos", "com.sony.dtv.sonyselect",                             // promo apps
+        "com.sony.dtv.demosupport", "com.sony.dtv.demosystemsupport", "com.sony.dtv.multiscreendemo",   // store demo
         // HY300 projectors (Amlogic txhd2, Android 13): JmLauncher opens it from the Home button (JM_HOME); off only
         // once JM_HOME is ours
         HTC_HOME,                                                                     // the stock home (and an ad SDK)
@@ -206,6 +214,17 @@ final class HomeMode {
         "com.onn.bluetoothconnect", "com.onn.btpairoverlay", "com.onn.updatenotification", "com.gretzky.GlobalKey",
         "com.gretzky.hwinfo", "com.droidlogic", "com.droidlogic.tv.settings", "com.droidlogic.mictoggle",
         "com.droidlogic.launcher.provider", "com.droidlogic.android.tv.connecteddevices",
+        // Sony BRAVIA (MediaTek, Android TV 10): inputs and tuner, TV API and live TV, system and vendor services
+        // (the remote's keys), settings, Bravia Sync (HDMI-CEC), picture and sound, updates, IP control, AirPlay and
+        // HomeKit with the Vewd core (persistent: AirPlay crash-loops without it, CleanYourTV's UR3 list)
+        "com.sony.dtv.tvinput.external", "com.sony.dtv.tvinput.hardwaremanager", "com.sony.dtv.tvinput.provider",
+        "com.sony.dtv.tvinput.tuner", "com.sony.dtv.tvapi", "com.sony.dtv.tvx", "com.sony.dtv.sonysystemservice",
+        "com.sony.dtv.sonyvendorservice", "com.sony.dtv.settingsprovider", "com.sony.dtv.braviasyncmenu",
+        "com.sony.dtv.braviasyncservice", "com.sony.dtv.braviasyncsetting", "com.sony.dtv.panelsettings",
+        "com.sony.dtv.audiooutput", "com.sony.dtv.acousticautocalibration", "com.sony.dtv.imeproxy",
+        "com.sony.dtv.update", "com.sony.dtv.systemupdate", "com.sony.dtv.oadservice", "com.sony.dtv.otaurlprovisioning",
+        "com.sony.dtv.upgradesetup", "com.sony.dtv.webapi.core", "com.sony.dtv.airplayapp", "com.sony.dtv.homekit",
+        "com.vewd.core.service",
         // Wanbo projectors (T2 Ultra: a Skyworth board, Amlogic, Android TV 11): remote pairing and reconnect, Amlogic
         // overlay, settings and customization, projector service, Skyworth and OEM services, factory and QA tests
         "com.droidlogic.ble", "com.droidlogic.overlay", "com.mft.rcupair", "com.mtf.blereconnect", "com.mtf.customization",
