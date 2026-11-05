@@ -166,7 +166,7 @@ final class WatchNext {
             // Home screen rows (not the tuner's channels): apps write these, and Watch Next, without any permission.
             packages(cr, TvContract.Channels.CONTENT_URI, TvContract.Channels.COLUMN_PACKAGE_NAME, TvContract.Channels.COLUMN_TYPE, pkgs);
         }
-        if (Plex.available()) pkgs.add(Plex.PKG);   // its row signs in to Plex too (kept only if it's installed)
+        if (Plex.available()) pkgs.add(Plex.PKG);   // its row signs in to Plex too
         pkgs.remove(c.getPackageName());
         // Only apps you can open from the TV: leaves out system pieces (Shell) and home screens (other launchers),
         // which ask for the permission but have nothing to resume.
@@ -176,9 +176,12 @@ final class WatchNext {
             homes.add(ri.activityInfo.packageName);
         }
         List<String[]> out = new ArrayList<>();
+        // Plex stays while signed in, even uninstalled: its row is where the account is signed out.
+        boolean plexAccount = Plex.signedIn(c);
         for (String p : pkgs) {
-            if (homes.contains(p) || HomeApps.launchIntent(pm, p) == null) continue;
-            String name = appName(c, p);
+            boolean keep = plexAccount && Plex.PKG.equals(p);
+            if (!keep && (homes.contains(p) || HomeApps.launchIntent(pm, p) == null)) continue;
+            String name = keep && appName(c, p).isEmpty() ? "Plex" : appName(c, p);
             out.add(new String[] {p, name.isEmpty() ? p : name});
         }
         Collections.sort(out, (a, b) -> a[1].toLowerCase(Locale.ROOT).compareTo(b[1].toLowerCase(Locale.ROOT)));

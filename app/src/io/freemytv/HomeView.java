@@ -153,7 +153,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         @Override public int focused() { return a11yFocused(); }
         @Override public void focus(int id) { a11yFocus(id); }
         @Override public void click(int id) { if (recentsOpen()) recents.openFocused(); else activate(); }
-        @Override public boolean clickable(int id) { return (id - 1) / 1000 != WIDGETS; }
+        @Override public boolean clickable(int id) { int g = (id - 1) / 1000; return g != WIDGETS && g != WATCH_HINT; }
         @Override public boolean holdable(int id) { return a11yHolds(id); }
         @Override public void hold(int id) { if (recentsOpen()) recents.closeFocused(); else if (sheetOpen) a11yHold(); else if (canReorder()) startReorder(); else showMenu(); }
     });
@@ -597,6 +597,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         if (!Plex.available() || Plex.signedIn(c) || Prefs.watchOff().contains(Plex.PKG)) return false;
         for (WatchNext.Item it : list) if (Plex.PKG.equals(it.pkg)) return false;
         return HomeApps.launchIntent(c.getPackageManager(), Plex.PKG) != null;
+    }
+
+    /** Under Continue Watching, painted and spoken (WATCH_HINT): where to sign in to Plex. */
+    private static String plexHintText() {
+        return Ui.tr("To see Plex here, sign in: Home Settings › Continue Watching apps › Plex.");
     }
 
     /** Plex brought a new list (on its own thread): Continue Watching is read again. */
@@ -3650,7 +3655,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     // MARK: - TalkBack: every reachable item as a virtual node (Spoken). Id = group * 1000 + index + 1.
 
     /** The drawer's weather (0) and quotes (1) cards: read by TalkBack, never focused by the remote. */
-    private static final int GRID = 9, WIDGETS = 8, MENU_ITEMS = 10, RECENT_CARDS = 11;
+    private static final int GRID = 9, WIDGETS = 8, MENU_ITEMS = 10, RECENT_CARDS = 11, WATCH_HINT = 12;
 
     private boolean recentsOpen() {
         return recents != null && recents.isOpen();   // not while it fades out: TalkBack reads the home screen again
@@ -3680,6 +3685,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         for (int i = picksMode() ? 0 : 3; i < 3 + lightButtons.size(); i++) out.add(a11yId(Z_TOP, i));
         for (int i = 0; i < Math.min(Recs.MAX_CARDS, cards.size()); i++) out.add(a11yId(Z_CARDS, i));
         if (continueMode()) for (int i = 0; i < watching.size(); i++) out.add(a11yId(Z_WATCH, i));
+        if (continueMode() && plexHint) out.add(a11yId(WATCH_HINT, 0));   // where to sign in to Plex, read as text
         for (int i = shelfFirst; i < Math.min(shelf.size(), shelfFirst + shelfVisible); i++) out.add(a11yId(Z_SHELF, i));
         for (int i = 0; i < drawerItems.size(); i++) out.add(a11yId(Z_DRAWER, i));
         if (drawerOpen && Prefs.weather()) out.add(a11yId(WIDGETS, 0));
@@ -3721,6 +3727,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                 return label(shelf, i);
             case Z_DRAWER: return label(drawerItems, i);
             case WIDGETS: return i == 0 ? weatherText() : quotesText();
+            case WATCH_HINT:
+                if (!continueMode() || !plexHint) return "";
+                return (watching.isEmpty() ? Ui.tr("Nothing half-watched in your apps.") + " " : "") + plexHintText();
             default: return "";
         }
     }
@@ -3768,6 +3777,13 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                 watchRect(i, a11yRect);
                 dy = heroLayer.getTranslationY();
                 break;
+            case WATCH_HINT: {
+                if (!continueMode() || !plexHint) return false;
+                float top = (watching.isEmpty() ? L_CARDS_TOP + 30 : L_CARDS_TOP + WatchArt.H + 105) * k;
+                a11yRect.set(MARGIN * k, top, CONTENT_R * k, top + (watching.isEmpty() ? 80 : 50) * k);
+                dy = heroLayer.getTranslationY();
+                break;
+            }
             case Z_SHELF:
                 if (i >= tileRects.length) return false;
                 a11yRect.set(tileRects[i]);
@@ -4166,8 +4182,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             String text = watchAllowed ? Ui.tr("Nothing half-watched in your apps.")
                     : Ui.tr("Missing permission: pick Continue Watching again in Home Settings.");
             c.drawText(text, MARGIN * k, (L_CARDS_TOP + 60) * k, lCardMeta);
-            if (plexHint) c.drawText(Ui.tr("To see Plex here, sign in: Home Settings › Continue Watching apps › Plex."),
-                    MARGIN * k, (L_CARDS_TOP + 100) * k, lCardMeta);
+            if (plexHint) c.drawText(plexHintText(), MARGIN * k, (L_CARDS_TOP + 100) * k, lCardMeta);
             return;
         }
         if (watchTitles == null || watchTextsK != k || watchTextsGen != Ui.generation) prepareWatchTexts();
@@ -4180,8 +4195,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         for (int i = 0; i < watching.size(); i++) if (i != top) drawWatchCard(c, i);
         if (top >= 0) drawWatchCard(c, top);
         c.restore();
-        if (plexHint) c.drawText(Ui.tr("To see Plex here, sign in: Home Settings › Continue Watching apps › Plex."),
-                MARGIN * k, (L_CARDS_TOP + WatchArt.H + 140) * k, lCardMeta);
+        if (plexHint) c.drawText(plexHintText(), MARGIN * k, (L_CARDS_TOP + WatchArt.H + 140) * k, lCardMeta);
     }
 
     private float watchLeftEdge() {

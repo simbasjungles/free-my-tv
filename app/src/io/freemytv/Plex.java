@@ -57,6 +57,11 @@ final class Plex {
         return Trakt.inHome();
     }
 
+    /** Plex is on the TV and can be opened: without it, nothing is fetched or shown (signing out still works). */
+    static boolean installed(Context c) {
+        return HomeApps.launchIntent(c.getPackageManager(), PKG) != null;
+    }
+
     private static SharedPreferences sp(Context c) {
         return c.getApplicationContext().getSharedPreferences("plex", Context.MODE_PRIVATE);
     }
@@ -112,7 +117,7 @@ final class Plex {
                     }
                     sp(app).edit().putString("token", token).putString("user", name).apply();
                     try {
-                        findServer(app);
+                        findServer(app, token);
                     } catch (Exception e) {
                         AppLog.w("plex server: " + e.getMessage());
                     }
@@ -133,8 +138,10 @@ final class Plex {
 
     /** Forgets the account and its server here (the client id stays: it's this TV). */
     static void signOut(Context c) {
-        String client = sp(c).getString("client", "");
-        sp(c).edit().clear().putString("client", client).apply();
+        synchronized (Plex.class) {
+            String client = sp(c).getString("client", "");
+            sp(c).edit().clear().putString("client", client).apply();
+        }
         message = "";
         fetchedAt = 0;
         Runnable l = listener;
@@ -156,8 +163,7 @@ final class Plex {
      * Your Plex Media Server (an owned one first) and the first of its https addresses that answers: local, then
      * remote, then Plex's relay. Saved, so the next fetches go straight to it.
      */
-    private static void findServer(Context c) throws Exception {
-        String token = sp(c).getString("token", "");
+    private static void findServer(Context c, String token) throws Exception {
         JSONArray list = new JSONArray(request(c, "GET", TV + "/resources?includeHttps=1&includeRelay=1", token, 8000));
         List<JSONObject> servers = new ArrayList<>();
         for (int i = 0; i < list.length(); i++) {
@@ -183,8 +189,11 @@ final class Plex {
                 } catch (Exception e) {
                     continue;
                 }
-                sp(c).edit().putString("serverUri", uri).putString("serverId", s.optString("clientIdentifier"))
-                        .putString("serverToken", serverToken).putString("serverName", s.optString("name")).apply();
+                synchronized (Plex.class) {
+                    if (!token.equals(sp(c).getString("token", ""))) throw new IOException("signed out meanwhile");
+                    sp(c).edit().putString("serverUri", uri).putString("serverId", s.optString("clientIdentifier"))
+                            .putString("serverToken", serverToken).putString("serverName", s.optString("name")).apply();
+                }
                 AppLog.w("plex: server found, " + (uris.indexOf(uri) == 0 ? "first address" : "a later address"));
                 return;
             }
@@ -193,13 +202,13 @@ final class Plex {
     }
 
     /** A GET on your server; if the saved address stopped answering, the server is found again (once). */
-    private static JSONObject server(Context c, String path) throws Exception {
-        if (sp(c).getString("serverUri", "").isEmpty()) findServer(c);
+    private static JSONObject server(Context c, String token, String path) throws Exception {
+        if (sp(c).getString("serverUri", "").isEmpty()) findServer(c, token);
         try {
             return new JSONObject(request(c, "GET", sp(c).getString("serverUri", "") + path, sp(c).getString("serverToken", ""), 6000));
         } catch (IOException e) {
             if (e.getMessage() != null && e.getMessage().startsWith("Plex returned HTTP")) throw e;
-            findServer(c);
+            findServer(c, token);
             return new JSONObject(request(c, "GET", sp(c).getString("serverUri", "") + path, sp(c).getString("serverToken", ""), 6000));
         }
     }
@@ -212,7 +221,7 @@ final class Plex {
      */
     static Lists lists(Context c) {
         Lists out = new Lists();
-        if (!signedIn(c)) return out;
+        if (!signedIn(c) || !installed(c)) return out;
         String saved = sp(c).getString("lists", "");
         try {
             if (!saved.isEmpty()) {
@@ -232,12 +241,34 @@ final class Plex {
         fetching = true;
         fetchedAt = System.currentTimeMillis();
         Context app = c.getApplicationContext();
+        // The account this fetch is for: signed out (or into another one) meanwhile, its result is dropped.
+        final String token = sp(app).getString("token", "");
         new Thread(() -> {
             try {
-                JSONObject o = new JSONObject().put("watching", watching(app)).put("watchlist", watchlist(app));
-                String json = o.toString();
-                if (!signedIn(app) || json.equals(sp(app).getString("lists", ""))) return;
-                sp(app).edit().putString("lists", json).apply();
+                if (!installed(app)) return;
+                // Each list on its own: no server reachable still leaves the watchlist, and the other way round.
+                JSONObject saved = savedLists(app);
+                JSONArray watching = saved.optJSONArray("watching"), watchlist = saved.optJSONArray("watchlist");
+                boolean got = false;
+                try {
+                    watching = watching(app, token);
+                    got = true;
+                } catch (Exception e) {
+                    AppLog.w("plex continue watching: " + e.getMessage());
+                }
+                try {
+                    watchlist = watchlist(app, token);
+                    got = true;
+                } catch (Exception e) {
+                    AppLog.w("plex watchlist: " + e.getMessage());
+                }
+                if (!got) return;
+                String json = new JSONObject().put("watching", watching == null ? new JSONArray() : watching)
+                        .put("watchlist", watchlist == null ? new JSONArray() : watchlist).toString();
+                synchronized (Plex.class) {
+                    if (!token.equals(sp(app).getString("token", "")) || json.equals(sp(app).getString("lists", ""))) return;
+                    sp(app).edit().putString("lists", json).apply();
+                }
                 Runnable l = listener;
                 if (l != null) l.run();
             } catch (Exception e) {
@@ -248,12 +279,20 @@ final class Plex {
         }, "plex").start();
     }
 
+    private static JSONObject savedLists(Context c) {
+        try {
+            return new JSONObject(sp(c).getString("lists", "{}"));
+        } catch (Exception e) {
+            return new JSONObject();
+        }
+    }
+
     /** Continue Watching from your server, in Plex's order: newer servers have the hub, older ones On Deck. */
-    private static JSONArray watching(Context c) throws Exception {
+    private static JSONArray watching(Context c, String token) throws Exception {
         JSONArray list = null;
         for (String path : new String[] {"/hubs/continueWatching/items", "/hubs/home/continueWatching", "/library/onDeck"}) {
             try {
-                list = metadata(server(c, path + "?X-Plex-Container-Start=0&X-Plex-Container-Size=20"));
+                list = metadata(server(c, token, path + "?X-Plex-Container-Start=0&X-Plex-Container-Size=20"));
                 break;
             } catch (IOException e) {
                 if (e.getMessage() == null || !e.getMessage().startsWith("Plex returned HTTP 404")) throw e;
@@ -278,16 +317,16 @@ final class Plex {
     }
 
     /** The Plex Watchlist, newest first: the one on your server opens there (it plays), else its page in Plex. */
-    private static JSONArray watchlist(Context c) throws Exception {
+    private static JSONArray watchlist(Context c, String token) throws Exception {
         JSONArray list = metadata(new JSONObject(request(c, "GET", DISCOVER
-                + "/library/sections/watchlist/all?X-Plex-Container-Start=0&X-Plex-Container-Size=20", sp(c).getString("token", ""), 8000)));
+                + "/library/sections/watchlist/all?X-Plex-Container-Start=0&X-Plex-Container-Size=20", token, 8000)));
         JSONArray out = new JSONArray();
         String id = sp(c).getString("serverId", "");
         for (int i = 0; list != null && i < list.length() && out.length() < WATCHLIST_MAX; i++) {
             JSONObject m = list.getJSONObject(i);
             String type = m.optString("type");
             if (!type.equals("movie") && !type.equals("show")) continue;
-            String art = first(m, "art", "thumb"), key = libraryKey(c, m.optString("guid")), slug = m.optString("slug");
+            String art = first(m, "art", "thumb"), key = libraryKey(c, token, m.optString("guid")), slug = m.optString("slug");
             String link = key != null ? link(id, key) : slug.isEmpty() ? null
                     : "https://watch.plex.tv/" + (type.equals("show") ? "show/" : "movie/") + slug;
             if (!art.startsWith("https://")) art = "";   // the watchlist's artwork is Plex's own https address
@@ -298,10 +337,10 @@ final class Plex {
     }
 
     /** The title's key on your server ("/library/metadata/123"), found by Plex's guid; null if it isn't there. */
-    private static String libraryKey(Context c, String guid) {
+    private static String libraryKey(Context c, String token, String guid) {
         if (guid.isEmpty() || sp(c).getString("serverUri", "").isEmpty()) return null;
         try {
-            JSONArray list = metadata(server(c, "/library/all?guid=" + URLEncoder.encode(guid, "UTF-8")));
+            JSONArray list = metadata(server(c, token, "/library/all?guid=" + URLEncoder.encode(guid, "UTF-8")));
             if (list != null && list.length() > 0) return list.getJSONObject(0).optString("key", null);
         } catch (Exception ignored) {
         }
