@@ -141,6 +141,19 @@ final class HomeMode {
         "com.sony.dtv.usercontext",                                                   // viewing context for recommendations
         "com.sony.dtv.promos", "com.sony.dtv.sonyselect",                             // promo apps
         "com.sony.dtv.demosupport", "com.sony.dtv.demosystemsupport", "com.sony.dtv.multiscreendemo",   // store demo
+        // and from CleanYourTV's UR3 display-only list: always running, nothing a home viewer uses
+        "com.sony.dtv.interactivetvutil", "com.sony.dtv.interactivetvutil.output",    // action and app log collectors
+        "com.sony.dtv.videoframeserver",                                              // reads Samba TV's data and the EPG
+        "com.sony.dtv.b2b.hotelmode", "com.sony.dtv.b2b.rs232csupport",               // hotel mode, RS-232 control
+        "com.sony.dtv.livingfit",                                                     // Living Decor (art mode)
+        "com.sony.dtv.notificationcenter", "com.sony.dtv.bivlinfo",                   // BRAVIA notices and info
+        "com.sony.dtv.customersupport", "com.sony.dtv.smarthelp", "com.sony.dtv.helpguidecontents",   // help, manual
+        "android.autoinstalls.config.sony.bravia",                                    // Play auto-installs partner apps
+        "com.google.android.feedback", "com.google.android.tv.bugreportsender",       // feedback and bug-report senders
+        "com.google.android.partnersetup", "com.google.android.videos",               // install attribution, Play Movies
+        // (com.sony.dtv.smarthomesettings asks for TV_INPUT_HARDWARE, so neededByTv keeps it on)
+        "com.sony.dtv.seeds.auth", "com.sony.dtv.seeds.iot", "com.sony.dtv.seeds.iot.remotestart",   // Alexa, Google Home
+        "com.sony.huey.dlna.module", "com.sony.huey.dlna.renderersettings", "com.sonyericsson.dlna",   // DLNA receiver
         // HY300 projectors (Amlogic txhd2, Android 13): JmLauncher opens it from the Home button (JM_HOME); off only
         // once JM_HOME is ours
         HTC_HOME,                                                                     // the stock home (and an ad SDK)
