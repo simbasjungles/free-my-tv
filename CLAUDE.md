@@ -34,7 +34,9 @@ before you do it, and let them do the taps on the TV.
 - Never commit `config.properties`, `*.keystore` or any key.
 - Never uninstall or clear the data of system apps; only `pm disable-user --user 0`, through `HomeMode`, so
   *Original* can bring it back.
-- Don't change the TV's picture, sound, network or account settings.
+- Don't change the TV's picture, sound, network or account settings. The one exception is Home Settings' *Ad blocking*,
+  off until the person turns it on: the Private DNS, recorded first and put back by turning it off, by *Original* and
+  by the watchdog's revert (`HomeMode.adBlocking`).
 - Keep the way back working: the *Original* mode and the watchdog.
 
 ## Installing it for someone
@@ -465,6 +467,15 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   It unbinds itself as soon as it connects (the permission is all it's for), and the home screen and the screensaver
   watch the sessions only while they show. The line is cut to fit when the title changes, never while drawing; the
   home screen's bars bounce again only for a new title (`Watch.title`), and TalkBack announces it then.
+- *Ad blocking* (Home Settings, off by default; Android 9+, in Free My TV mode) sets the TV's Private DNS to AdGuard DNS
+  (`HomeMode.AD_DNS`, DNS over TLS) through the TV's ADB, so ad and tracker domains answer 0.0.0.0 in every app (not
+  YouTube's ads, which come from YouTube's own servers). The setting it replaces is kept in the state file
+  (`dnsBefore`) and put back when the row goes off, by *Original* and by the watchdog's revert; one the person set
+  themselves (no `dnsBefore`) is never touched. Strict mode has no fallback, so the switch waits up to 15 s for
+  `dumpsys connectivity` to list AdGuard among the validated Private DNS addresses, and otherwise puts the old setting
+  back and proves `Capabilities.PRIVATE_DNS` refused (the row shows Unavailable; turning it off forgets that). The
+  switch to Free My TV mode and `verifyNow` set it again where the row is on (a TV update can reset it), never after
+  a refusal. It also gets around ISP DNS blocks (Jio sinkholes `api.themoviedb.org`; `api.tmdb.org` still resolves).
 - *At power-on* (Home Settings, `Prefs.powerOn()`: `tv`, the default, `home` or `live`; #396, #346) acts only after a
   full start, never on a wake from standby. `HomeActivity` keeps the uptime of the first time the home screen came up
   in this start (`HomeMode.noteHomeShown`, the file `home-shown` with `Settings.Global.BOOT_COUNT`). `live`: 10 s later,

@@ -971,12 +971,13 @@ public class SettingsActivity extends Activity {
                 CLOCKS = {"auto", "24", "12"};
         /** Home Settings: language, temperature, theme, clock, my photos, sounds, top of the screen, picks, Continue
          *  Watching's apps, watch from the screensaver, Android apps, status icons, Recent Apps, weather, city, forecast,
-         *  now playing, Home Assistant (only on builds with its address), quotes, one row per coin, then the TMDB and Watchmode keys and
+         *  now playing, ad blocking, Home Assistant (only on builds with its address), quotes, one row per coin, then the TMDB and Watchmode keys and
          *  updates (the last row). */
         private static final int CLOCK_ROW = 3, PHOTOS_ROW = 4, TOP_ROW = 6, PICKS_ROW = 7, WATCH_ROW = 8,
                 SAVER_ROW = 9, ANDROID_APPS_ROW = 10, STATUS_ICONS_ROW = 11, RECENTS_ROW = 12, POWER_ON_ROW = 13,
-                WEATHER_ROW = 14, CITY_ROW = 15, FORECAST_ROW = 16, PLAYING_ROW = 17, HOME_ROW = Config.HOME_ASSISTANT ? 18 : -1,
-                QUOTES_ROW = Config.HOME_ASSISTANT ? 19 : 18, COIN_ROWS = QUOTES_ROW + 1;
+                WEATHER_ROW = 14, CITY_ROW = 15, FORECAST_ROW = 16, PLAYING_ROW = 17, AD_BLOCK_ROW = 18,
+                HOME_ROW = Config.HOME_ASSISTANT ? 19 : -1, QUOTES_ROW = Config.HOME_ASSISTANT ? 20 : 19,
+                COIN_ROWS = QUOTES_ROW + 1;
         /** No "home" on Xiaomi TVs: their remote sends one Home press as a burst of presses (HomeView.BURST_MS). */
         private static final String[] RECENTS = RemoteKeys.XIAOMI ? new String[] {"off", "drawer"}
                 : new String[] {"off", "drawer", "home"};
@@ -1007,6 +1008,7 @@ public class SettingsActivity extends Activity {
             l.add(Ui.tr("City"));
             l.add(Ui.tr("Forecast"));
             l.add(Ui.tr("Now Playing widget"));
+            l.add(Ui.tr("Ad blocking"));
             if (HOME_ROW >= 0) l.add("Home Assistant");
             l.add(Ui.tr("Quotes widget"));
             l.add("Bitcoin");
@@ -1116,6 +1118,7 @@ public class SettingsActivity extends Activity {
             v[CITY_ROW] = !cityStatus.isEmpty() ? cityStatus : Prefs.city().isEmpty() ? "—" : Prefs.city();
             v[FORECAST_ROW] = Prefs.forecast().equals("days") ? Ui.tr("Next days") : Ui.tr("Next hours");
             v[PLAYING_ROW] = onOff(Prefs.nowPlaying());
+            v[AD_BLOCK_ROW] = onOff(Prefs.adBlocking());
             if (HOME_ROW >= 0) v[HOME_ROW] = onOff(HomeAssistant.on(getContext()));
             v[QUOTES_ROW] = onOff(Prefs.quotes());
             // No quotes widget, nowhere to show prices: the coins read as off (and stay locked) until it is back on.
@@ -1146,6 +1149,7 @@ public class SettingsActivity extends Activity {
                             : i == 6 ? Capabilities.NEED_ADB : null;
                 case HOME_SETTINGS:
                     return pickScroll + i == PLAYING_ROW ? Capabilities.NEED_LISTENER
+                            : pickScroll + i == AD_BLOCK_ROW ? Capabilities.NEED_PRIVATE_DNS
                             : pickScroll + i == HOME_ROW ? Capabilities.NEED_HOME_ASSISTANT
                             : pickScroll + i == POWER_ON_ROW ? Capabilities.NEED_LIVE_TV : null;
                 case POWER: {
@@ -1379,8 +1383,10 @@ public class SettingsActivity extends Activity {
 
         /** Changes the focused row's value one step (OK and → go forward, ← goes back). */
         private void adjust(int dir) {
-            // Refused or without Free My TV mode, Now Playing can still be turned off (and the refusal is then forgotten).
-            boolean turnOff = screen == HOME_SETTINGS && pickScroll + focus == PLAYING_ROW && Prefs.nowPlaying();
+            // Refused or without Free My TV mode, Now Playing and Ad blocking can still be turned off (and the refusal is
+            // then forgotten).
+            boolean turnOff = screen == HOME_SETTINGS && (pickScroll + focus == PLAYING_ROW && Prefs.nowPlaying()
+                    || pickScroll + focus == AD_BLOCK_ROW && Prefs.adBlocking());
             if (unavailable(focus) != null && !turnOff) return;
             if (screen == PICKS) {
                 if (focus == 0) {
@@ -1481,6 +1487,10 @@ public class SettingsActivity extends Activity {
                     Prefs.setNowPlaying(!Prefs.nowPlaying());
                     HomeMode.nowPlayingAccess(getContext());
                     break;
+                case AD_BLOCK_ROW:   // the TV's Private DNS follows the row (HomeMode.adBlocking)
+                    Prefs.setAdBlocking(!Prefs.adBlocking());
+                    HomeMode.adBlockingAccess(getContext());
+                    return;
                 case HOME_ROW:   // off: what it read is forgotten, and nothing is asked of the server until it's on again
                     Prefs.setHomeAssistant(!Prefs.homeAssistant());
                     if (!Prefs.homeAssistant()) HomeAssistant.forget(getContext());

@@ -20,10 +20,13 @@ final class Capabilities {
     /** Reading what apps play (NowPlaying): Android hands media sessions only to an allowed notification listener. */
     static final String LISTENER = "listener";
 
+    /** Ad blocking's DNS (HomeMode.adBlocking): refused where Android couldn't validate AdGuard's server. */
+    static final String PRIVATE_DNS = "private-dns";
+
     /** An option's needs. */
     static final String NEED_ADB = "adb", NEED_REMOTE_BUTTONS = "remote-buttons", NEED_OVERLAY = OVERLAY,
             NEED_LIVE_TV = "live-tv", NEED_LISTENER = LISTENER, NEED_SWITCH = "switch",
-            NEED_HOME_ASSISTANT = "home-assistant", NEED_APP_STORE = "app-store";
+            NEED_HOME_ASSISTANT = "home-assistant", NEED_APP_STORE = "app-store", NEED_PRIVATE_DNS = PRIVATE_DNS;
 
     /** null where this TV has what `need` names; else why not, and what would change it, for the person to read. */
     static String missing(Context c, String need) {
@@ -37,6 +40,10 @@ final class Capabilities {
             case NEED_LISTENER:
                 return !adb(c) ? Ui.tr("Needs Free My TV mode: turn it on in Home Screen.")
                         : refused(c, LISTENER) ? Ui.tr("This TV doesn't let apps see what's playing.") : null;
+            case NEED_PRIVATE_DNS:
+                return android.os.Build.VERSION.SDK_INT < 28 ? Ui.tr("Needs Android 9 or newer.")
+                        : !adb(c) ? Ui.tr("Needs Free My TV mode: turn it on in Home Screen.")
+                        : refused(c, PRIVATE_DNS) ? Ui.tr("AdGuard DNS didn't answer on this network, so the TV kept its own DNS.") : null;
             case NEED_HOME_ASSISTANT:
                 return !HomeAssistant.hasEntities()
                         ? Ui.tr("None of home_assistant_entities can be a button (see the README).")

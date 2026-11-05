@@ -339,6 +339,13 @@ final class Prefs {
         version++;
     }
 
+    /** The TV's Private DNS on AdGuard DNS (HomeMode.adBlocking): off until turned on here. */
+    static boolean adBlocking() { return sp().getBoolean("adBlocking", false); }
+    static void setAdBlocking(boolean on) {   // committed: the main process reads it right away to set the DNS
+        sp().edit().putBoolean("adBlocking", on).commit();
+        version++;
+    }
+
     /** Home Assistant's tiles in the drawer (HomeAssistant): off until turned on here, even with a server configured. */
     static boolean homeAssistant() { return sp().getBoolean("homeAssistant", false); }
     static void setHomeAssistant(boolean on) { put("homeAssistant", on); }
