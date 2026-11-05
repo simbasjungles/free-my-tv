@@ -100,8 +100,9 @@ final class WatchNext {
             }
         }
         Set<String> off = Prefs.watchOff(), hidden = Prefs.watchHidden();
-        if (!plex.watching.isEmpty() || !plex.watchlist.isEmpty()) {
-            // Plex's own list is the better one: what Plex shares on the TV would only repeat it.
+        if (!plex.watching.isEmpty()) {
+            // Plex's own list replaces what Plex shares on the TV (Google TV), which would only repeat it. Until it has
+            // something (signed out, the first fetch, no server), the TV's Plex rows stay.
             for (java.util.Iterator<Item> i = all.iterator(); i.hasNext(); ) if (Plex.PKG.equals(i.next().pkg)) i.remove();
         }
         for (java.util.Iterator<Item> i = all.iterator(); i.hasNext(); ) {
@@ -119,7 +120,6 @@ final class WatchNext {
                 it.app = name;
                 out.add(it);
             }
-            perApp.put(Plex.PKG, PER_APP);   // Plex's in-progress titles are in; Plex's own Watch Next ones aren't needed
         }
         for (Item it : all) {
             String key = it.pkg + "|" + (it.intent != null ? it.intent : it.title);

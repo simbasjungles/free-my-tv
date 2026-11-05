@@ -318,7 +318,7 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   signing in. When Plex is on there but no one signed in and the row has nothing from Plex, the home screen says
   where to sign in (`plexHint`). The token stays in `:home`'s private `plex` preferences, only travels in the `X-Plex-Token` header,
   never follows a redirect and is never logged. Continue Watching then starts with the server's in-progress titles
-  (Plex's order, beyond `PER_APP`) and ends with the Plex Watchlist; Plex's own Watch Next rows are dropped then, and
+  (Plex's order, beyond `PER_APP`) and ends with the Plex Watchlist; the TV's own Plex rows (Google TV) are dropped once that list has titles, not before, and
   its pictures (`Plex.PICTURE` keys in `WatchArt`) are the one exception to "only from the TV": Plex gave them. Plex
   shares its own row only through Google TV's Engage, which Android TV models never get (a Sony BRAVIA VH1).
 - Trakt (`Trakt`, Google TV only) needs the person's own API app: `trakt_client_id` (the Client ID only: device code
