@@ -3,10 +3,18 @@
 # Needs a JDK (17+) and the Android SDK command-line tools (build-tools 34+, platform android-34). See README.md.
 #   ./build.sh             with config.properties (your city, your TMDB key)
 #   ./build.sh --generic   without it, as the APK on GitHub's releases: no key, and the TV's time zone gives the city
+#   ./build.sh --pkg=<id>  under another application id, so it installs next to the release APK on the same TV (a test
+#                          build, for working on the app without uninstalling yours)
 set -euo pipefail
 cd "$(dirname "$0")"
 GENERIC=false
-for arg in "$@"; do [ "$arg" = "--generic" ] && GENERIC=true; done
+PKGNAME="io.freemytv"
+for arg in "$@"; do
+  case "$arg" in
+    --generic) GENERIC=true ;;
+    --pkg=*) PKGNAME="${arg#--pkg=}" ;;
+  esac
+done
 
 # --- Tools
 SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
@@ -116,6 +124,9 @@ package io.freemytv;
 final class Config {
     private Config() {}
 
+    /** The application id the APK is built under: --pkg renames it, for a build that lives next to another one. */
+    static final String PACKAGE = "$PKGNAME";
+
     static final String TMDB_KEY = "$(prop tmdb_key '')";
     static final String WATCHMODE_KEY = "$(prop watchmode_key '')";
     static final String PLEX_URL = "$(prop plex_url '')";
@@ -161,10 +172,27 @@ mkdir -p out/res/xml
 
 # --- Build
 
+# A renamed build: the manifest's package changes, and the component names stay fully qualified (".HomeActivity" would
+# otherwise point into the new package, where no class lives). The providers' authorities must differ from the release
+# build's too, or the two can't be installed side by side.
+MANIFEST=app/AndroidManifest.xml
+CUSTOM_PACKAGE=()
+if [ "$PKGNAME" != "io.freemytv" ]; then
+  MANIFEST=out/AndroidManifest-$PKGNAME.xml
+  sed -e "s#package=\"io\.freemytv\"#package=\"$PKGNAME\"#" \
+      -e "s#android:name=\"\.#android:name=\"io.freemytv.#g" \
+      -e "s#android:authorities=\"io\.freemytv\.#android:authorities=\"$PKGNAME.#g" \
+      -e "s#android:taskAffinity=\"io\.freemytv\.#android:taskAffinity=\"$PKGNAME.#g" \
+      app/AndroidManifest.xml > "$MANIFEST"
+  # The classes stay in io.freemytv, and so must R: aapt2 would otherwise write it under the new id.
+  CUSTOM_PACKAGE=(--custom-package io.freemytv)
+fi
+
 "$BT/aapt2" compile --dir app/res -o out/res.zip
 "$BT/aapt2" compile --dir out/res -o out/res-gen.zip
 # Fonts uncompressed: Android reads them straight from the APK.
-"$BT/aapt2" link -o out/base.apk -I "$AJ" --manifest app/AndroidManifest.xml --java out/gen out/res.zip out/res-gen.zip \
+"$BT/aapt2" link -o out/base.apk -I "$AJ" --manifest "$MANIFEST" --java out/gen \
+  ${CUSTOM_PACKAGE[@]+"${CUSTOM_PACKAGE[@]}"} out/res.zip out/res-gen.zip \
   --min-sdk-version 26 --target-sdk-version 33 -A app/assets -0 ttf
 # Windows aapt2 packs assets with backslash separators ("assets/symbols\x.png") and Android
 # cannot find them: the home screen loses its icons and fonts. Rename the zip entries to "/".
