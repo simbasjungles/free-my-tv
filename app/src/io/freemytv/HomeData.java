@@ -70,7 +70,7 @@ final class HomeData {
     }
 
     private static String weatherUrl() {
-        return "https://api.open-meteo.com/v1/forecast?latitude=" + Prefs.latitude() + "&longitude=" + Prefs.longitude() + WEATHER_QUERY;
+        return WeatherSource.openMeteoUrl(Prefs.latitude(), Prefs.longitude(), Prefs.weatherHost(), WEATHER_QUERY);
     }
     private static final long PRICES_EVERY = 5 * 60_000L, WEATHER_EVERY = 30 * 60_000L;
     interface Listener { void onData(); }
@@ -212,7 +212,7 @@ final class HomeData {
             String w = cache.getString("weather", null);
             // The cached forecast is for the city it was fetched for; another city means fetch again.
             if (w != null && weatherPlace().equals(cache.getString("weatherPlace", ""))) {
-                weather = parseWeather(w);
+                weather = parseWeather(w, cache.getBoolean("weatherMetNo", false));
                 // Fetched with another query (an older version): shown, and fetched again now.
                 weatherAt = WEATHER_QUERY.equals(cache.getString("weatherQuery", "")) ? cache.getLong("weatherAt", 0) : 0;
                 weatherFor = weatherPlace();
@@ -291,11 +291,22 @@ final class HomeData {
             io.execute(() -> {
                 try {
                     String place = weatherPlace();
-                    String body = get(weatherUrl());
-                    weather = parseWeather(body);
+                    // Open-Meteo first: it's the one that answers everywhere but on networks that block its host
+                    // (#450, some Russian ISPs). MET Norway needs no key either, and answers there.
+                    String body;
+                    boolean metNo = false;
+                    try {
+                        body = get(weatherUrl(), 4000);
+                    } catch (IOException openMeteo) {
+                        body = get(WeatherSource.metNoUrl(Prefs.latitude(), Prefs.longitude()), 6000);
+                        metNo = true;
+                        AppLog.w("weather: Open-Meteo failed (" + openMeteo.getMessage() + "), MET Norway answered");
+                    }
+                    weather = parseWeather(body, metNo);
                     weatherAt = System.currentTimeMillis();
                     weatherFor = place;
                     cache.edit().putString("weather", body).putLong("weatherAt", weatherAt).putString("weatherPlace", place)
+                            .putBoolean("weatherMetNo", metNo)
                             .putString("weatherQuery", WEATHER_QUERY).apply();
                     notifyListeners();
                 } catch (Exception e) {
@@ -364,51 +375,18 @@ final class HomeData {
         }
     }
 
-    private static Weather parseWeather(String body) throws Exception {
-        JSONObject o = new JSONObject(body);
-        // Open-Meteo writes every time at the place's offset of now, even past a DST change (Berlin's sunrise after the
-        // change still reads 07:51 at GMT+2): read them at that offset, as LG and Samsung do, not by the zone's rules.
-        TimeZone zone = o.has("utc_offset_seconds") ? new SimpleTimeZone(o.getInt("utc_offset_seconds") * 1000, "GMT")
-                : TimeZone.getTimeZone(o.optString("timezone", TimeZone.getDefault().getID()));
-        Weather w = new Weather();
-        JSONObject current = o.getJSONObject("current");
-        w.temp = current.getDouble("temperature_2m");
-        w.code = current.getInt("weather_code");
-        w.isDay = current.optInt("is_day", 1) == 1;
-        JSONObject daily = o.getJSONObject("daily");
-        w.max = daily.getJSONArray("temperature_2m_max").getDouble(0);
-        w.min = daily.getJSONArray("temperature_2m_min").getDouble(0);
-        w.sunrise = localTime(daily.getJSONArray("sunrise").getString(0), zone);
-        w.sunset = localTime(daily.getJSONArray("sunset").getString(0), zone);
-        JSONObject hourly = o.optJSONObject("hourly");
-        if (hourly != null) {
-            JSONArray times = hourly.getJSONArray("time");
-            JSONArray temps = hourly.getJSONArray("temperature_2m");
-            JSONArray codes = hourly.getJSONArray("weather_code");
-            JSONArray days = hourly.optJSONArray("is_day");
-            long now = System.currentTimeMillis();
-            for (int i = 0; i < times.length() && w.hours.size() < 6; i++) {
-                long at = localTime(times.getString(i), zone);
-                if (at <= now) continue;
-                w.hours.add(at);
-                w.hourTemp.add(temps.getDouble(i));
-                w.hourCode.add(codes.getInt(i));
-                w.hourDay.add(days == null || days.optInt(i, 1) == 1);
-            }
+    /** The cached or freshly fetched body, from whichever source answered. */
+    private static Weather parseWeather(String body, boolean metNo) throws Exception {
+        if (metNo) return WeatherSource.parseMetNo(body, coordinate(Prefs.latitude()), coordinate(Prefs.longitude()));
+        return WeatherSource.parseOpenMeteo(body);
+    }
+
+    private static double coordinate(String v) {
+        try {
+            return Double.parseDouble(v.trim());
+        } catch (RuntimeException e) {
+            return 0;
         }
-        JSONArray dates = daily.getJSONArray("time"), highs = daily.getJSONArray("temperature_2m_max"),
-                lows = daily.getJSONArray("temperature_2m_min"), codes = daily.optJSONArray("weather_code");
-        long now = System.currentTimeMillis();
-        for (int i = 0; codes != null && i < dates.length() && w.days.size() < 5; i++) {
-            String date = dates.getString(i);
-            // Only days that haven't started at the city: today, and past days in a forecast kept offline, are left out.
-            if (localTime(date + "T12:00", zone) - 12 * 3600_000L <= now) continue;
-            w.days.add(localTime(date + "T12:00", TimeZone.getDefault()));   // its noon on the TV's clock: named right anywhere
-            w.dayMax.add(highs.optDouble(i));
-            w.dayMin.add(lows.optDouble(i));
-            w.dayCode.add(codes.optInt(i, -1));
-        }
-        return w;
     }
 
     private static long localTime(String iso, TimeZone zone) throws ParseException {
@@ -419,8 +397,7 @@ final class HomeData {
 
     static List<String[]> findCity(String name) throws Exception {
         String lang = Ui.language.replaceAll("-.*", "");   // Open-Meteo takes the language without the country
-        JSONObject o = new JSONObject(get("https://geocoding-api.open-meteo.com/v1/search?count=10&format=json&language=" + lang
-                + "&name=" + URLEncoder.encode(name.trim(), "UTF-8")));
+        JSONObject o = new JSONObject(get(WeatherSource.geocodingUrl(URLEncoder.encode(name.trim(), "UTF-8"), lang, Prefs.weatherHost())));
         JSONArray results = o.optJSONArray("results");
         List<String[]> out = new ArrayList<>();
         java.util.Set<String> seen = new java.util.HashSet<>();   // places with the same name, state and country read the same
@@ -440,9 +417,13 @@ final class HomeData {
     }
 
     private static String get(String url) throws IOException {
+        return get(url, 6000);
+    }
+
+    private static String get(String url, int timeoutMs) throws IOException {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-        c.setConnectTimeout(6000);
-        c.setReadTimeout(6000);
+        c.setConnectTimeout(timeoutMs);
+        c.setReadTimeout(timeoutMs);
         c.setRequestProperty("User-Agent", "FreeMyTV");
         try {
             if (c.getResponseCode() != 200) throw new IOException("HTTP " + c.getResponseCode());
