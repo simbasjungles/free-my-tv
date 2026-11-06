@@ -120,6 +120,16 @@ final class HomeApps {
         {"premier", "Premier", "gpm.tnt_premier", "FF2D55", "", "1"},
         {"amediateka", "Амедиатека", "ru.amediateka", "E31E24", "", "1"},
         {"wink", "Wink", "ru.rt.video.app.tv", "FF5A1F", "", "1"},
+        // Russia's other services: the five above come from TMDB's RU watch providers (picks), these are shelf-only.
+        // Their colors are checked against the app's own TV art on the test TV before the pull request.
+        {"ivi", "Иви", "ru.ivi.client", "EA1B1B", "", "1"},
+        {"start", "START", "ru.start.androidtv", "E4002B", "", "1"},
+        {"kion", "Kion", "ru.mts.mtstv", "8B2FD6", "", "1"},
+        {"kinopub", "kino.pub", "com.kinopub", "1E90FF", "", "1"},
+        {"lmd", "Lazy Media Deluxe", "com.lazycatsoftware.lmd", "8A8F98", "", "1"},
+        {"ottplay", "ott-play", "com.ott_play", "1C7ED6", "", "1"},
+        {"moretv", "more.tv", "com.ctcmediagroup.videomore", "FF3B30", "", "1"},
+        {"vkvideo", "VK Видео", "com.vk.tv", "0077FF", "", "1"},
         {"spotify", "Spotify", "com.spotify.tv.android", "1DB954", "", "1"},
     };
     /**
