@@ -332,7 +332,8 @@ public class SettingsActivity extends Activity {
                     return row - 1 < names.length ? names[row - 1] : "";
                 }
                 case HOME_CHOICE: {
-                    String name = row == 0 ? "Free My TV, " + Ui.tr("no ads, with the new screensaver")
+                    String name = row == 0 ? "Free My TV, " + (Capabilities.screensaver(getContext())
+                            ? Ui.tr("no ads, with the new screensaver") : Ui.tr("no ads"))
                             : "Original, " + Ui.tr("the TV's factory home screen");
                     boolean inUse = (row == 0) == freeActive();
                     return name + (inUse ? Ui.tr(". In use") : "") + ", " + Ui.trf("{i} of {n}", "i", row + 1, "n", 2);
@@ -737,7 +738,8 @@ public class SettingsActivity extends Activity {
         private void drawChoice(Canvas c) {
             Paint heading = Ui.text(Ui.displaySemibold, 34 * k, 0xFFFFFFFF);
             c.drawText(Ui.tr("Home Screen"), LIST_X * k + 30 * k, (LIST_TOP - 24) * k, heading);
-            String[][] options = {{"Free My TV", Ui.tr("No ads, with the new screensaver")},
+            String free = Capabilities.screensaver(getContext()) ? Ui.tr("No ads, with the new screensaver") : Ui.tr("No ads");
+            String[][] options = {{"Free My TV", free},
                     {Ui.tr("Original"), Ui.tr("The TV's factory home screen")}};
             int current = freeActive() ? 0 : 1;
             for (int i = 0; i < 2; i++) {
@@ -1142,12 +1144,14 @@ public class SettingsActivity extends Activity {
         private String need(int i) {
             switch (screen) {
                 case MAIN:
-                    return i == 0 ? Capabilities.NEED_SWITCH : i == 5 ? Capabilities.NEED_REMOTE_BUTTONS
+                    return i == 0 ? Capabilities.NEED_SWITCH : i == 1 ? Capabilities.NEED_SCREENSAVER
+                            : i == 5 ? Capabilities.NEED_REMOTE_BUTTONS
                             : i == 6 ? Capabilities.NEED_ADB : null;
                 case HOME_SETTINGS:
                     return pickScroll + i == PLAYING_ROW ? Capabilities.NEED_LISTENER
                             : pickScroll + i == HOME_ROW ? Capabilities.NEED_HOME_ASSISTANT
-                            : pickScroll + i == POWER_ON_ROW ? Capabilities.NEED_LIVE_TV : null;
+                            : pickScroll + i == POWER_ON_ROW ? Capabilities.NEED_LIVE_TV
+                            : pickScroll + i == SAVER_ROW ? Capabilities.NEED_SCREENSAVER : null;
                 case POWER: {
                     int id = powerRows()[i];
                     return id == P_WHERE ? Capabilities.NEED_OVERLAY : null;

@@ -571,7 +571,8 @@ final class HomeMode {
                 busy(c, Ui.tr("Measuring the original home screen…"));
                 measure(c, adb, ORIGINAL, true);
             }
-            busy(c, Ui.tr("Switching the home screen and screensaver…"));
+            busy(c, Capabilities.screensaver(c) ? Ui.tr("Switching the home screen and screensaver…")
+                    : Ui.tr("Switching the home screen…"));
             Watchdog.clear(c);
             check(adb.shell("cmd package set-home-activity " + HOME_ACTIVITY), "Success",
                     Ui.tr("Android didn't accept the new home screen"));
@@ -643,7 +644,9 @@ final class HomeMode {
                 }
             }
             wakeWatch(adb, true);
-            notice(c, Ui.trf("Free My TV is on: new home screen and screensaver, {n} apps turned off.", "n", disabled.size()));
+            notice(c, Capabilities.screensaver(c)
+                    ? Ui.trf("Free My TV is on: new home screen and screensaver, {n} apps turned off.", "n", disabled.size())
+                    : Ui.trf("Free My TV is on: new home screen, {n} apps turned off.", "n", disabled.size()));
             busy(c, Ui.tr("Measuring Free My TV…"));
             measure(c, adb, FREE, false);
             done(c, null);

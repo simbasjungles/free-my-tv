@@ -23,7 +23,7 @@ final class Capabilities {
     /** An option's needs. */
     static final String NEED_ADB = "adb", NEED_REMOTE_BUTTONS = "remote-buttons", NEED_OVERLAY = OVERLAY,
             NEED_LIVE_TV = "live-tv", NEED_LISTENER = LISTENER, NEED_SWITCH = "switch",
-            NEED_HOME_ASSISTANT = "home-assistant", NEED_APP_STORE = "app-store";
+            NEED_HOME_ASSISTANT = "home-assistant", NEED_APP_STORE = "app-store", NEED_SCREENSAVER = "screensaver";
 
     /** null where this TV has what `need` names; else why not, and what would change it, for the person to read. */
     static String missing(Context c, String need) {
@@ -45,6 +45,8 @@ final class Capabilities {
                 return HomeApps.liveTv(c) != null ? null : Ui.tr("This TV has no live TV (antenna or cable) to open.");
             case NEED_APP_STORE:
                 return HomeApps.storePackage(c) != null ? null : Ui.tr("This TV has no supported app store to open.");
+            case NEED_SCREENSAVER:
+                return screensaver(c) ? null : Ui.tr("This TV runs its own screensaver, not Free My TV's.");
             case NEED_SWITCH:   // where the switch must not run; a TV already in Free My TV mode can still go back
                 return HomeMode.phone(c) ? HomeMode.phoneText() : HomeMode.BRICKS && !adb(c) ? HomeMode.bricksText() : null;
             default:
@@ -73,6 +75,21 @@ final class Capabilities {
     /** The remote's app buttons, on the brands whose key codes RemoteKeys knows. */
     static boolean remoteButtons() {
         return RemoteKeys.supported();
+    }
+
+    private static Boolean screensaverNow;
+
+    /**
+     * Android can start our screensaver here. A TV kept awake (stay_on_while_plugged_in) never idles, so none starts:
+     * a Philips TPM171E (Android 8) is set so, and runs its own from its system UI (#451). Read once, as the settings
+     * ask on every frame.
+     */
+    static synchronized boolean screensaver(Context c) {
+        if (screensaverNow == null) {
+            screensaverNow = Config.SCREENSAVER && android.provider.Settings.Global.getInt(c.getContentResolver(),
+                    android.provider.Settings.Global.STAY_ON_WHILE_PLUGGED_IN, 0) == 0;
+        }
+        return screensaverNow;
     }
 
     /** Over other apps: allowed, or ADB can allow it and hasn't been refused on this TV. */
