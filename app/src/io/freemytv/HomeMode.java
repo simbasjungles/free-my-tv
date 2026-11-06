@@ -537,6 +537,9 @@ final class HomeMode {
             String home = originalHome(s);
             if (home.isEmpty() || home.startsWith(PKG + "/")) {
                 String found = currentHome(adb);
+                // No holder to read (Android 8 and 9 have no `cmd role`, and the chooser answers until a default is
+                // set): the TV's own, when it has exactly one (#453).
+                if (found == null) found = stockHome(adb);
                 home = found != null ? realHome(found) : "";
                 if (home.isEmpty()) AppLog.w("original home screen not recorded (HOME resolves to \"" + homeHolder(adb) + "\"): Original will pick the TV's own");
             }
@@ -776,6 +779,16 @@ final class HomeMode {
         return found;
     }
 
+    /** {@link #stockHome}, recorded as the original home screen for a switch that couldn't read it; or "". */
+    private static String recordStockHome(Context c, Adb adb) throws IOException, JSONException {
+        String stock = stockHome(adb);
+        if (stock == null) return "";
+        String home = realHome(stock);
+        save(c, state(c).put("originalHome", home));
+        AppLog.w("original home screen recorded at the check: " + home);
+        return home;
+    }
+
     /** Safety net: our home screen crashed 3 times in a row. The home screen and the screensaver go back; the rest stays. */
     static void revertHomeNow(Context app) {
         synchronized (RUN) {
@@ -868,6 +881,9 @@ final class HomeMode {
                 Set<String> owners = wifiOwners(adb);
                 boolean reverted = s.optBoolean("homeReverted");
                 String home = originalHome(s);
+                // Switched without the TV's home screen recorded (Android 8 and 9, #453): recorded now, so it goes
+                // off here as at the switch, and Original turns it back on.
+                if (home.isEmpty() && !reverted) home = recordStockHome(app, adb);
                 String homePkg = packageOf(home);
                 // Who saved the Wi-Fi unknown: the setup app and the home screen wait for the next check.
                 Set<String> wait = new HashSet<>();
