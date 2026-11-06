@@ -310,6 +310,31 @@ It's your code, and Claude Code finds its way around it. Try:
 - *"Add Catalan."*
 - *"Switch to the night look an hour after sunset."*
 
+## In Russia
+
+Everything works in Russian out of the box: the language is in the list, and the five services TMDB knows here —
+Кинопоиск, Okko, Premier, Амедиатека and Wink — are on the shelf and in the picks, as they are everywhere else.
+
+- **The weather has two sources, and neither needs a key.** Open-Meteo answers first; where a network blocks its host
+  (some Russian ISPs do, [#450](https://github.com/simbasjungles/free-my-tv/issues/450)), the app asks
+  [MET Norway](https://www.met.no) instead, which answers there, and keeps the last forecast when neither does. Sunrise
+  and sunset are computed on the TV from the city's coordinates, so the night look works from the first start.
+- **More Russian apps on the shelf**, when installed: Иви, START, Kion, kino.pub, Lazy Media Deluxe, ott-play, more.tv
+  and VK Видео. kino.pub, Lazy Media Deluxe and ott-play are never on Google Play — install them however you do now,
+  and their tile picks them up.
+- **The picks stay western-heavy**, and that isn't this app's choice: TMDB's watch providers for Russia list only the
+  five services above. A title that none of them streams gets no card.
+- **Яндекс Музыка and Звук ship no Android TV build** — on a TV, music lives inside Кинопоиск and Okko. If you have
+  installed either APK anyway, *Home Settings* → *Android apps* shows it in *All Apps* as the phone app it is.
+- **Yandex Weather is not built in**: its API needs a key that can't ship in an open-source app, its free tier is
+  personal and non-commercial, and its terms forbid caching the forecast. MET Norway covers the same cities for free.
+
+Building your own copy next to the released one (no uninstall, your settings stay):
+
+```bash
+./build.sh --pkg=io.freemytv.test   # then: adb install -r FreeMyTV.apk
+```
+
 ## How it works
 
 - **A plain Android app, no Gradle, no libraries.** [`build.sh`](build.sh) runs aapt2 → javac → d8 → zipalign → apksigner and makes a 2 MB APK.
@@ -318,7 +343,7 @@ It's your code, and Claude Code finds its way around it. Try:
 - **A safety net.** A watchdog in a separate process brings back the stock home screen after three crashes in five minutes, and a boot check keeps your choice after TV updates.
 - **On LG and Samsung, the same design in plain HTML, CSS and JavaScript** ([`web/`](web)), written for the Chromium of older TVs, with no frameworks. [`webos/build.py`](webos/build.py) packs it with `config.properties` into an `.ipk` without LG's tools, and [`webos/install.py`](webos/install.py) installs it through Developer Mode; on LG it lists and opens apps through the TV's own service bus (Luna), as LG's launcher does. [`tizen/build.py`](tizen/build.py) packs the same app into a Samsung `.wgt`, which uses Tizen's web APIs for the apps and the inputs. To preview it on a computer: `python3 webos/build.py --preview`, then open `out/webos/index.html` (a stand-in lists sample apps).
 - **Continue Watching** reads Android TV's Watch Next list (what apps share about what you're watching). Only picking it grants `READ_TV_LISTINGS` through the TV's ADB; *Original* revokes it. Pictures load only from the TV (`content://`, `android.resource://`), never from the network.
-- **Data** comes only from TMDB (trending titles, new releases, the most popular titles when those are few, and which app streams what in your country), Open-Meteo (forecast, sunrise and sunset), optionally Binance (24-hour prices when `show_crypto=true`), optionally Watchmode (the picks' own pages in their apps, with a `watchmode_key`), optionally your Plex server (with a `plex_url`), optionally your Immich server (your photos, with an `immich_server` and its key) and optionally Trakt (what you're watching and your watchlist, with a `trakt_client_id`, once you sign in on the TV).
+- **Data** comes only from TMDB (trending titles, new releases, the most popular titles when those are few, and which app streams what in your country), Open-Meteo with MET Norway as the backup (forecast), optionally Binance (24-hour prices when `show_crypto=true`), optionally Watchmode (the picks' own pages in their apps, with a `watchmode_key`), optionally your Plex server (with a `plex_url`), optionally your Immich server (your photos, with an `immich_server` and its key) and optionally Trakt (what you're watching and your watchlist, with a `trakt_client_id`, once you sign in on the TV).
 
 | File | What it is |
 |---|---|
@@ -330,6 +355,7 @@ It's your code, and Claude Code finds its way around it. Try:
 | [`WatchNext.java`](app/src/io/freemytv/WatchNext.java) | Continue Watching from the TV's lists |
 | [`WatchArt.java`](app/src/io/freemytv/WatchArt.java) | Continue Watching pictures, only from the TV |
 | [`HomeData.java`](app/src/io/freemytv/HomeData.java) | Weather and prices |
+| [`WeatherSource.java`](app/src/io/freemytv/WeatherSource.java), [`Sun.java`](app/src/io/freemytv/Sun.java) | The two weather sources, and sunrise and sunset from the coordinates |
 | [`HomeApps.java`](app/src/io/freemytv/HomeApps.java) | The shelf, inputs and All Apps |
 | [`DreamView.java`](app/src/io/freemytv/DreamView.java) | The screensaver |
 | [`SettingsActivity.java`](app/src/io/freemytv/SettingsActivity.java) | The settings screen (the app's icon) |
