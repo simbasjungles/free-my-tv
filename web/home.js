@@ -398,7 +398,7 @@
     var buttons = $('buttons');
     buttons.innerHTML = '';
     var own = Prefs.boxInput() !== 'live';
-    var defs = [[own ? 'tv' : 'live_tv', boxLabel()], ['hdmi', tr('HDMI Inputs')], ['settings', tr('light|Settings')]];
+    var defs = [[own ? 'tv' : 'live_tv', own ? boxLabel() : tr('light|Live TV')], ['hdmi', tr('HDMI Inputs')], ['settings', tr('light|Settings')]];
     for (var b = 0; b < 3; b++) {
       var r = el('button', 'round' + (b === 2 ? ' last' : ''), buttons);
       r.style.left = (1596 + 88 * b) + 'px';
@@ -658,7 +658,6 @@
     extraKey = parts.join(' · ');
     if (parts.length) extraShown = fitExtra(el('div', 'extra', card, extraKey), parts);
     else extraShown = '';
-    setClass(card, 'with-extra', !!extraShown);   // the card grows the line only when it has one: otherwise, main's
     setClass(card, 'with-extra', !!extraShown);   // the card grows the line only when it has one: otherwise, main's
     el('div', 'range', card, trf('H:{max}', {max: Data.degrees(w.max)}) + '   ' + trf('L:{min}', {min: Data.degrees(w.min)}));
     el('div', 'split', card);
