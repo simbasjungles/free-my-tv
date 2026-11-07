@@ -450,6 +450,7 @@
  "{n} min left": "απομένουν {n} λ.",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} από {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "απομένουν {time}",
  "{url}, code {code}": "{url}, κωδικός {code}",
  "{version} is out: build it again": "Βγήκε η {version}: φτιάξτε το ξανά",

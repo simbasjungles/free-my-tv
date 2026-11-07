@@ -450,6 +450,7 @@
  "{n} min left": "{n} dk kaldı",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on}/{total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} kaldı",
  "{url}, code {code}": "{url}, kod {code}",
  "{version} is out: build it again": "{version} çıktı: yeniden derleyin",

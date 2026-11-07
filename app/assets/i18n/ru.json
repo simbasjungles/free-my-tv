@@ -450,6 +450,7 @@
  "{n} min left": "осталось {n} мин",
  "{n} ms": "{n} мс",
  "{on} of {total}": "{on} из {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "осталось {time}",
  "{url}, code {code}": "{url}, код {code}",
  "{version} is out: build it again": "Вышла {version}: соберите заново",

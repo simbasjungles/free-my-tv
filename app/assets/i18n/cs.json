@@ -450,6 +450,7 @@
  "{n} min left": "zbývá {n} min",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} z {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "zbývá {time}",
  "{url}, code {code}": "{url}, kód {code}",
  "{version} is out: build it again": "Vyšla verze {version}: sestavte ji znovu",

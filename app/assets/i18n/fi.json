@@ -450,6 +450,7 @@
  "{n} min left": "{n} min jäljellä",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on}/{total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} jäljellä",
  "{url}, code {code}": "{url}, koodi {code}",
  "{version} is out: build it again": "{version} on julkaistu: rakenna se uudelleen",

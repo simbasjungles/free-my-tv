@@ -450,6 +450,7 @@
  "{n} min left": "{n}분 남음",
  "{n} ms": "{n}ms",
  "{on} of {total}": "{total}개 중 {on}개",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} 남음",
  "{url}, code {code}": "{url}, 코드 {code}",
  "{version} is out: build it again": "{version} 출시: 다시 빌드하세요",

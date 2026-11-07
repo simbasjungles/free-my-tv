@@ -450,6 +450,7 @@
  "{n} min left": "sisa {n} mnt",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} dari {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} lagi",
  "{url}, code {code}": "{url}, kode {code}",
  "{version} is out: build it again": "{version} sudah rilis: build ulang",

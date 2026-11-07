@@ -450,6 +450,7 @@
  "{n} min left": "залишилося {n} хв",
  "{n} ms": "{n} мс",
  "{on} of {total}": "{on} з {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "залишилось {time}",
  "{url}, code {code}": "{url}, код {code}",
  "{version} is out: build it again": "Вийшла {version}: зберіть знову",

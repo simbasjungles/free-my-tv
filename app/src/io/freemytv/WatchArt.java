@@ -119,6 +119,12 @@ final class WatchArt {
         }
     }
 
+    private boolean cached(String key) {
+        synchronized (cache) {
+            return cache.containsKey(key);
+        }
+    }
+
     private boolean failedRecently(String uri) {
         synchronized (cache) {
             Long at = failed.get(uri);
@@ -146,6 +152,19 @@ final class WatchArt {
             }
             Integer color = b == null ? null : colorOf(b);
             BitmapShader shader = b == null ? null : new BitmapShader(b, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+            // A Plex picture that failed: its banner in the same task, not queued behind the other cards' pictures.
+            String bannerKey = "banner:" + pkg;
+            Bitmap banner = null;
+            if (b == null && uri == null && key.startsWith(Plex.PICTURE) && !cached(bannerKey)) {
+                try {
+                    banner = banner(pkg);
+                } catch (IOException | RuntimeException | OutOfMemoryError e) {
+                    AppLog.w("continue watching banner: " + e.getMessage());
+                }
+            }
+            Integer bannerColor = banner == null ? null : colorOf(banner);
+            BitmapShader bannerShader = banner == null ? null
+                    : new BitmapShader(banner, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
             synchronized (cache) {
                 pending.remove(key);
                 if (closed) return;
@@ -155,6 +174,11 @@ final class WatchArt {
                     colors.put(key, color);
                 } else {
                     failed.put(key, System.currentTimeMillis());
+                }
+                if (banner != null && cache.get(bannerKey) == null) {
+                    shaders.put(banner, bannerShader);
+                    cache.put(bannerKey, banner);
+                    colors.put(bannerKey, bannerColor);
                 }
             }
             main.post(() -> { if (!closed) onLoaded.run(); });   // the picture, or the banner in its place

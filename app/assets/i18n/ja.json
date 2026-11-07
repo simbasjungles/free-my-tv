@@ -450,6 +450,7 @@
  "{n} min left": "残り{n}分",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on}/{total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "残り{time}",
  "{url}, code {code}": "{url}、コード {code}",
  "{version} is out: build it again": "{version} が出ました：もう一度ビルドしてください",

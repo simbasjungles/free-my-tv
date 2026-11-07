@@ -51,6 +51,8 @@ final class Plex {
     /** The token whose lists are being fetched now, or null: another account's slow fetch doesn't hold up a new one. */
     private static volatile String fetchingFor;
     private static volatile long fetchedAt;
+    /** Your server's pictures failed to connect: until then, the others don't wait for it (WatchArt shows banners). */
+    private static volatile long picturesDownUntil;
     private static volatile Runnable listener;
     private static final Object SIGN_IN = new Object();
 
@@ -273,6 +275,15 @@ final class Plex {
                     got = true;
                 } catch (Exception e) {
                     AppLog.w("plex watchlist: " + e.getMessage());
+                    // Plex refused the account's token (this TV removed from the account, or every session signed
+                    // out): signed out here too, so the row drops its titles and Sign in is offered again. A network
+                    // failure keeps everything.
+                    if (e.getMessage() != null && e.getMessage().startsWith("Plex returned HTTP 401")) {
+                        synchronized (Plex.class) {
+                            if (token.equals(sp(app).getString("token", ""))) signOut(app);
+                        }
+                        return;
+                    }
                 }
                 if (!got) return;
                 String json = new JSONObject().put("watching", watching == null ? new JSONArray() : watching)
@@ -420,7 +431,9 @@ final class Plex {
         String image = key.startsWith(PICTURE) && key.indexOf('|') > 0 ? key.substring(key.indexOf('|') + 1) : "";
         if (!signedIn(c) || image.isEmpty()) throw new IOException("no Plex picture");
         HttpURLConnection conn;
-        if (image.startsWith("https://")) {
+        boolean server = !image.startsWith("https://");
+        if (server && System.currentTimeMillis() < picturesDownUntil) throw new IOException("Plex server down");
+        if (!server) {
             conn = (HttpURLConnection) new URL(image).openConnection();
         } else {
             String url = sp(c).getString("serverUri", "") + "/photo/:/transcode?width=1280&height=720&minSize=1&upscale=1&url="
@@ -429,10 +442,17 @@ final class Plex {
             conn.setRequestProperty("X-Plex-Token", sp(c).getString("serverToken", ""));
         }
         conn.setInstanceFollowRedirects(false);
-        conn.setConnectTimeout(6000);
-        conn.setReadTimeout(10000);
+        conn.setConnectTimeout(4000);
+        conn.setReadTimeout(8000);
         try {
-            if (conn.getResponseCode() != 200) throw new IOException("Plex picture: HTTP " + conn.getResponseCode());
+            int status;
+            try {
+                status = conn.getResponseCode();
+            } catch (IOException e) {
+                if (server) picturesDownUntil = System.currentTimeMillis() + EVERY;   // no answer: a minute's rest
+                throw e;
+            }
+            if (status != 200) throw new IOException("Plex picture: HTTP " + status);
             try (InputStream in = conn.getInputStream()) {
                 return readAll(in);
             }

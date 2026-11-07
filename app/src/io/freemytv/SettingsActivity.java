@@ -2055,7 +2055,7 @@ public class SettingsActivity extends Activity {
             if (!Plex.message().isEmpty()) return Plex.message();
             if (!on) return onOff(false);
             String who = Plex.signedIn(c) ? (Plex.user(c).isEmpty() ? Ui.tr("Signed in") : Plex.user(c)) : Ui.tr("Sign in");
-            return onOff(true) + " · " + who;
+            return Ui.trf("{state} · {account}", "state", onOff(true), "account", who);
         }
 
         /** OK on Plex: sign in (or out), and on or off in Continue Watching, in one small menu. */

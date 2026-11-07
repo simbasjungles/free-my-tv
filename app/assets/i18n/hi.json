@@ -450,6 +450,7 @@
  "{n} min left": "{n} मि बाकी",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{total} में से {on}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} बाकी",
  "{url}, code {code}": "{url}, कोड {code}",
  "{version} is out: build it again": "{version} आ गया है: इसे फिर से बनाएँ",

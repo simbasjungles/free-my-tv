@@ -450,6 +450,7 @@
  "{n} min left": "{n} min kvar",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} av {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} kvar",
  "{url}, code {code}": "{url}, kod {code}",
  "{version} is out: build it again": "{version} är ute: bygg den igen",

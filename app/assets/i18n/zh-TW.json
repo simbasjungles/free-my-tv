@@ -450,6 +450,7 @@
  "{n} min left": "剩餘 {n} 分鐘",
  "{n} ms": "{n} 毫秒",
  "{on} of {total}": "{on}/{total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "剩餘 {time}",
  "{url}, code {code}": "{url}，代碼 {code}",
  "{version} is out: build it again": "{version} 已推出：請重新建置",

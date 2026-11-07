@@ -450,6 +450,7 @@
  "{n} min left": "au rămas {n} min",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} din {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "mai sunt {time}",
  "{url}, code {code}": "{url}, cod {code}",
  "{version} is out: build it again": "A apărut {version}: compilează din nou",

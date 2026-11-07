@@ -450,6 +450,7 @@
  "{n} min left": "còn {n} phút",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on}/{total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "còn {time}",
  "{url}, code {code}": "{url}, mã {code}",
  "{version} is out: build it again": "Đã có {version}: hãy build lại",

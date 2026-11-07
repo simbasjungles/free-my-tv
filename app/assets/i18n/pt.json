@@ -450,6 +450,7 @@
  "{n} min left": "faltam {n} min",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} de {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "faltam {time}",
  "{url}, code {code}": "{url}, código {code}",
  "{version} is out: build it again": "Saiu a {version}: compile de novo",

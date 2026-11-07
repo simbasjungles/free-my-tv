@@ -450,6 +450,7 @@
  "{n} min left": "{n} min tilbage",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} af {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} tilbage",
  "{url}, code {code}": "{url}, kode {code}",
  "{version} is out: build it again": "{version} er ude: byg den igen",

@@ -450,6 +450,7 @@
  "{n} min left": "quedan {n} min",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} de {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "quedan {time}",
  "{url}, code {code}": "{url}, código {code}",
  "{version} is out: build it again": "Salió la {version}: vuelve a compilarla",
