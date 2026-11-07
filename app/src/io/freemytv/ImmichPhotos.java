@@ -166,7 +166,7 @@ final class ImmichPhotos {
         JSONArray found = new JSONArray(request("/api/search/random", query.toString()));
         File inbox = Photos.privateInbox(app);
         if (!inbox.isDirectory() && !inbox.mkdirs()) throw new IOException("can't create " + inbox);
-        // The previous source's photos, oldest first: one goes for each new one; the rest wait for the next syncs
+        // The previous source's photos, oldest first: one goes for each new one, the rest once a sync finished whole
         File changed = changed(app);
         List<File> previous = new ArrayList<>();
         if (changed.exists()) {
@@ -174,7 +174,7 @@ final class ImmichPhotos {
         }
         // Low-memory and 720p TVs take Immich's preview (about 1440 px) rather than decode a 24 MP original
         boolean small = Backdrop.W <= 1280 || HomeApps.lowRam(app);
-        int got = 0;
+        int got = 0, failed = 0;
         for (int i = 0; i < found.length() && got < COUNT; i++) {
             JSONObject a = found.getJSONObject(i);
             String id = a.optString("id");
@@ -203,14 +203,19 @@ final class ImmichPhotos {
                     if (!full && !previous.isEmpty()) previous.remove(0).delete();
                 }
             } catch (IOException e) {
+                failed++;
                 AppLog.w("immich: photo skipped: " + e.getMessage());
             } finally {
                 part.delete();
             }
         }
-        // The previous source's go one for each new one (above), never the rest: a sync that brought only a few, or
-        // stopped on the network, would otherwise take the whole library with it. The mark stays until the last of
-        // them went, so the next syncs carry on replacing them.
+        // A sync the network cut short keeps the rest of the previous source's, and the mark, for the next one: it would
+        // otherwise take the library down to the few that came. One that finished is the new source, even an album of
+        // ten: the previous source's would never all be replaced.
+        if (got > 0 && failed == 0) {
+            for (File f : previous) f.delete();
+            previous.clear();
+        }
         if (got > 0 && previous.isEmpty()) changed.delete();
         return got;
     }
