@@ -141,7 +141,7 @@ final class RemoteKeys {
                             "com.smartdevice.dailyshortcut.ui.MainActivity")
                     : (TCL || PHILIPS_GTV) && pkg.equals(Prefs.QUICK_PANEL)
                     ? new Intent(c, QuickPanelActivity.class)
-                    : (JVC_SKYWORTH || TCL) && pkg.equals("com.android.tv.settings")
+                    : (JVC_SKYWORTH || TCL || PHILIPS_GTV) && pkg.equals("com.android.tv.settings")
                     ? new Intent(android.provider.Settings.ACTION_SETTINGS).setPackage(pkg)
                     : launchIntent(c.getPackageManager(), pkg);
             if (pkg.equals(Prefs.ALL_APPS)) intent.putExtra(HomeActivity.EXTRA_ALL_APPS, true);
