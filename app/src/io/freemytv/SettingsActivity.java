@@ -2344,7 +2344,7 @@ public class SettingsActivity extends Activity {
                         : RemoteKeys.SONY ? Ui.tr("Sony default: the button opens what it always did.")
                         : RemoteKeys.FORMOVIE || RemoteKeys.JVC_SKYWORTH || RemoteKeys.XIAOMI_AFKR0
                         ? Ui.tr("The other buttons: the TV itself controls them.")
-                        : RemoteKeys.XIAOMI || RemoteKeys.XIAOMI_AFKR0 ? Ui.tr("Xiaomi default: the button opens what it always did.")
+                        : RemoteKeys.XIAOMI ? Ui.tr("Xiaomi default: the button opens what it always did.")
                         : RemoteKeys.HISENSE ? Ui.tr("Netflix: the TV itself controls that button.")
                         : RemoteKeys.GOOGLE_STREAMER ? Ui.tr("The other buttons: the TV itself controls them.")
                         : RemoteKeys.supported() ? Ui.tr("Disney and Globoplay: the TV itself controls those buttons.")

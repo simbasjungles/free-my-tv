@@ -1128,7 +1128,7 @@ final class Recs {
         return Config.OPEN_IN_STREMIO && HomeApps.launchIntent(context.getPackageManager(), STREMIO) != null;
     }
 
-    /** Nuvio's package when open_in_nuvio is on and the app is on the TV: Play Store's build first, else the release APK. */
+    /** Nuvio's package when open_in_nuvio is on and the app is on the TV: the release APK first, else Google Play's. */
     private String nuvio() {
         if (!Config.OPEN_IN_NUVIO) return null;
         for (String pkg : NUVIO) if (HomeApps.launchIntent(context.getPackageManager(), pkg) != null) return pkg;
