@@ -369,6 +369,11 @@ final class HomeApps {
         items.add(shortcut(ALL_APPS, "all", Ui.tr("All Apps"), "apps"));
         items.add(shortcut(SETTINGS, "settings", Ui.tr("Home Settings"), "settings"));
         items.add(shortcut(ANDROID_SETTINGS, "tv-settings", Ui.tr("TV Settings"), "tv_settings"));
+        // Android's list of apps (force stop, clear data, uninstall), where TV Settings opens the maker's own menu: a
+        // Philips TPM171E (Android 8) has no Apps there, and its stock home screen was the way to an app's page (#452).
+        String tvSettings = answers(c, new Intent(Settings.ACTION_SETTINGS));
+        Intent apps = new Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS);
+        if (tvSettings != null && !tvSettings.equals(answers(c, apps))) device(c, items, "app-settings", Ui.tr("App Settings"), "apps", apps);
         if (!Prefs.recents().equals("off")) items.add(shortcut(RECENTS, "recents", Ui.tr("Recent Apps"), "recents"));   // opt-in (Home Settings)
         // HY300 projectors (Hotack, Allwinner H713): keystone and focus live in the maker's settings app, and the
         // stock home screen was the only way to its Miracast receiver. Each shows only where the TV has it.
@@ -388,6 +393,12 @@ final class HomeApps {
         Item it = shortcut(DEVICE, key, label, symbol);
         it.intent = intent;
         items.add(it);
+    }
+
+    /** The package whose activity answers `intent`, or null. */
+    private static String answers(Context c, Intent intent) {
+        ResolveInfo r = c.getPackageManager().resolveActivity(intent, 0);
+        return r != null ? r.activityInfo.packageName : null;
     }
 
     /** A streaming service's app (the "Watch" button of the featured pick). */
