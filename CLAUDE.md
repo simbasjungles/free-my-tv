@@ -395,6 +395,13 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   VK, `_16` for Rutube, `_11` for KION, `_10` for Wink and `_12` for IVI, global keys for Xiaomi's hot-key receiver
   (`com.xiaomi.android.tvsetup.partnercustomizer`, its log: "dealWithHotkey keycode:199"). "Xiaomi default" (empty)
   leaves the key to the TV.
+  The MiTV-AFKR0 (Amlogic, Android TV 11 tested; device `jaws`) has a Home button and a remote marked "Mi TV+",
+  Netflix, Prime Video and YouTube: `RemoteKeys.XIAOMI_AFKR0` lists those four, as `BUTTON_5` (the PatchWall one,
+  left to PatchWall until an app is picked), `BUTTON_6`, `BUTTON_7` and `BUTTON_16` (not `BUTTON_3` as above; this
+  remote has no Rutube button to clash with it). Netflix, Prime Video and YouTube open their apps unless picked, and
+  its presses come one at a time, so no burst. `getevent` shows its presses on the remote's consumer-control interface,
+  with codes that keylayout leaves unmapped (`KEY_VIDEOPHONE` for Netflix); what the framework dispatches comes from
+  its keyboard interface (`key 416 BUTTON_6`), so read key codes from `adb logcat -s FreeMyTV` ("remote key 193 -> …").
   The MiTV-AXSO2 (Amlogic `txlx`, Android TV 11, India; its home screen is `tvlauncher`, not `launcherx`) has a Home
   button, and `dumpsys window policy` hands `BUTTON_2` to `_7` and `_15` to that same receiver, which stays on, so its
   app buttons keep working without the service. Only its PatchWall button is listed (`RemoteKeys.XIAOMI_PATCHWALL_ONLY`,
