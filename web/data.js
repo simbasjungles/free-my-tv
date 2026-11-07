@@ -160,8 +160,11 @@ var Data = (function () {
 
   function place() { return Prefs.latitude() + ',' + Prefs.longitude(); }
   // Both forecasts in one answer, the next 48 hours and today plus 5 days: Home Settings → Forecast switches without
-  // asking again, and offline too.
-  var QUERY = '&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,weather_code'
+  // asking again, and offline too. 14 steps of 15 minutes tell the card whether rain comes in the next two hours, even
+  // from a forecast 30 minutes old (where the time zone is off by half an hour, they start up to 45 minutes back).
+  var QUERY = '&current=temperature_2m,weather_code,is_day'
+      + '&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,weather_code,uv_index_max'
+      + '&minutely_15=precipitation,precipitation_probability&forecast_minutely_15=14'
       + '&hourly=temperature_2m,weather_code,is_day&timezone=auto&forecast_days=6&forecast_hours=48';
   var weather = null, weatherAt = 0, fetchingWeather = false;
   (function () {
@@ -183,8 +186,20 @@ var Data = (function () {
     var w = {
       temp: o.current.temperature_2m, code: o.current.weather_code, isDay: o.current.is_day !== 0,
       max: dl.temperature_2m_max[0], min: dl.temperature_2m_min[0],
+      uv: dl.uv_index_max ? dl.uv_index_max[0] : null,
       sunrise: localTime(dl.sunrise[0], off), sunset: localTime(dl.sunset[0], off), hours: [], days: []
     };
+    // The 15-minute steps, [start, rain]: a step counts as rain from a 50% chance or 0.2 mm of it. rainIn reads them at
+    // the moment the card is drawn, not when the forecast came.
+    var mr = o.minutely_15;
+    if (mr && mr.time) {
+      w.steps = [];
+      for (var k = 0; k < mr.time.length; k++) {
+        var pr = mr.precipitation_probability ? mr.precipitation_probability[k] || 0 : 0;
+        var mm = mr.precipitation ? mr.precipitation[k] || 0 : 0;
+        w.steps.push([localTime(mr.time[k], off), pr >= 50 || mm >= 0.2]);
+      }
+    }
     var hr = o.hourly;
     for (var i = 0; hr && i < hr.time.length && w.hours.length < 6; i++) {
       var at = localTime(hr.time[i], off);
@@ -202,6 +217,20 @@ var Data = (function () {
     return w;
   }
 
+  /**
+   * Rain in the next two hours at `now`: the minutes until it starts, 0 while the step we're in has it, -1 if no step up
+   * to two hours from now has any, null when the steps don't reach that far (an older forecast, offline).
+   */
+  function rainIn(now) {
+    var s = weather && weather.steps, STEP = 15 * 60000, end = now + 2 * 3600000;
+    if (!s || !s.length) return null;
+    for (var i = 0; i < s.length && s[i][0] < end; i++) {
+      if (s[i][0] + STEP <= now) continue;   // already over
+      if (s[i][1]) return Math.max(0, Math.round((s[i][0] - now) / 60000));
+    }
+    return s[s.length - 1][0] + STEP >= end ? -1 : null;
+  }
+
   function refreshWeather() {
     var now = Date.now();
     if (fetchingWeather || (now - weatherAt < 30 * 60000 && now >= weatherAt)) return;
@@ -214,6 +243,38 @@ var Data = (function () {
       weather = parseWeather(body);
       weatherAt = Date.now();
       store('weather', {place: at, body: body, at: weatherAt, query: QUERY});
+      changed();
+    });
+  }
+
+  // MARK: - Air quality
+
+  /**
+   * Open-Meteo's air-quality endpoint, apart from the forecast: its numbers change slowly, so it has its own half-hour
+   * cache and its own key, and a TV that can't reach it still shows the weather.
+   */
+  var AIR_QUERY = 'current=us_aqi,pm2_5&timezone=auto';
+  var air = null, airAt = 0, airTried = 0, fetchingAir = false;
+  (function () {
+    var a = stored('air');
+    if (a && a.place === place() && a.query === AIR_QUERY) { air = a.body; airAt = a.at; }
+  })();
+
+  function refreshAir() {
+    var now = Date.now();
+    // Only for the weather card; a host that didn't answer is asked again 5 minutes later, not at every 30-second tick.
+    if (!Prefs.weather() || fetchingAir || (now - airAt < 30 * 60000 && now >= airAt) || (now - airTried < 5 * 60000 && now >= airTried)) return;
+    airTried = now;
+    fetchingAir = true;
+    var at = place();
+    getMeteo('air-quality-api.open-meteo.com/v1/air-quality?latitude=' + Prefs.latitude() + '&longitude='
+        + Prefs.longitude() + '&' + AIR_QUERY, function (err, body) {
+      fetchingAir = false;
+      if (at !== place()) { refreshAir(); return; }   // another city was picked meanwhile
+      if (err || !body || !body.current) return;
+      air = {aqi: body.current.us_aqi, pm25: body.current.pm2_5, at: Date.now()};
+      airAt = air.at;
+      store('air', {place: at, body: air, at: airAt, query: AIR_QUERY});
       changed();
     });
   }
@@ -689,12 +750,14 @@ var Data = (function () {
     appFor: appFor,
     usable: usable,
     services: services,
-    refresh: function () { refreshWeather(); refreshPrices(); refreshRecs(); },
+    refresh: function () { refreshWeather(); refreshAir(); refreshPrices(); refreshRecs(); },
     settingsChanged: function () { pricesAt = 0; refreshPrices(); changed(); },
     findCity: findCity,
     /** Another city picked: its weather now (none shown until it comes). */
-    cityChanged: function () { weather = null; weatherAt = 0; refreshWeather(); changed(); },
+    cityChanged: function () { weather = null; weatherAt = 0; air = null; airAt = 0; airTried = 0; refreshWeather(); refreshAir(); changed(); },
     get weather() { return weather; },
+    get air() { return air; },
+    rainIn: rainIn,
     get weatherAt() { return weatherAt; },
     prices: prices,
     changes: changes,
