@@ -346,7 +346,7 @@ The website ([freemytv.io](https://freemytv.io)) is in [`docs/`](docs): plain HT
 On Google TV, LG and Samsung, each language is one file, [`app/assets/i18n/<lang>.json`](app/assets/i18n), keyed by the
 English text in the code. *Automatic* follows the TV's language and uses any language that has a file (English otherwise); *Home
 Settings* → *Language* lists them all. Today: English, Portuguese, Spanish, German, French, Italian, Dutch, Polish,
-Swedish, Danish, Norwegian, Finnish, Czech, Romanian, Turkish, Russian, Ukrainian, Greek, Japanese, Korean, Simplified
+Swedish, Danish, Norwegian, Finnish, Czech, Slovak, Romanian, Turkish, Russian, Ukrainian, Greek, Japanese, Korean, Simplified
 and Traditional Chinese, Hindi, Indonesian, Vietnamese and Thai. Portuguese, Spanish, German, Russian, Thai and Turkish were translated by hand and are the
 reference (fix them by hand); the others were machine-made, and corrections from native speakers are welcome.
 

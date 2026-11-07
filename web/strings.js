@@ -15,11 +15,11 @@ var I18N = (function () {
 
   /** The usual country for each language's dates and numbers, when the TV itself is in another language. */
   var REGIONS = {pt: 'BR', es: 'ES', de: 'DE', fr: 'FR', it: 'IT', nl: 'NL', pl: 'PL', sv: 'SE', da: 'DK', nb: 'NO',
-    fi: 'FI', cs: 'CZ', ro: 'RO', tr: 'TR', ru: 'RU', uk: 'UA', el: 'GR', ja: 'JP', ko: 'KR', hi: 'IN', id: 'ID', vi: 'VN', th: 'TH'};
+    fi: 'FI', cs: 'CZ', sk: 'SK', ro: 'RO', tr: 'TR', ru: 'RU', uk: 'UA', el: 'GR', ja: 'JP', ko: 'KR', hi: 'IN', id: 'ID', vi: 'VN', th: 'TH'};
 
   /** Each language in its own name, for TVs without Intl.DisplayNames (Chromium before 81). */
   var NAMES = {en: 'English', pt: 'Português', es: 'Español', de: 'Deutsch', fr: 'Français', it: 'Italiano',
-    nl: 'Nederlands', pl: 'Polski', sv: 'Svenska', da: 'Dansk', nb: 'Norsk bokmål', fi: 'Suomi', cs: 'Čeština',
+    nl: 'Nederlands', pl: 'Polski', sv: 'Svenska', da: 'Dansk', nb: 'Norsk bokmål', fi: 'Suomi', cs: 'Čeština', sk: 'Slovenčina',
     ro: 'Română', tr: 'Türkçe', ru: 'Русский', uk: 'Українська', el: 'Ελληνικά', ja: '日本語', ko: '한국어',
     'zh-CN': '简体中文', 'zh-TW': '繁體中文', hi: 'हिन्दी', id: 'Indonesia', vi: 'Tiếng Việt', th: 'ไทย'};
 
@@ -35,6 +35,7 @@ var I18N = (function () {
       return n === 1 ? 'one' : t >= 2 && t <= 4 && (h < 12 || h > 14) ? 'few' : 'many';
     },
     cs: function (n) { return n === 1 ? 'one' : n >= 2 && n <= 4 ? 'few' : 'other'; },
+    sk: function (n) { return n === 1 ? 'one' : n >= 2 && n <= 4 ? 'few' : 'other'; },
     ro: function (n) { var h = n % 100; return n === 1 ? 'one' : n === 0 || (h >= 1 && h <= 19) ? 'few' : 'other'; }
   };
 
