@@ -35,6 +35,8 @@ final class ImmichPhotos {
     private static final long EVERY_MS = 6 * 3_600_000L;
     /** After a failure (the server down), tried again this much later. */
     private static final long RETRY_MS = 30 * 60_000L;
+    /** A claim this old was left by a process that died while syncing: another one may take it. */
+    private static final long CLAIM_MS = 3_600_000L;
     /** Photos per sync; the import keeps Photos.MAX in all. */
     private static final int COUNT = 40;
     /** Smaller ones would be blown up on the screen (Photos also refuses under 640). */
@@ -116,12 +118,29 @@ final class ImmichPhotos {
         return new File(app.getFilesDir(), "immich-source");
     }
 
+    /** One sync at a time across processes: the screensaver (main process) and the home screen (:home) both ask. */
+    private static File claim(Context app) {
+        return new File(app.getFilesDir(), "immich-sync.lock");
+    }
+
+    /** Takes the claim atomically; false while another process is syncing, or when the file can't be written. */
+    private static boolean take(Context app) {
+        File lock = claim(app);
+        if (lock.exists() && System.currentTimeMillis() - lock.lastModified() > CLAIM_MS) lock.delete();
+        try {
+            return lock.createNewFile();
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     /** Starts a sync in the background when one is due (and My Photos is on); `ready` runs on the main thread after. */
     static void syncIfDue(Context c, Runnable ready) {
         if (!configured(c) || !Prefs.photos() || "default".equals(Prefs.photoSource()) || running) return;
         Context app = c.getApplicationContext();
         File stamp = new File(app.getFilesDir(), "immich-sync");
         if (Math.abs(System.currentTimeMillis() - stamp.lastModified()) < EVERY_MS) return;   // 0 when never
+        if (!take(app)) return;   // the other process is syncing
         running = true;
         WORKER.execute(() -> {
             int n = 0;
@@ -132,6 +151,7 @@ final class ImmichPhotos {
                 AppLog.w("immich: " + e.getMessage());
             } finally {
                 touch(stamp, n > 0 ? System.currentTimeMillis() : System.currentTimeMillis() - EVERY_MS + RETRY_MS);
+                claim(app).delete();
                 running = false;
             }
             if (n > 0 && ready != null) MAIN.post(ready);
@@ -146,7 +166,7 @@ final class ImmichPhotos {
         JSONArray found = new JSONArray(request("/api/search/random", query.toString()));
         File inbox = Photos.privateInbox(app);
         if (!inbox.isDirectory() && !inbox.mkdirs()) throw new IOException("can't create " + inbox);
-        // The previous source's photos, oldest first: one goes for each new one, the rest once new ones came
+        // The previous source's photos, oldest first: one goes for each new one, the rest once a sync finished whole
         File changed = changed(app);
         List<File> previous = new ArrayList<>();
         if (changed.exists()) {
@@ -154,7 +174,7 @@ final class ImmichPhotos {
         }
         // Low-memory and 720p TVs take Immich's preview (about 1440 px) rather than decode a 24 MP original
         boolean small = Backdrop.W <= 1280 || HomeApps.lowRam(app);
-        int got = 0;
+        int got = 0, failed = 0;
         for (int i = 0; i < found.length() && got < COUNT; i++) {
             JSONObject a = found.getJSONObject(i);
             String id = a.optString("id");
@@ -183,15 +203,20 @@ final class ImmichPhotos {
                     if (!full && !previous.isEmpty()) previous.remove(0).delete();
                 }
             } catch (IOException e) {
+                failed++;
                 AppLog.w("immich: photo skipped: " + e.getMessage());
             } finally {
                 part.delete();
             }
         }
-        if (got > 0) {
+        // A sync the network cut short keeps the rest of the previous source's, and the mark, for the next one: it would
+        // otherwise take the library down to the few that came. One that finished is the new source, even an album of
+        // ten: the previous source's would never all be replaced.
+        if (got > 0 && failed == 0) {
             for (File f : previous) f.delete();
-            changed.delete();
+            previous.clear();
         }
+        if (got > 0 && previous.isEmpty()) changed.delete();
         return got;
     }
 

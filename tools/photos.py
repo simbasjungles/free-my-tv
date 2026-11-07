@@ -8,7 +8,7 @@ The photos go, in the order given (a folder's in name order), to the app's own f
 (Android/data/io.freemytv/files/photos: adb can write there, and the app needs no permission); where the TV keeps adb
 out of it (Android 11, Fire OS 8), they go through the app itself (pushed to /data/local/tmp, then `content write` to
 its PhotoInbox, which only adb may use). The next time the home screen, the screensaver or Free My TV's settings
-open, the app imports each one (upright, cropped to 16:9, at the screensaver's size, without its GPS and other tags)
+open, the app imports each one (upright, whole, at the screensaver's size, without its GPS and other tags)
 and deletes what was sent. Up to 100 photos in all; remove them on the TV: Home Settings > My Photos > OK. JPEG, PNG
 and WebP; HEIC on Android 9 and newer.
 """

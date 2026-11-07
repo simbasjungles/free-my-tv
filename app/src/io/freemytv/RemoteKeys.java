@@ -56,6 +56,21 @@ final class RemoteKeys {
      * devices we run on, whose remotes have a Home button; Formovie's Xiaomi projectors have their own remote.
      */
     static final boolean XIAOMI = is("Xiaomi") && !FORMOVIE && (Build.MODEL.startsWith("MiTV-M") || XIAOMI_PATCHWALL_ONLY);
+    /**
+     * Xiaomi's MiTV-AFKR0 (jaws, Amlogic, Android TV 11 tested), whose remote (Xiaomi RC,
+     * Vendor_2717_Product_32b9.kl) has the buttons marked "Mi TV+", Netflix, Prime Video and YouTube. YouTube is
+     * BUTTON_16 here, not BUTTON_3 as on the MiTV-M… remotes, and there is no Rutube button to clash with it. Its
+     * presses come one at a time, so no burst as on the other Xiaomi remotes.
+     */
+    static final boolean XIAOMI_AFKR0 = is("Xiaomi") && Build.MODEL.equals("MiTV-AFKR0");
+    /**
+     * Philips' Google TV models (TP Vision; 65OLED910, "Philips Google TV TA5", Android 14, #437), whose remote sends TP
+     * Vision's own key codes. org.droidtv.GlobalKey hands the Settings button to Google TV's home app (its dashboard),
+     * which Free My TV turns off; Netflix, YouTube and Prime Video keep working through that receiver until an app is
+     * picked. Their older Android TV sets have another remote.
+     */
+    static final boolean PHILIPS_GTV = (is("Philips") || is("TPV") || Build.MODEL.startsWith("Philips"))
+            && Build.VERSION.SDK_INT >= 33;
     /** Brands whose Netflix button is STEM_1, a global key (MediaTek): only that button is ours. */
     static final boolean STEM_NETFLIX = VESTEL || FORMOVIE;
     /**
@@ -70,7 +85,7 @@ final class RemoteKeys {
     private static long lastDown;
 
     static boolean supported() {
-        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || HISENSE || GOOGLE_STREAMER || JVC_SKYWORTH;
+        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || XIAOMI_AFKR0 || HISENSE || GOOGLE_STREAMER || JVC_SKYWORTH || PHILIPS_GTV;
     }
 
     /** The key service is on only where the filter is safe, and while a button opens something (else it has no work). */
@@ -124,9 +139,9 @@ final class RemoteKeys {
                     : JVC_SKYWORTH && pkg.equals(Prefs.TV_SHORTCUTS)
                     ? new Intent(Intent.ACTION_MAIN).setClassName("com.smartdevice.dailyshortcut",
                             "com.smartdevice.dailyshortcut.ui.MainActivity")
-                    : TCL && pkg.equals(Prefs.QUICK_PANEL)
+                    : (TCL || PHILIPS_GTV) && pkg.equals(Prefs.QUICK_PANEL)
                     ? new Intent(c, QuickPanelActivity.class)
-                    : (JVC_SKYWORTH || TCL) && pkg.equals("com.android.tv.settings")
+                    : (JVC_SKYWORTH || TCL || PHILIPS_GTV) && pkg.equals("com.android.tv.settings")
                     ? new Intent(android.provider.Settings.ACTION_SETTINGS).setPackage(pkg)
                     : launchIntent(c.getPackageManager(), pkg);
             if (pkg.equals(Prefs.ALL_APPS)) intent.putExtra(HomeActivity.EXTRA_ALL_APPS, true);

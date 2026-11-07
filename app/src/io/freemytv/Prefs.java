@@ -66,12 +66,25 @@ final class Prefs {
             KEY_XIAOMI_RUTUBE = KeyEvent.KEYCODE_BUTTON_16, KEY_XIAOMI_KION = KeyEvent.KEYCODE_BUTTON_11,
             KEY_XIAOMI_WINK = KeyEvent.KEYCODE_BUTTON_10, KEY_XIAOMI_IVI = KeyEvent.KEYCODE_BUTTON_12;
     /**
+     * Xiaomi's MiTV-AFKR0 remote (see RemoteKeys.XIAOMI_AFKR0): the button marked "Mi TV+" is BUTTON_5, the PatchWall
+     * one; Netflix is BUTTON_6 (key 416 in its keylayout), Prime Video BUTTON_7 and YouTube BUTTON_16, the code the
+     * MiTV-M… remotes use for Rutube, which this remote doesn't have.
+     */
+    static final int KEY_XIAOMI_NETFLIX = KeyEvent.KEYCODE_BUTTON_6, KEY_XIAOMI_PRIME = KeyEvent.KEYCODE_BUTTON_7,
+            KEY_XIAOMI_YOUTUBE = KeyEvent.KEYCODE_BUTTON_16;
+    /**
      * Hisense's buttons (Q6N, MediaTek, Android TV 12 tested; read from the key filter): global keys for Google TV's
      * home app (launcherx), or Hisense's 607 for Disney+. The gear sends NOTIFICATION; ALL_APPS (284) and PROFILE_SWITCH
      * (288) are API 28/29 names, so numbers here.
      */
     static final int KEY_HISENSE_PRIME = 295, KEY_HISENSE_YOUTUBE = KeyEvent.KEYCODE_BUTTON_3, KEY_HISENSE_DISNEY = 607,
             KEY_HISENSE_APPS = 284, KEY_HISENSE_SETTINGS = KeyEvent.KEYCODE_NOTIFICATION, KEY_HISENSE_PROFILE = 288;
+    /**
+     * Philips' Google TV remote (RemoteKeys.PHILIPS_GTV), read on a 65OLED910 (#437): TP Vision's own numbers, as the
+     * TV reports them (GLOBAL_FUNCTION 811, LOCAL_OTT1 816, NETFLIX 475, YOUTUBE 781, AMAZON_PRIME_VIDEO 788).
+     */
+    static final int KEY_PHILIPS_SETTINGS = 811, KEY_PHILIPS_APPS = 816, KEY_PHILIPS_GUIDE = KeyEvent.KEYCODE_GUIDE,
+            KEY_PHILIPS_NETFLIX = 475, KEY_PHILIPS_YOUTUBE = 781, KEY_PHILIPS_PRIME = 788;
     /** Google TV Streamer's Vendor_18d1_Product_9451.kl; MACRO_1 (313) was added in API 34. */
     static final int KEY_GOOGLE_YOUTUBE = KeyEvent.KEYCODE_BUTTON_3, KEY_GOOGLE_NETFLIX = KeyEvent.KEYCODE_BUTTON_4,
             KEY_GOOGLE_CUSTOM = 313;
@@ -88,6 +101,8 @@ final class Prefs {
     static final int[] KEYS = RemoteKeys.GOOGLE_STREAMER
             ? new int[] {KEY_GOOGLE_YOUTUBE, KEY_GOOGLE_NETFLIX, KEY_GOOGLE_CUSTOM}
             : RemoteKeys.JVC_SKYWORTH ? new int[] {KEY_JVC_SHORTCUT, KEY_JVC_SETTINGS}
+            : RemoteKeys.PHILIPS_GTV ? new int[] {KEY_PHILIPS_SETTINGS, KEY_PHILIPS_APPS, KEY_PHILIPS_GUIDE, KEY_PHILIPS_NETFLIX,
+                    KEY_PHILIPS_YOUTUBE, KEY_PHILIPS_PRIME}
             : RemoteKeys.HISENSE ? new int[] {KEY_HISENSE_PRIME, KEY_HISENSE_YOUTUBE, KEY_HISENSE_DISNEY,
                     KEY_HISENSE_APPS, KEY_HISENSE_SETTINGS, KEY_HISENSE_PROFILE}
             : RemoteKeys.SONY
@@ -96,6 +111,8 @@ final class Prefs {
             : RemoteKeys.STEM_NETFLIX ? new int[] {KEY_STEM_NETFLIX}
             : RemoteKeys.KTC ? new int[] {KEY_KTC_TABII}
             : RemoteKeys.XIAOMI_PATCHWALL_ONLY ? new int[] {KEY_XIAOMI_PATCHWALL}
+            : RemoteKeys.XIAOMI_AFKR0 ? new int[] {KEY_XIAOMI_PATCHWALL, KEY_XIAOMI_NETFLIX, KEY_XIAOMI_PRIME,
+                    KEY_XIAOMI_YOUTUBE}
             : RemoteKeys.XIAOMI ? new int[] {KEY_MI, KEY_YOUTUBE, KEY_XIAOMI_PATCHWALL, KEY_XIAOMI_OKKO, KEY_XIAOMI_VK,
                     KEY_XIAOMI_RUTUBE, KEY_XIAOMI_KION, KEY_XIAOMI_WINK, KEY_XIAOMI_IVI}
             : new int[] {KEY_NETFLIX, KEY_YOUTUBE, KEY_PRIME, KEY_TCL_CHANNEL, KEY_TCL_SETTINGS};
@@ -474,6 +491,21 @@ final class Prefs {
                 case KEY_SONY_CRUNCHYROLL: return "com.crunchyroll.crunchyroid";
                 case KEY_SONY_LIV: return "com.sonyliv";
                 default: return "";
+            }
+        }
+        if (RemoteKeys.XIAOMI_AFKR0) {
+            switch (keyCode) {
+                case KEY_XIAOMI_NETFLIX: return "com.netflix.ninja";
+                case KEY_XIAOMI_PRIME: return "com.amazon.amazonvideo.livingroom";
+                case KEY_XIAOMI_YOUTUBE: return "com.google.android.youtube.tv";
+                default: return "";   // the Mi TV+ button keeps PatchWall, which also holds the TV's input picker
+            }
+        }
+        if (RemoteKeys.PHILIPS_GTV) {
+            switch (keyCode) {
+                case KEY_PHILIPS_APPS: return ALL_APPS;
+                case KEY_PHILIPS_SETTINGS: return "com.android.tv.settings";
+                default: return "";   // the app buttons go on working through Philips' receiver
             }
         }
         if (RemoteKeys.HISENSE) {

@@ -133,6 +133,14 @@ final class HomeMode {
         // KTC (NextStar; MediaTek)
         "tv.anoki.acr.controller",                                                    // Anoki ACR: watches what's on screen
         "com.mediatek.tv.retaildemo", "com.electronic.manual",                        // store demo, manual
+        // Sony BRAVIA (BRAVIA_UR3, MediaTek, Android TV 10 tested; CleanYourTV's examples/sony-bravia-4k-ur3 list,
+        // reboot-checked there on four sets)
+        "tv.samba.ssm",                                                               // Samba TV ACR: watches what's on screen
+        "com.qterics.da.product", "com.sony.dtv.da.service",                          // device agents (remote support)
+        "com.sonyericsson.idd.agent", "com.sony.dtv.sonybugreportsys",                // usage data, bug-report uploader
+        "com.sony.dtv.usercontext",                                                   // viewing context for recommendations
+        "com.sony.dtv.promos", "com.sony.dtv.sonyselect",                             // promo apps
+        "com.sony.dtv.demosupport", "com.sony.dtv.demosystemsupport", "com.sony.dtv.multiscreendemo",   // store demo
         // HY300 projectors (Amlogic txhd2, Android 13): JmLauncher opens it from the Home button (JM_HOME); off only
         // once JM_HOME is ours
         HTC_HOME,                                                                     // the stock home (and an ad SDK)
@@ -206,6 +214,17 @@ final class HomeMode {
         "com.onn.bluetoothconnect", "com.onn.btpairoverlay", "com.onn.updatenotification", "com.gretzky.GlobalKey",
         "com.gretzky.hwinfo", "com.droidlogic", "com.droidlogic.tv.settings", "com.droidlogic.mictoggle",
         "com.droidlogic.launcher.provider", "com.droidlogic.android.tv.connecteddevices",
+        // Sony BRAVIA (MediaTek, Android TV 10): inputs and tuner, TV API and live TV, system and vendor services
+        // (the remote's keys), settings, Bravia Sync (HDMI-CEC), picture and sound, updates, IP control, AirPlay and
+        // HomeKit with the Vewd core (persistent: AirPlay crash-loops without it, CleanYourTV's UR3 list)
+        "com.sony.dtv.tvinput.external", "com.sony.dtv.tvinput.hardwaremanager", "com.sony.dtv.tvinput.provider",
+        "com.sony.dtv.tvinput.tuner", "com.sony.dtv.tvapi", "com.sony.dtv.tvx", "com.sony.dtv.sonysystemservice",
+        "com.sony.dtv.sonyvendorservice", "com.sony.dtv.settingsprovider", "com.sony.dtv.braviasyncmenu",
+        "com.sony.dtv.braviasyncservice", "com.sony.dtv.braviasyncsetting", "com.sony.dtv.panelsettings",
+        "com.sony.dtv.audiooutput", "com.sony.dtv.acousticautocalibration", "com.sony.dtv.imeproxy",
+        "com.sony.dtv.update", "com.sony.dtv.systemupdate", "com.sony.dtv.oadservice", "com.sony.dtv.otaurlprovisioning",
+        "com.sony.dtv.upgradesetup", "com.sony.dtv.webapi.core", "com.sony.dtv.airplayapp", "com.sony.dtv.homekit",
+        "com.vewd.core.service",
         // Wanbo projectors (T2 Ultra: a Skyworth board, Amlogic, Android TV 11): remote pairing and reconnect, Amlogic
         // overlay, settings and customization, projector service, Skyworth and OEM services, factory and QA tests
         "com.droidlogic.ble", "com.droidlogic.overlay", "com.mft.rcupair", "com.mtf.blereconnect", "com.mtf.customization",
@@ -537,6 +556,13 @@ final class HomeMode {
             String home = originalHome(s);
             if (home.isEmpty() || home.startsWith(PKG + "/")) {
                 String found = currentHome(adb);
+                if (found == null) {
+                    // No holder to read (Android 8 and 9 have no `cmd role`, and the chooser answers until a default is
+                    // set), or it's ours: the TV's own, when it has exactly one (#453).
+                    found = stockHomeAtSwitch(adb, s);
+                    // Its Home button can't be timed now, nor at a retry: HOME opens the chooser or ours (Original times it).
+                    if (found != null && metrics(state(c), ORIGINAL) == null) putMetric(c, ORIGINAL, "at", System.currentTimeMillis());
+                }
                 home = found != null ? realHome(found) : "";
                 if (home.isEmpty()) AppLog.w("original home screen not recorded (HOME resolves to \"" + homeHolder(adb) + "\"): Original will pick the TV's own");
             }
@@ -551,7 +577,8 @@ final class HomeMode {
             if (jm && !jmBefore.equals(PKG)) latest.put("originalJmHome", jmBefore.matches("[\\w.]*") ? jmBefore : "");
             save(c, latest);
             // Turning off an app makes Android delete the Wi-Fi networks it saved (#14), and Original can't bring them
-            // back. The TV's first setup usually saved the network: then stop here, before anything changes.
+            // back. The TV's first setup usually saved the network (or its home screen did, which goes off too):
+            // then stop here, before anything changes.
             Set<String> owners = wifiOwners(adb);
             if (owners == null) {
                 // Nobody can tell who saved the networks: on Wi-Fi, stop before anything changes.
@@ -560,9 +587,16 @@ final class HomeMode {
                 }
                 owners = new HashSet<>();
             }
+            // By name, for adb logcat: the message only says whether it was the setup app or the home screen (#411).
+            if (!owners.isEmpty()) AppLog.w("Wi-Fi networks saved by " + String.join(", ", sorted(owners)));
             boolean setupHome = setupIsHome(adb);
-            if ((setupHome && owners.contains(GOOGLE_SETUP)) || owners.contains(packageOf(home))) {
+            if (setupHome && owners.contains(GOOGLE_SETUP)) {
                 throw new IOException(Ui.tr("the TV's first setup saved the Wi-Fi, and turning it off would erase those networks. "
+                        + "In Settings → Network & Internet, forget the network and connect again (networks out of range don't "
+                        + "show there: Claude Code can remove them from your computer), then try once more."));
+            }
+            if (owners.contains(packageOf(home))) {
+                throw new IOException(Ui.tr("the TV's home screen saved the Wi-Fi, and turning it off would erase those networks. "
                         + "In Settings → Network & Internet, forget the network and connect again (networks out of range don't "
                         + "show there: Claude Code can remove them from your computer), then try once more."));
             }
@@ -571,7 +605,8 @@ final class HomeMode {
                 busy(c, Ui.tr("Measuring the original home screen…"));
                 measure(c, adb, ORIGINAL, true);
             }
-            busy(c, Ui.tr("Switching the home screen and screensaver…"));
+            busy(c, Capabilities.screensaver(c) ? Ui.tr("Switching the home screen and screensaver…")
+                    : Ui.tr("Switching the home screen…"));
             Watchdog.clear(c);
             check(adb.shell("cmd package set-home-activity " + HOME_ACTIVITY), "Success",
                     Ui.tr("Android didn't accept the new home screen"));
@@ -643,7 +678,9 @@ final class HomeMode {
                 }
             }
             wakeWatch(adb, true);
-            notice(c, Ui.trf("Free My TV is on: new home screen and screensaver, {n} apps turned off.", "n", disabled.size()));
+            notice(c, Capabilities.screensaver(c)
+                    ? Ui.trf("Free My TV is on: new home screen and screensaver, {n} apps turned off.", "n", disabled.size())
+                    : Ui.trf("Free My TV is on: new home screen, {n} apps turned off.", "n", disabled.size()));
             busy(c, Ui.tr("Measuring Free My TV…"));
             measure(c, adb, FREE, false);
             done(c, null);
@@ -776,6 +813,34 @@ final class HomeMode {
         return found;
     }
 
+    /**
+     * {@link #stockHome} for a switch that can't read HOME's holder. Not where Google TV's home is installed (Original
+     * takes that one), nor while an earlier switch's work is still off, after a reinstall: the home screen it turned off
+     * is no candidate then, and a lone vendor app that opens HOME would be taken for it.
+     */
+    private static String stockHomeAtSwitch(Adb adb, JSONObject s) throws IOException {
+        if (adb.shell("pm path " + packageOf(GOOGLE_HOME)).contains("package:")) return null;
+        Set<String> earlier = recorded(adb);
+        earlier.addAll(stringList(s, "disabled"));
+        earlier.retainAll(packages(adb, "-d"));
+        return earlier.isEmpty() ? stockHome(adb) : null;
+    }
+
+    /**
+     * {@link #stockHome}, recorded as the original home screen for a switch that couldn't read it; or "". Only Google's
+     * launcher here: this check runs by itself, and on a TV switched earlier the real home screen may be off, leaving a
+     * lone vendor app that opens HOME. Any other home screen is recorded by going through Original once.
+     */
+    private static String recordStockHome(Context c, Adb adb) throws IOException, JSONException {
+        if (adb.shell("pm path " + packageOf(GOOGLE_HOME)).contains("package:")) return "";
+        String stock = stockHome(adb);
+        if (stock == null || !TV_LAUNCHER.equals(packageOf(stock))) return "";
+        String home = realHome(stock);
+        save(c, state(c).put("originalHome", home));
+        AppLog.w("original home screen recorded at the check: " + home);
+        return home;
+    }
+
     /** Safety net: our home screen crashed 3 times in a row. The home screen and the screensaver go back; the rest stays. */
     static void revertHomeNow(Context app) {
         synchronized (RUN) {
@@ -868,6 +933,9 @@ final class HomeMode {
                 Set<String> owners = wifiOwners(adb);
                 boolean reverted = s.optBoolean("homeReverted");
                 String home = originalHome(s);
+                // Switched without the TV's home screen recorded (Android 8 and 9, #453): recorded now, so it goes
+                // off here as at the switch, and Original turns it back on.
+                if (home.isEmpty() && !reverted) home = recordStockHome(app, adb);
                 String homePkg = packageOf(home);
                 // Who saved the Wi-Fi unknown: the setup app and the home screen wait for the next check.
                 Set<String> wait = new HashSet<>();

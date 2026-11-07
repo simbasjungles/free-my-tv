@@ -147,6 +147,34 @@ final class Backdrop {
      * (bottom left) and the clock (top right) sit, for the scrims. Returns {photo (mutable), frosted}.
      */
     static Bitmap[] photo(java.io.File f, int w, int h, float[] light) throws java.io.IOException {
+        return photo(f, w, h, light, 0);
+    }
+
+    /**
+     * `around` != 0: the whole photo, fitted inside w × h (never cropped) on that color; else its middle
+     * cropped to fill w × h.
+     */
+    static Bitmap[] photo(java.io.File f, int w, int h, float[] light, int around) throws java.io.IOException {
+        if (around != 0) {
+            Bitmap src = android.graphics.BitmapFactory.decodeFile(f.getPath());
+            if (src == null) throw new java.io.IOException("unreadable image");
+            float s = Math.min((float) w / src.getWidth(), (float) h / src.getHeight());
+            int pw = Math.max(1, Math.round(src.getWidth() * s)), ph = Math.max(1, Math.round(src.getHeight() * s));
+            Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            Canvas c = new Canvas(out);
+            c.drawColor(around);
+            int x = (w - pw) / 2, y = (h - ph) / 2;
+            c.drawBitmap(src, null, new android.graphics.Rect(x, y, x + pw, y + ph),
+                    new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG));
+            src.recycle();
+            if (light != null && light.length >= 2) {
+                light[0] = luminance(out, 0, 0.6f, 0.5f, 0.95f);
+                light[1] = luminance(out, 0.62f, 0.04f, 0.96f, 0.36f);
+            }
+            int fw = w / PHOTO_FROST, fh = h / PHOTO_FROST;
+            Bitmap frost = Bitmap.createBitmap(reduce(out, fw, fh, 3, 2), fw, fh, Bitmap.Config.ARGB_8888);
+            return new Bitmap[] {out, frost};
+        }
         android.graphics.BitmapFactory.Options bounds = new android.graphics.BitmapFactory.Options();
         bounds.inJustDecodeBounds = true;
         android.graphics.BitmapFactory.decodeFile(f.getPath(), bounds);
