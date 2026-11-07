@@ -294,7 +294,7 @@
  "This TV has little memory, so the shelf holds fewer apps.": "Tato TV má málo paměti, proto se vejde méně oblíbených aplikací.",
  "This TV has no live TV (antenna or cable) to open.": "Tato TV nemá živé vysílání (anténa nebo kabel).",
  "This TV has no supported app store to open.": "Tato TV nemá žádný podporovaný obchod s aplikacemi, který lze otevřít.",
- "This TV runs its own screensaver, not Free My TV's.": "Tato TV používá vlastní spořič obrazovky, ne spořič Free My TV.",
+ "This TV stays awake, so no screensaver starts.": "Tato TV zůstává stále zapnutá, takže se spořič obrazovky nespustí.",
  "This TV's remote has no app buttons that Free My TV knows.": "Ovladač této TV nemá tlačítka aplikací, která Free My TV zná.",
  "This code has expired.": "Platnost kódu vypršela.",
  "This product uses the TMDB API but is not endorsed or certified by TMDB.": "Používá API TMDB bez schválení či certifikace od TMDB.",

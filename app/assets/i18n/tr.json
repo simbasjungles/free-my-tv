@@ -294,7 +294,7 @@
  "This TV has little memory, so the shelf holds fewer apps.": "Bu TV'nin belleği az, bu yüzden rafa daha az uygulama sığar.",
  "This TV has no live TV (antenna or cable) to open.": "Bu TV'de açılacak canlı yayın (anten veya kablo) yok.",
  "This TV has no supported app store to open.": "Bu TV’de açılabilecek desteklenen bir uygulama mağazası yok.",
- "This TV runs its own screensaver, not Free My TV's.": "Bu TV, Free My TV'nin değil kendi ekran koruyucusunu kullanır.",
+ "This TV stays awake, so no screensaver starts.": "Bu TV sürekli açık kalır, bu yüzden ekran koruyucu başlamaz.",
  "This TV's remote has no app buttons that Free My TV knows.": "Bu TV'nin kumandasında Free My TV'nin tanıdığı uygulama düğmesi yok.",
  "This code has expired.": "Bu kodun süresi doldu.",
  "This product uses the TMDB API but is not endorsed or certified by TMDB.": "Bu ürün TMDB API'sini kullanır; TMDB onaylı veya sertifikalı değildir.",

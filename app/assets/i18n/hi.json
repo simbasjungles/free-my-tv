@@ -294,7 +294,7 @@
  "This TV has little memory, so the shelf holds fewer apps.": "इस टीवी में मेमोरी कम है, इसलिए कम पसंदीदा ऐप जोड़े जा सकते हैं।",
  "This TV has no live TV (antenna or cable) to open.": "इस टीवी में खोलने के लिए लाइव टीवी (एंटीना या केबल) नहीं है।",
  "This TV has no supported app store to open.": "इस टीवी पर खोलने के लिए कोई समर्थित ऐप स्टोर नहीं है।",
- "This TV runs its own screensaver, not Free My TV's.": "यह टीवी अपना स्क्रीनसेवर चलाता है, Free My TV का नहीं।",
+ "This TV stays awake, so no screensaver starts.": "यह टीवी हमेशा चालू रहता है, इसलिए कोई स्क्रीनसेवर शुरू नहीं होता।",
  "This TV's remote has no app buttons that Free My TV knows.": "इस टीवी के रिमोट में ऐसे ऐप बटन नहीं हैं जिन्हें Free My TV जानता हो।",
  "This code has expired.": "इस कोड की समय-सीमा खत्म हो गई।",
  "This product uses the TMDB API but is not endorsed or certified by TMDB.": "यह प्रोडक्ट TMDB API का इस्तेमाल करता है, पर TMDB इसका समर्थन या प्रमाणन नहीं करता।",

@@ -294,7 +294,7 @@
  "This TV has little memory, so the shelf holds fewer apps.": "ทีวีเครื่องนี้มีหน่วยความจำน้อย จึงเพิ่มแอปโปรดได้น้อยลง",
  "This TV has no live TV (antenna or cable) to open.": "ทีวีนี้ไม่มีทีวีสด (เสาอากาศหรือเคเบิล) ให้เปิด",
  "This TV has no supported app store to open.": "ทีวีเครื่องนี้ไม่มีร้านแอปที่รองรับให้เปิด",
- "This TV runs its own screensaver, not Free My TV's.": "ทีวีนี้ใช้สกรีนเซฟเวอร์ของตัวเอง ไม่ใช่ของ Free My TV",
+ "This TV stays awake, so no screensaver starts.": "ทีวีนี้เปิดทำงานตลอดเวลา จึงไม่มีสกรีนเซฟเวอร์เริ่มทำงาน",
  "This TV's remote has no app buttons that Free My TV knows.": "รีโมตของทีวีนี้ไม่มีปุ่มแอปที่ Free My TV รู้จัก",
  "This code has expired.": "รหัสนี้หมดอายุแล้ว",
  "This product uses the TMDB API but is not endorsed or certified by TMDB.": "ผลิตภัณฑ์นี้ใช้ TMDB API แต่ไม่ได้รับการรับรองจาก TMDB",

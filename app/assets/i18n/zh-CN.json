@@ -294,7 +294,7 @@
  "This TV has little memory, so the shelf holds fewer apps.": "此电视内存较少，收藏栏可放的应用较少。",
  "This TV has no live TV (antenna or cable) to open.": "此电视没有可打开的直播电视（天线或有线）。",
  "This TV has no supported app store to open.": "此电视没有可打开的受支持应用商店。",
- "This TV runs its own screensaver, not Free My TV's.": "此电视使用自带的屏保，而不是 Free My TV 的。",
+ "This TV stays awake, so no screensaver starts.": "此电视一直保持唤醒，因此不会启动屏保。",
  "This TV's remote has no app buttons that Free My TV knows.": "此电视的遥控器上没有 Free My TV 能识别的应用按键。",
  "This code has expired.": "此二维码已过期。",
  "This product uses the TMDB API but is not endorsed or certified by TMDB.": "本产品使用 TMDB API，但未经 TMDB 认可或认证。",

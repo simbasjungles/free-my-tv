@@ -294,7 +294,7 @@
  "This TV has little memory, so the shelf holds fewer apps.": "TV này ít bộ nhớ nên có thể thêm ít ứng dụng yêu thích hơn.",
  "This TV has no live TV (antenna or cable) to open.": "TV này không có truyền hình trực tiếp (ăng-ten hoặc cáp) để mở.",
  "This TV has no supported app store to open.": "TV này không có cửa hàng ứng dụng được hỗ trợ để mở.",
- "This TV runs its own screensaver, not Free My TV's.": "TV này dùng trình bảo vệ màn hình riêng, không phải của Free My TV.",
+ "This TV stays awake, so no screensaver starts.": "TV này luôn ở trạng thái hoạt động nên trình bảo vệ màn hình không khởi động.",
  "This TV's remote has no app buttons that Free My TV knows.": "Điều khiển của TV này không có nút ứng dụng mà Free My TV nhận biết.",
  "This code has expired.": "Mã này đã hết hạn.",
  "This product uses the TMDB API but is not endorsed or certified by TMDB.": "Dùng API TMDB, không được TMDB phê duyệt hay chứng nhận.",

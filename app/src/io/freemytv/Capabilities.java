@@ -46,7 +46,7 @@ final class Capabilities {
             case NEED_APP_STORE:
                 return HomeApps.storePackage(c) != null ? null : Ui.tr("This TV has no supported app store to open.");
             case NEED_SCREENSAVER:
-                return screensaver(c) ? null : Ui.tr("This TV runs its own screensaver, not Free My TV's.");
+                return screensaver(c) ? null : Ui.tr("This TV stays awake, so no screensaver starts.");
             case NEED_SWITCH:   // where the switch must not run; a TV already in Free My TV mode can still go back
                 return HomeMode.phone(c) ? HomeMode.phoneText() : HomeMode.BRICKS && !adb(c) ? HomeMode.bricksText() : null;
             default:

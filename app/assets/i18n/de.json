@@ -294,7 +294,7 @@
  "This TV has little memory, so the shelf holds fewer apps.": "Dieser Fernseher hat wenig Speicher, daher passen weniger Apps in die Leiste.",
  "This TV has no live TV (antenna or cable) to open.": "Dieser Fernseher hat kein Live-TV (Antenne oder Kabel) zum Öffnen.",
  "This TV has no supported app store to open.": "Auf diesem Fernseher ist kein unterstützter App-Store verfügbar.",
- "This TV runs its own screensaver, not Free My TV's.": "Dieser Fernseher nutzt seinen eigenen Bildschirmschoner, nicht den von Free My TV.",
+ "This TV stays awake, so no screensaver starts.": "Dieser Fernseher bleibt dauerhaft aktiv, daher startet kein Bildschirmschoner.",
  "This TV's remote has no app buttons that Free My TV knows.": "Die Fernbedienung dieses Fernsehers hat keine App-Tasten, die Free My TV kennt.",
  "This code has expired.": "Dieser Code ist abgelaufen.",
  "This product uses the TMDB API but is not endorsed or certified by TMDB.": "Nutzt die TMDB-API, ohne Billigung oder Zertifizierung durch TMDB.",
