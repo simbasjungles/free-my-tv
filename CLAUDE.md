@@ -421,6 +421,13 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   Android 11 the key service is off (#325), so there the row works on the home screen only. The panel is our own, over
   what's playing (a window on the left, drawn as glass since TVs turn window blur off), whose tiles open the TV's own screens
   (TCL's Picture and Sound panels through `DISPLAY_SETTINGS` and `VIEW_SOUND_SETTINGS`; TCL Google TV 14 tested).
+  TCL's BeyondTV (Android 9, Realtek RTD2851, build `PPR1.180610.011`) sends each remote key through
+  `com.tcl.keycustomfunctionservice` (`KeyMultipleService`). This service injects the key again (the log shows
+  `deviceId=-1`). The key service is on and runs in `:keys`, but it does not receive these keys. Thus Remote Buttons
+  work only when our home screen window has the focus. The system also handles Netflix (4062) and TCL Channel (4020)
+  as global keys (`GlobalKeyManager handleGlobalKey`; 4020 goes to the receiver of `com.realtek.tv.settings`). Thus
+  the TV also does its own action: on the home screen, a Netflix button set to a different choice did that choice, and
+  Netflix also opened.
   The Google TV Streamer (`RemoteKeys.GOOGLE_STREAMER`: model `Google TV Streamer`, device `kirkwood`, Android 14
   tested) maps YouTube to `BUTTON_3`, Netflix to `BUTTON_4` and its custom star button to `MACRO_1` (313, API 34), from
   `Vendor_18d1_Product_9451.kl`. YouTube and the star go to launcherx; Netflix goes to chromecastservice. The model
