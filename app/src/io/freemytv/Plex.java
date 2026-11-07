@@ -257,14 +257,18 @@ final class Plex {
                 JSONObject saved = savedLists(app);
                 JSONArray watching = saved.optJSONArray("watching"), watchlist = saved.optJSONArray("watchlist");
                 boolean got = false;
+                // Watchlist titles are looked up on your server only while it answers this refresh: a server that's
+                // down would otherwise be waited on again for every title.
+                boolean[] serverUp = {true};
                 try {
                     watching = watching(app, token);
                     got = true;
                 } catch (Exception e) {
+                    serverUp[0] = false;
                     AppLog.w("plex continue watching: " + e.getMessage());
                 }
                 try {
-                    watchlist = watchlist(app, token);
+                    watchlist = watchlist(app, token, serverUp);
                     got = true;
                 } catch (Exception e) {
                     AppLog.w("plex watchlist: " + e.getMessage());
@@ -324,18 +328,17 @@ final class Plex {
     }
 
     /** The Plex Watchlist, newest first: the one on your server opens there (it plays), else its page in Plex. */
-    private static JSONArray watchlist(Context c, String token) throws Exception {
+    private static JSONArray watchlist(Context c, String token, boolean[] serverUp) throws Exception {
         JSONArray list = metadata(new JSONObject(request(c, "GET", DISCOVER
                 + "/library/sections/watchlist/all?X-Plex-Container-Start=0&X-Plex-Container-Size=20", token, 8000)));
         JSONArray out = new JSONArray();
-        String id = sp(c).getString("serverId", "");
         for (int i = 0; list != null && i < list.length() && out.length() < WATCHLIST_MAX; i++) {
             JSONObject m = list.getJSONObject(i);
             String type = m.optString("type");
             if (!type.equals("movie") && !type.equals("show")) continue;
-            String art = first(m, "art", "thumb"), key = libraryKey(c, token, m.optString("guid")), slug = m.optString("slug");
-            String link = key != null ? link(id, key) : slug.isEmpty() ? null
-                    : "https://watch.plex.tv/" + (type.equals("show") ? "show/" : "movie/") + slug;
+            String art = first(m, "art", "thumb"), slug = m.optString("slug");
+            String link = serverUp[0] ? libraryLink(c, token, m.optString("guid"), serverUp) : null;
+            if (link == null && !slug.isEmpty()) link = "https://watch.plex.tv/" + (type.equals("show") ? "show/" : "movie/") + slug;
             if (!art.startsWith("https://")) art = "";   // the watchlist's artwork is Plex's own https address
             out.put(new JSONObject().put("title", m.optString("title")).put("picture", art)
                     .put("intent", link == null ? "" : link).put("watchlist", true));
@@ -343,12 +346,17 @@ final class Plex {
         return out;
     }
 
-    /** The title's key on your server ("/library/metadata/123"), found by Plex's guid; null if it isn't there. */
-    private static String libraryKey(Context c, String token, String guid) {
+    /** The link to the title on your server, found by Plex's guid; null if it isn't there or the server is down. */
+    private static String libraryLink(Context c, String token, String guid, boolean[] serverUp) {
         if (guid.isEmpty() || sp(c).getString("serverUri", "").isEmpty()) return null;
         try {
             JSONArray list = metadata(server(c, token, "/library/all?guid=" + URLEncoder.encode(guid, "UTF-8")));
-            if (list != null && list.length() > 0) return list.getJSONObject(0).optString("key", null);
+            String key = list != null && list.length() > 0 ? list.getJSONObject(0).optString("key", "") : "";
+            // The server that answered (a lookup may have moved to another one), not the one saved before it.
+            return key.isEmpty() ? null : link(sp(c).getString("serverId", ""), key);
+        } catch (IOException e) {
+            // Plex answered "no" (an HTTP error): only this title. No answer at all: the server is down for this refresh.
+            if (e.getMessage() == null || !e.getMessage().startsWith("Plex returned HTTP")) serverUp[0] = false;
         } catch (Exception ignored) {
         }
         return null;
