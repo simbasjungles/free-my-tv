@@ -237,13 +237,16 @@ var I18N = (function () {
     return l === 'in' ? 'id' : l === 'iw' ? 'he' : l === 'no' || l === 'nn' ? 'nb' : l;
   }
 
-  /** The BCP 47 tag for dates and numbers: the TV's own country when it is in this language (es-MX, de-AT…). */
+  /**
+   * The BCP 47 tag for dates and numbers: the TV's own country when it is in this language (es-MX, de-AT…), in the
+   * catalogue's language, so a TV in Nynorsk (nn-NO), which gets the Bokmål text, gets Bokmål dates (nb-NO) too.
+   */
   function localeOf(code) {
     if (code === 'en') return 'en-US';
     if (code === 'pt') return 'pt-BR';
     if (code.indexOf('-') > 0) return code;
     var tv = navigator.language || '';
-    if (base(tv) === code && tv.indexOf('-') > 0) return tv;
+    if (base(tv) === code && tv.indexOf('-') > 0) return code + tv.substring(tv.indexOf('-'));
     return REGIONS[code] ? code + '-' + REGIONS[code] : code;
   }
 

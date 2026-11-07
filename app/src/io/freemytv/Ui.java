@@ -298,7 +298,10 @@ final class Ui {
         if (lang.equals("pt")) return new Locale("pt", "BR");
         if (lang.indexOf('-') > 0) return Locale.forLanguageTag(lang);
         Locale tv = Locale.getDefault();
-        if (lang.equals(base(tv.getLanguage()))) return tv;   // the TV's own Spanish (es-MX, es-AR…), German (de-AT)…
+        // The TV's own Spanish (es-MX, es-AR…), German (de-AT)…; a TV in Nynorsk gets the Bokmål text, so Bokmål dates.
+        if (lang.equals(base(tv.getLanguage()))) {
+            return lang.equals(tv.getLanguage()) ? tv : new Locale(lang, tv.getCountry());
+        }
         for (String[] r : REGIONS) if (r[0].equals(lang)) return new Locale(lang, r[1]);
         return new Locale(lang);
     }
