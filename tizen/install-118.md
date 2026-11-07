@@ -57,8 +57,10 @@ Samsung‑signed one did not — the difference is the newer HAWKM_FHD set *also
 
 ## `config.xml` notes for Tizen 2.4
 
-Three manifest details also cause a **sub‑second** `install failed[118]` on 2.4 (distinct from the ~4 s
-signature failure above):
+Free My TV's own [`config.xml`](config.xml) installed as it is on a KU6640 and a KU6400 (#349), with a space in its
+`<name>` and `tv-samsung` as its profile, so change these only if the install fails in under a second. Three manifest
+details also caused a **sub‑second** `install failed[118]` on a UA40K5300 (distinct from the ~4 s signature failure
+above):
 
 - **No spaces in `<name>`** — e.g. `NeoHome`, not `Neo Home`.
 - **Drop `<tizen:profile name="tv"/>`** — its presence can be rejected here.
