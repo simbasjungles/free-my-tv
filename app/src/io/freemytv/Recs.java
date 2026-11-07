@@ -52,7 +52,7 @@ final class Recs {
         String kind;            // "movie" or "tv"
         String title, backdrop, poster, meta = "", app, pkg;   // poster: the portrait image of the narrow cards
         String link;            // opens the title in its app (looked up with Watchmode), or null: the app's home
-        String servicePkg;      // open_in_stremio: the TV's own app it streams on (pkg is then Stremio's)
+        String servicePkg;      // open_in_stremio/-_nuvio: the TV's own app it streams on (pkg is then Stremio's or Nuvio's)
         String tag;             // Trakt: "Up next: S2 E5", "On your watchlist"…, first in the meta; else null
         int mine;               // Trakt: PROGRESS, LIKED (watchlist, recommended) or 0 (TMDB's)
         boolean detailed;
@@ -130,9 +130,16 @@ final class Recs {
      * (stremio:///detail/<type>/<imdb id>) instead of in that app. Only an Open in: what is picked doesn't change.
      */
     private static final String STREMIO = "com.stremio.one";
+    /**
+     * Nuvio (open_in_nuvio): the release APK and Google Play's, the same app. It takes nuvio://tmdb/<type>/<tmdb id>
+     * (its DeepLinkParser), not the stremio:// page above, which it reads only for addon installs. Asked before Stremio:
+     * with both apps on the TV, Nuvio opens.
+     */
+    private static final String[] NUVIO = {"com.nuvio.tv", "com.nuvio.app"};
     private static final Map<String, String> SERVICE_NAME = new HashMap<>();
     static {
         SERVICE_NAME.put("stremio", "Stremio");
+        SERVICE_NAME.put("nuvio", "Nuvio");
         SERVICE_NAME.put("netflix", "Netflix");
         SERVICE_NAME.put("prime", "Prime Video");
         SERVICE_NAME.put("disney", "Disney+");
@@ -987,8 +994,14 @@ final class Recs {
         if (p.tag != null) parts.add(0, p.tag);
         JSONObject ext = o.optJSONObject("external_ids");
         String imdb = ext == null ? "" : ext.optString("imdb_id", "");
-        if (p.app != null && stremio() && imdb.startsWith("tt")) {     // the meta still names the TV's app it's on
+        String nuvio = p.app == null ? null : nuvio();
+        if (nuvio != null) {     // the meta still names the TV's app it's on
             p.servicePkg = p.pkg;   // its switch in Picks from (and the app itself) still decide whether it shows
+            p.app = "nuvio";
+            p.pkg = nuvio;
+            p.link = nuvioLink(p.kind, p.id);
+        } else if (p.app != null && stremio() && imdb.startsWith("tt")) {
+            p.servicePkg = p.pkg;
             p.app = "stremio";
             p.pkg = STREMIO;
             p.link = "stremio:///detail/" + (p.kind.equals("movie") ? "movie" : "series") + "/" + imdb;
@@ -1096,9 +1109,23 @@ final class Recs {
         return Config.OPEN_IN_STREMIO && HomeApps.launchIntent(context.getPackageManager(), STREMIO) != null;
     }
 
+    /** Nuvio's package when open_in_nuvio is on and the app is on the TV: Play Store's build first, else the release APK. */
+    private String nuvio() {
+        if (!Config.OPEN_IN_NUVIO) return null;
+        for (String pkg : NUVIO) if (HomeApps.launchIntent(context.getPackageManager(), pkg) != null) return pkg;
+        return null;
+    }
+
+    /** Nuvio's own page for a title (nuvio://tmdb/movie/603), as the web app sends it to the TV on LG and Samsung. */
+    static String nuvioLink(String kind, long id) {
+        return "nuvio://tmdb/" + ("movie".equals(kind) ? "movie" : "series") + "/" + id;
+    }
+
     private long sourceStamp() {
         long stamp = ((key().hashCode() * 31L + REGION.hashCode()) * 31L + (Prefs.hideAnimation() ? 1 : 0)) * 31L + Config.PLEX_URL.hashCode();
         if (stremio()) stamp = stamp * 31L + 1;   // off: the same stamp as before, so nothing is fetched again
+        String nuvio = nuvio();
+        if (nuvio != null) stamp = stamp * 31L + nuvio.hashCode();
         for (String[] service : SERVICES) stamp = stamp * 31L + (installed(service[2]) ? service[2].hashCode() : 0);
         // Switched on, one found by name counts; off, finding it changes nothing, so nothing is fetched again (a 0 would:
         // it still multiplies the stamp by 31).
