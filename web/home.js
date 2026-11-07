@@ -129,6 +129,59 @@
     return m ? [+m[1], +m[2], +m[3]] : [0, 0, 0];
   }
 
+  /**
+   * The background of an icon whose edges change smoothly instead of being one color (Disney+'s and SkyShowtime's
+   * gradients, Vodafone TV's vignette, Movistar Plus+'s grey to black on a 2019 Q70R): the colors along its four edges,
+   * a little inside, for a Coons patch between them (patch()). null when an edge is clear or jumps: a picture, not a
+   * background.
+   */
+  function ramp(px, w, h, inset) {
+    var N = 16, x0 = inset, x1 = w - 1 - inset, y0 = inset, y1 = h - 1 - inset;
+    if (x1 - x0 < N || y1 - y0 < N) return null;
+    var sum = [0, 0, 0];
+    function side(xa, ya, xb, yb) {   // N + 1 colors from (xa, ya) to (xb, yb)
+      var out = [], prev = null;
+      for (var s = 0; s <= N; s++) {
+        var i = (Math.round(ya + s / N * (yb - ya)) * w + Math.round(xa + s / N * (xb - xa))) * 4;
+        if (px[i + 3] < 250) return null;
+        var c = [px[i], px[i + 1], px[i + 2]];
+        if (prev && Math.max(Math.abs(c[0] - prev[0]), Math.abs(c[1] - prev[1]), Math.abs(c[2] - prev[2])) > 48) return null;
+        sum[0] += c[0]; sum[1] += c[1]; sum[2] += c[2];
+        out.push(prev = c);
+      }
+      return out;
+    }
+    var top = side(x0, y0, x1, y0), bottom = side(x0, y1, x1, y1), left = side(x0, y0, x0, y1), right = side(x1, y0, x1, y1);
+    if (!top || !bottom || !left || !right) return null;
+    // Each column's top and bottom colors, each row's left and right ones, and where it sits between the edges (0-1).
+    function spread(edge, n, a, b) {
+      var out = [], at = [];
+      for (var z = 0; z < n; z++) {
+        var t = Math.max(0, Math.min(1, (z - a) / (b - a))), f = t * N, s = Math.min(N - 1, Math.floor(f)), r = f - s;
+        for (var c = 0; c < 3; c++) out.push(edge[s][c] + (edge[s + 1][c] - edge[s][c]) * r);
+        at.push(t);
+      }
+      return {rgb: out, at: at};
+    }
+    var cols = spread(top, w, x0, x1), colsB = spread(bottom, w, x0, x1), rows = spread(left, h, y0, y1);
+    var corners = [];
+    for (var c = 0; c < 3; c++) {
+      corners.push((top[0][c] + left[0][c]) / 2, (top[N][c] + right[0][c]) / 2,
+        (bottom[0][c] + left[N][c]) / 2, (bottom[N][c] + right[N][c]) / 2);
+    }
+    var n = 4 * (N + 1);
+    return {t: cols.rgb, b: colsB.rgb, l: rows.rgb, r: spread(right, h, y0, y1).rgb, u: cols.at, v: rows.at,
+      corners: corners, mean: [Math.round(sum[0] / n), Math.round(sum[1] / n), Math.round(sum[2] / n)]};
+  }
+
+  /** Channel c of ramp()'s background at (x, y): the edges blended in, less the corners counted twice. */
+  function patch(g, x, y, c) {
+    var u = g.u[x], v = g.v[y], k = c * 4;
+    return (1 - v) * g.t[x * 3 + c] + v * g.b[x * 3 + c] + (1 - u) * g.l[y * 3 + c] + u * g.r[y * 3 + c] -
+      ((1 - u) * (1 - v) * g.corners[k] + u * (1 - v) * g.corners[k + 1] + (1 - u) * v * g.corners[k + 2] +
+        u * v * g.corners[k + 3]);
+  }
+
   function lift(img) {
     var w = img.naturalWidth, h = img.naturalHeight;
     if (!w || !h) return false;
@@ -158,6 +211,10 @@
       votes[key] = (votes[key] || 0) + 1;
       if (votes[key] > bestN) { bestN = votes[key]; best = key === 'clear' ? null : [px[i], px[i + 1], px[i + 2]]; }
     }
+    // Not one color all along the edge: a gradient or a vignette, taken away pixel by pixel when it's smooth. Against
+    // its near-black end, a pixel a few levels darker isn't ink (Movistar Plus+'s last rows, HBO Max's vignette).
+    var grad = bestN < 64 ? ramp(px, w, h, inset) : null, under = [0, 0, 0], dark = grad ? 64 : 1;
+    if (grad) best = grad.mean;
     var minX = w, minY = h, maxX = -1, maxY = -1, ink = [0, 0, 0, 0, 0, 0, 0, 0], inkSum = 0;
     for (var p = 0; p < w * h; p++) {
       var j = p * 4, a = px[j + 3] / 255;
@@ -166,12 +223,14 @@
         // anti-aliased edges come out as the logo's color, partly clear, without a fringe of the background
         var k = 0, c;
         for (c = 0; c < 3; c++) {
-          var v = px[j + c], o = best[c];
-          k = Math.max(k, v > o ? (v - o) / Math.max(1, 255 - o) : (o - v) / Math.max(1, o));
+          var v = px[j + c], o = under[c] = grad ? patch(grad, p % w, (p / w) | 0, c) : best[c];
+          k = Math.max(k, v > o ? (v - o) / Math.max(1, 255 - o) : (o - v) / Math.max(dark, o));
         }
         k = Math.max(0, Math.min(1, (k - 0.1) / 0.9));   // compression noise stays clear
+        // Outside the edges a gradient was read on, it keeps going (Disney+'s brightens in its last rows): background.
+        if (grad && (p % w < inset || p % w >= w - inset || p < inset * w || p >= (h - inset) * w)) k = 0;
         if (k > 0 && k < 1) {
-          for (c = 0; c < 3; c++) px[j + c] = Math.max(0, Math.min(255, best[c] + (px[j + c] - best[c]) / k));
+          for (c = 0; c < 3; c++) px[j + c] = Math.max(0, Math.min(255, under[c] + (px[j + c] - under[c]) / k));
         }
         a *= k;
       }
@@ -397,7 +456,8 @@
     }
     var buttons = $('buttons');
     buttons.innerHTML = '';
-    var defs = [['live_tv', tr('light|Live TV')], ['hdmi', tr('HDMI Inputs')], ['settings', tr('light|Settings')]];
+    var own = Prefs.boxInput() !== 'live';
+    var defs = [[own ? 'tv' : 'live_tv', own ? boxLabel() : tr('light|Live TV')], ['hdmi', tr('HDMI Inputs')], ['settings', tr('light|Settings')]];
     for (var b = 0; b < 3; b++) {
       var r = el('button', 'round' + (b === 2 ? ' last' : ''), buttons);
       r.style.left = (1596 + 88 * b) + 'px';
@@ -653,6 +713,11 @@
     sym(Data.symbol(w.code, w.isDay), now);
     el('span', 'temp', now, Data.degrees(w.temp));
     el('div', 'cond', card, Data.condition(w.code, w.isDay));
+    var parts = weatherParts(w);
+    extraKey = parts.join(' · ');
+    if (parts.length) extraShown = fitExtra(el('div', 'extra', card, extraKey), parts);
+    else extraShown = '';
+    setClass(card, 'with-extra', !!extraShown);   // the card grows the line only when it has one: otherwise, main's
     el('div', 'range', card, trf('H:{max}', {max: Data.degrees(w.max)}) + '   ' + trf('L:{min}', {min: Data.degrees(w.min)}));
     el('div', 'split', card);
     // Home Settings → Forecast: the next 6 hours or the next 5 days (the hours until a forecast has days).
@@ -671,6 +736,42 @@
     if (w.sunrise) { var a = el('span', '', sun); sym('sunrise', a); a.appendChild(document.createTextNode(trf('Sunrise {time}', {time: Data.time(w.sunrise)}))); }
     if (w.sunset) { var b = el('span', '', sun); sym('sunset', b); b.appendChild(document.createTextNode(trf('Sunset {time}', {time: Data.time(w.sunset)}))); }
   }
+
+  var extraShown = '', extraKey = '';
+
+  /**
+   * The line under the condition, part by part: rain in the next two hours, the UV index by day, the air quality from
+   * moderate up. Empty when it has nothing to say (no rain coming, night, clean air): then the card is the one on main.
+   */
+  function weatherParts(w) {
+    var parts = [], rain = Data.rainIn(Date.now());
+    // 0: it rains now, which the line above says; -1: no rain in the two hours ahead; null: the forecast doesn't reach.
+    if (rain > 0) parts.push(trf('Rain in ~{time}', {time: trf('{n} min', {n: Math.max(5, Math.round(rain / 5) * 5)})}));
+    if (w.uv >= 3 && w.isDay) parts.push(trf('UV {n}', {n: Math.round(w.uv)}));   // the day's highest, so not at night
+    var air = Data.air;
+    // 51 is where the US AQI says moderate: good air is what a weather card needn't spell out.
+    if (air && air.aqi !== null && air.aqi !== undefined && air.aqi >= 51) parts.push(trf('AQI {n}', {n: Math.round(air.aqi)}));
+    return parts;
+  }
+
+  /** Never a cut at the edge: the line is set smaller first, and then its last part goes (the air quality, then the UV). */
+  function fitExtra(line, parts) {
+    var sizes = [21, 19];
+    for (var i = 0; i < sizes.length; i++) {
+      line.style.fontSize = sizes[i] + 'px';
+      if (line.scrollWidth <= line.clientWidth + 1) return line.textContent;
+    }
+    while (parts.length > 1 && line.scrollWidth > line.clientWidth + 1) {
+      parts.pop();
+      line.textContent = parts.join(' · ');
+    }
+    return line.textContent;
+  }
+
+  // "Rain in ~40 min" counts down between forecasts: the card is drawn again when its line would read otherwise.
+  setInterval(function () {
+    if (Prefs.weather() && Data.weather && weatherParts(Data.weather).join(' · ') !== extraKey) renderPanels();
+  }, 60000);
 
   function renderPrices(card, coins) {
     el('div', 'head', card, tr('Crypto'));
@@ -802,6 +903,8 @@
       rows.push({label: tr('Open picks in'), value: open === 'nuvio' ? 'Nuvio' : tr('Streaming apps'),
         step: function (d) { cycle('openPicks', ['apps', 'nuvio'], open, d); }});
     }
+    rows.push({label: tr('Live TV button'), value: boxLabel(),
+      step: function (d) { cycle('boxInput', ['live', 'hdmi1', 'hdmi2', 'hdmi3', 'hdmi4'], Prefs.boxInput(), d); renderTop(); }});
     rows.push({label: tr('Shelf'), value: '›', shelf: true, step: function (d) { if (d >= 0) openShelfEdit(); }});
     rows.push({label: tr('About this TV'), value: '›', about: true, step: function (d) { if (d >= 0) openAbout(); }});
     if (TV.canOpenSettings) rows.push({label: tr('TV Settings'), value: '›', step: function (d) { if (d >= 0) tvSettings(); }});
@@ -1281,11 +1384,24 @@
     return null;
   }
 
+  /** The input the first top button opens, picked in Home Settings > Live TV button: Live TV or an HDMI port. */
+  function boxTV() {
+    var want = Prefs.boxInput();
+    for (var i = 0; i < inputs.length; i++) if (inputs[i].key === want) return inputs[i];
+    return liveTV();
+  }
+
+  /** Its name, for the button's tip and the settings row: the TV's own ("HDMI 2", or a name the person gave the input). */
+  function boxLabel() {
+    var box = boxTV();
+    return box && box !== liveTV() && box.label ? box.label : tr('Live TV');
+  }
+
   function activate() {
     switch (st.zone) {
       case Z.TOP:
         if (st.top < 3) return;
-        if (st.top === 3) { var live = liveTV(); if (live) launcher(live.id, tr('Live TV'))(); }
+        if (st.top === 3) { var box2 = boxTV(); if (box2) launcher(box2.id, boxLabel())(); }
         else if (st.top === 4) { st.zone = Z.SHELF; openDrawer(); st.drawer = 1 < drawerInputs ? 1 : 0; updateFocus(); }
         else openSettings();
         return;

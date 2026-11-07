@@ -125,7 +125,7 @@ final class Ui {
     /** The usual country for each language's dates and numbers, when the TV itself is in another language. */
     private static final String[][] REGIONS = {
         {"pt", "BR"}, {"es", "ES"}, {"de", "DE"}, {"fr", "FR"}, {"it", "IT"}, {"nl", "NL"}, {"pl", "PL"}, {"sv", "SE"},
-        {"da", "DK"}, {"nb", "NO"}, {"fi", "FI"}, {"cs", "CZ"}, {"ro", "RO"}, {"tr", "TR"}, {"ru", "RU"}, {"uk", "UA"},
+        {"da", "DK"}, {"nb", "NO"}, {"fi", "FI"}, {"cs", "CZ"}, {"sk", "SK"}, {"ro", "RO"}, {"tr", "TR"}, {"ru", "RU"}, {"uk", "UA"},
         {"el", "GR"}, {"ja", "JP"}, {"ko", "KR"}, {"hi", "IN"}, {"id", "ID"}, {"vi", "VN"}, {"th", "TH"},
     };
 
@@ -298,7 +298,10 @@ final class Ui {
         if (lang.equals("pt")) return new Locale("pt", "BR");
         if (lang.indexOf('-') > 0) return Locale.forLanguageTag(lang);
         Locale tv = Locale.getDefault();
-        if (lang.equals(base(tv.getLanguage()))) return tv;   // the TV's own Spanish (es-MX, es-AR…), German (de-AT)…
+        // The TV's own Spanish (es-MX, es-AR…), German (de-AT)…; a TV in Nynorsk gets the Bokmål text, so Bokmål dates.
+        if (lang.equals(base(tv.getLanguage()))) {
+            return lang.equals(tv.getLanguage()) ? tv : new Locale(lang, tv.getCountry());
+        }
         for (String[] r : REGIONS) if (r[0].equals(lang)) return new Locale(lang, r[1]);
         return new Locale(lang);
     }

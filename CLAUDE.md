@@ -104,11 +104,15 @@ before you do it, and let them do the taps on the TV.
    127.0.0.1 with its own key, so the TV asks once more to allow debugging. Don't switch modes from the computer.
    Before they switch, run `adb disconnect <IP>:5555` (connect again for step 9): on Android 8 to 10 the TV can hand
    its answer to a computer that's still connected (#221).
-   If the TV's Wi-Fi was saved during its first setup, the switch stops before changing anything and asks them to
-   forget the network and connect again in Settings (Network & Internet); then the switch goes through. Saved
-   networks out of range don't show in Settings: find the ones with `cname=com.google.android.tungsten.setupwraith`
-   in `adb shell dumpsys wifi` (each block starts with its `ID:`), and with their OK remove them with
-   `adb shell cmd wifi forget-network <id>`.
+   If the TV's Wi-Fi was saved during its first setup (or by its stock home screen: the message says which), the
+   switch stops before changing anything and asks them to forget the network and connect again in Settings (Network &
+   Internet); then the switch goes through. `adb logcat -s FreeMyTV` names every app that saved one ("Wi-Fi networks
+   saved by"). Saved networks out of range don't show in Settings: find the ones with
+   `cname=com.google.android.tungsten.setupwraith` (or the home screen's package) in `adb shell dumpsys wifi` (each
+   block starts with its `ID:`), and with their OK remove them with `adb shell cmd wifi forget-network <id>`. The
+   check reads every `cname=` in that dump: from Android 11 each network shows up more than once (ConfigurationMap's
+   `mPerId=` holds every user's, which `forget-network` can't reach), and a Passpoint profile's block has one too
+   (#411).
 9. **Check:** `adb logcat -s FreeMyTV` shows what the switch did.
 
 ## Installing it on an LG TV (webOS)
@@ -132,8 +136,9 @@ stays, and Free My TV opens with a long press of a number key.
    and a 2019 HD one (webOS 3.9) showed a 1920x1080 app in its top-left two thirds (#402). `--1080p` installs it as
    built; `python3 webos/build.py --hd` builds it at 1280x720.
 6. **Tell them:** while Free My TV is open, holding a number key pins it to that key (on a remote without number keys,
-   it's in LG's app list on the home screen). Developer Mode lasts about 40 days; *EXTEND* in that app renews it (if
-   it runs out, the TV removes developer apps, and installing again brings it back). `--uninstall` removes Free My TV.
+   it's in LG's app list on the home screen). Developer Mode lasts about 40 days; *EXTEND* in that app renews it, or
+   `python3 webos/renew.py <IP>` from the computer that installed it, on a schedule if they like (if it runs out, the TV
+   removes developer apps, and installing again brings it back). `--uninstall` removes Free My TV.
 7. **Empty shelf on webOS 3** (user agent Chrome 38): the app can't list the TV's apps there (`listLaunchPoints`
    denied, no `getAppLoadStatus`, and the remote control API answers `invalid origin` to file:// pages). Run
    `python3 webos/apps.py <IP>`: the TV asks them once to allow it, then build and install again. It writes
@@ -168,7 +173,7 @@ Developer Mode; Samsung's home screen stays. Two ways:
    (its DUID): the plugin's Samsung profile opens the browser for them to sign in, or Tizen Studio's Certificate
    Manager does it. 2015-2022 TVs take a Tizen certificate (`tizen certificate`, then `tizen security-profiles add`
    and `tizen cli-config "profiles.path=<home>/tizen-studio-data/profile/profiles.xml"`; on macOS the passwords go to
-   the login Keychain). Certificate passwords are theirs: they type them in their own terminal, never in the chat.
+   the login Keychain). Certificate passwords are theirs: they type them in their own terminal, never in the chat. On Linux those passwords live in the GNOME keyring: `tizen package` reads them by running `secret-tool`, which a headless shell (a WSL install, a container) has not, and `security-profiles add` writes no `.pwd` file, so signing stops at `CertificationException: Invaild password` even though `keytool` opens the `.p12` with that same password. Leaving the profile item's `password=""` makes the CLI ask instead, and answering that prompt (a pseudo-terminal, not a pipe: without a console it throws a NullPointerException) signs it.
 5. **Settings:** the same `config.properties`; the TMDB key rules above apply.
 6. **Build and sign:** `python3 tizen/build.py --sign <profile>` must end with `Built FreeMyTV-tizen.wgt (...,
    signed with "<profile>")`.
@@ -183,8 +188,11 @@ Developer Mode; Samsung's home screen stays. Two ways:
    with another certificate and not shown on the TV: `--uninstall`, then install again (2016 KU6640 and KU6400, #349;
    the KU6400 took the Tizen certificate after that, while a Samsung one, Public with its DUID, kept getting 118). Still
    118 after that, for a package id the TV has never seen and from Samsung's own `tizen install` with an install
-   permit: the model refuses developer installs (a 2016 Full HD K5670, `16_HAWKM_FHD`, #349), so suggest a Google TV
-   streamer on HDMI.
+   permit: first try what fixed a UA40K5300 on the same platform, a SHA-256 signature and a Tizen certificate
+   ([`tizen/install-118.md`](tizen/install-118.md), #417; recent Tizen Studios sign with SHA-512, which 2.3 and 2.4 reject). The
+   signer patch there changes their Tizen Studio, so ask first. If it still fails, the model refuses developer installs
+   (a 2016 Full HD K5670, `16_HAWKM_FHD`, #349): suggest a Google TV streamer on HDMI.
+   On a 2015 UN55JU6800 (Tizen 2.3, `15_HAWKM_UHD_2D_SC`) every package asking for `tv.inputdevice`, `application.launch`, `tv.window` or the Samsung `network.public` privilege was refused with `install failed[PKGMGR_ERROR]` at the same point, while the same files without them installed; changing the manifest also has to go through `--uninstall` first, since the TV refuses a changed one as an update. Once that TV was signed into a Samsung account, the build carrying none of those privileges launched apps and switched to the TV source anyway, so try that before buying a certificate: the same set does not trust the `VD DEVELOPER Partner CA Class` that issues them now, and refused even a minimal package signed with one (the DUID from port 8001 published as `uuid:` was accepted by the certificate tool).
    With Samsung's tools instead: `sdb connect <IP>`, `tizen install -n FreeMyTV-tizen.wgt -t <serial from sdb
    devices>` and `tizen run -p FreeMyTVio.FreeMyTV -t <serial>`. Updates need the same certificate: the TV refuses
    one signed by another (uninstall first). A retail TV's sdbd only takes files (`filesync_support:push`): nothing
@@ -354,10 +362,17 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   answers present and when, never the value, so the tool can tell it arrived; adb's `content write` needs
   Android 9. A new feature with such a
   key adds its name there and to the tool.
+- Android 8 and 9 have no `cmd role`, and with Free My TV installed beside the stock launcher and no default home, HOME
+  answers with the chooser, so the switch takes `stockHome` instead (Original's pick: never where launcherx is installed, nor
+  while an earlier switch's work is still off, after a reinstall), without timing its Home button. The boot check does
+  the same for a TV switched earlier, only for Google's `tvlauncher`, since it runs by itself (#453: `tvrecommendations`
+  started tvlauncher at wakes on a Philips TPM171E). `Capabilities.screensaver` (`stay_on_while_plugged_in`, read once) says whether
+  Android can start ours at all: that Philips stays awake and runs its own from its system UI, burn-in protection that must
+  not be turned off or raced (#451); the switch's texts leave the screensaver out there, and its rows are Unavailable.
 - Settings rows that need something this TV lacks stay, dimmed as *Unavailable*: `SettingsActivity.need` names what a
   row needs, `Capabilities.missing` says why it's missing (once per screen), and OK on the row shows it in a toast.
 - The remote's app buttons (`RemoteKeys`, `RemoteKeyService`) use each brand's key codes: they run only on TCL,
-  Vestel, KTC (NextStar), Sony, Xiaomi and Hisense TVs, the JVC G24, Formovie projectors and the Google TV Streamer, the service is on only in Free My TV mode, and *Original* takes it out of the enabled accessibility
+  Vestel, KTC (NextStar), Sony, Xiaomi, Hisense and Philips' Google TV TVs, the JVC G24, Formovie projectors and the Google TV Streamer, the service is on only in Free My TV mode, and *Original* takes it out of the enabled accessibility
   services. The system waits for the service on every key, so it lives alone in the `:keys` process: what it reads is
   in `remote-keys.txt` (`Prefs.keyApp`), never in SharedPreferences, and `onKeyEvent` does no heavy work.
   The service is also off while every button is *Nothing*, and always on TCL's Android 11 (`RemoteKeys.FILTER_SAFE`):
@@ -395,6 +410,13 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   VK, `_16` for Rutube, `_11` for KION, `_10` for Wink and `_12` for IVI, global keys for Xiaomi's hot-key receiver
   (`com.xiaomi.android.tvsetup.partnercustomizer`, its log: "dealWithHotkey keycode:199"). "Xiaomi default" (empty)
   leaves the key to the TV.
+  The MiTV-AFKR0 (Amlogic, Android TV 11 tested; device `jaws`) has a Home button and a remote marked "Mi TV+",
+  Netflix, Prime Video and YouTube: `RemoteKeys.XIAOMI_AFKR0` lists those four, as `BUTTON_5` (the PatchWall one,
+  left to PatchWall until an app is picked), `BUTTON_6`, `BUTTON_7` and `BUTTON_16` (not `BUTTON_3` as above; this
+  remote has no Rutube button to clash with it). Netflix, Prime Video and YouTube open their apps unless picked, and
+  its presses come one at a time, so no burst. `getevent` shows its presses on the remote's consumer-control interface,
+  with codes that keylayout leaves unmapped (`KEY_VIDEOPHONE` for Netflix); what the framework dispatches comes from
+  its keyboard interface (`key 416 BUTTON_6`), so read key codes from `adb logcat -s FreeMyTV` ("remote key 193 -> …").
   The MiTV-AXSO2 (Amlogic `txlx`, Android TV 11, India; its home screen is `tvlauncher`, not `launcherx`) has a Home
   button, and `dumpsys window policy` hands `BUTTON_2` to `_7` and `_15` to that same receiver, which stays on, so its
   app buttons keep working without the service. Only its PatchWall button is listed (`RemoteKeys.XIAOMI_PATCHWALL_ONLY`,
@@ -407,6 +429,11 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   opens TV Settings and All Apps opens our own sheet (`Prefs.ALL_APPS`, `HomeActivity.EXTRA_ALL_APPS`); the profile
   button has nothing to open without `launcherx`. Hisense keeps only error logs: `adb shell setprop log.tag.FreeMyTV I`
   before reading `adb logcat -s FreeMyTV`.
+  Philips' Google TV models (`RemoteKeys.PHILIPS_GTV`: Android 13 and newer, by brand, maker or model name; a 65OLED910,
+  `Philips Google TV TA5`, Android 14, gave the codes, #437, and no one has run it yet) send TP Vision's own numbers: 811
+  Settings, 816 apps, `GUIDE`, 475 Netflix, 781 YouTube, 788 Prime Video. `org.droidtv.GlobalKey` hands Settings to
+  launcherx's dashboard, off in our mode, so it opens TV Settings by default, and the apps button our All Apps; the
+  app buttons keep working through that receiver until an app is picked (*Philips default*).
   TCL's Settings button sends `KEYCODE_NOTIFICATION`, which only Google TV's home app (launcherx, off in our mode)
   answers with its quick settings panel. It is a *Remote Buttons* row (`Prefs.KEY_TCL_SETTINGS`) whose default is TV
   Settings (`com.android.tv.settings`, as #289 does from the home screen); its choice `Prefs.QUICK_PANEL` makes
@@ -414,6 +441,13 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   Android 11 the key service is off (#325), so there the row works on the home screen only. The panel is our own, over
   what's playing (a window on the left, drawn as glass since TVs turn window blur off), whose tiles open the TV's own screens
   (TCL's Picture and Sound panels through `DISPLAY_SETTINGS` and `VIEW_SOUND_SETTINGS`; TCL Google TV 14 tested).
+  TCL's BeyondTV (Android 9, Realtek RTD2851, build `PPR1.180610.011`) sends each remote key through
+  `com.tcl.keycustomfunctionservice` (`KeyMultipleService`). This service injects the key again (the log shows
+  `deviceId=-1`). The key service is on and runs in `:keys`, but it does not receive these keys. Thus Remote Buttons
+  work only when our home screen window has the focus. The system also handles Netflix (4062) and TCL Channel (4020)
+  as global keys (`GlobalKeyManager handleGlobalKey`; 4020 goes to the receiver of `com.realtek.tv.settings`). Thus
+  the TV also does its own action: on the home screen, a Netflix button set to a different choice did that choice, and
+  Netflix also opened.
   The Google TV Streamer (`RemoteKeys.GOOGLE_STREAMER`: model `Google TV Streamer`, device `kirkwood`, Android 14
   tested) maps YouTube to `BUTTON_3`, Netflix to `BUTTON_4` and its custom star button to `MACRO_1` (313, API 34), from
   `Vendor_18d1_Product_9451.kl`. YouTube and the star go to launcherx; Netflix goes to chromecastservice. The model
@@ -528,7 +562,8 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   instead of the port. Amazon's input player wants `com.amazon.tv.permission.TUNE_INPUT` and its home screen's switch
   `LAUNCH_INPUTS` (signature only), but `com.amazon.tv.inputpreference.service/.KaminoInputSwitchService` takes an
   `inputType` extra, the port's hardware number (`.../HdmiInputService/HW2` is 2, HDMI 1), from any app
-  (`HomeApps.fireInput`). Live TV opens `com.amazon.tv.livetv/.DttIconWrapperActivity`, the antenna's entry.
+  (`HomeApps.fireInput`). On a TCL AFTDEC012E (Fire OS 8), HDMI 4 is HW5 but the switch requires type 10; type 5
+  times out waiting for input data and queues later requests. Live TV opens `com.amazon.tv.livetv/.DttIconWrapperActivity`, the antenna's entry.
   A Fire OS TV restarts quietly into standby when turned off (QHB) once it booted from power; after a reboot from
   software (`adb reboot`) every power-off restarts it with the screen on, until it's unplugged for 30 seconds.
 - Realtek TVs on Hikeen boards (Romsat `D50A114D-U-T2-S`, KIVI; Android 9 tested; their `com.hikeen.*` apps tell
@@ -545,8 +580,8 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   and opacity animate. Tizen 2.4 (2016) runs WebKit 538: no Intl (`fmt` in data.js rounds by hand), SVGs need a width
   and height, and `tv.js` adds a `lite` class there that turns off shadows and transitions, which its GPU can't keep up
   with (LGs whose `navigator.deviceMemory` reads 1, up to about 1.5 GB, get it too: webOS TV Lite sets went from 25 to
-  60 fps at a ratio of 2, #318, and from 45-50 to 59 at a ratio of 1, #383; Samsungs only when they also draw the page
-  at twice its size, `devicePixelRatio`, since none at a ratio of 1 has been measured); it also
+  60 fps at a ratio of 2, #318, and from 45-50 to 59 at a ratio of 1, #383; Samsungs too, where a 1.5 GB UN50AU7700 at a
+  ratio of 1 still stuttered with `flat` alone, #461); it also
   can't open the TV's settings (`TV.canOpenSettings`). Without Intl, `toLocaleDateString` ignores its options and
   writes the whole date, so `strings.js` takes weekday and month names from the catalogues there (`I18N.dateNames` in
   data.js: `weekday|`, `month|` and `monthday|` keys, the last in the form next to a day). Tizen 2.3 and 2.4 don't

@@ -52,7 +52,7 @@ final class Recs {
         String kind;            // "movie" or "tv"
         String title, backdrop, poster, meta = "", app, pkg;   // poster: the portrait image of the narrow cards
         String link;            // opens the title in its app (looked up with Watchmode), or null: the app's home
-        String servicePkg;      // open_in_stremio: the TV's own app it streams on (pkg is then Stremio's)
+        String servicePkg;      // open_in_stremio/-_nuvio: the TV's own app it streams on (pkg is then Stremio's or Nuvio's)
         String tag;             // Trakt: "Up next: S2 E5", "On your watchlist"…, first in the meta; else null
         int mine;               // Trakt: PROGRESS, LIKED (watchlist, recommended) or 0 (TMDB's)
         boolean detailed;
@@ -80,6 +80,8 @@ final class Recs {
     private static final int POOL = 24;
     /** Trakt's titles in the list: about what the tabs show of them (now(): up to 2 in 5 in progress, 3 in 5 liked). */
     private static final int TRAKT_MAX = MAX_CARDS;
+    /** By subscription, with ads (Pluto TV) or free: never rent or buy. */
+    private static final String WATCH_TYPES = "flatrate%7Cads%7Cfree";
     /** Images kept on disk: a backdrop and a poster for every title the list can hold. */
     private static final int FILES = 2 * (POOL + TRAKT_MAX);
     /** Pick.mine: what they're in the middle of, and what they'd like (watchlist, Trakt's recommendations). */
@@ -130,9 +132,16 @@ final class Recs {
      * (stremio:///detail/<type>/<imdb id>) instead of in that app. Only an Open in: what is picked doesn't change.
      */
     private static final String STREMIO = "com.stremio.one";
+    /**
+     * Nuvio (open_in_nuvio): the release APK and Google Play's, the same app. It takes nuvio://tmdb/<type>/<tmdb id>
+     * (its DeepLinkParser), not the stremio:// page above, which it reads only for addon installs. Asked before Stremio:
+     * with both apps on the TV, Nuvio opens.
+     */
+    private static final String[] NUVIO = {"com.nuvio.tv", "com.nuvio.app"};
     private static final Map<String, String> SERVICE_NAME = new HashMap<>();
     static {
         SERVICE_NAME.put("stremio", "Stremio");
+        SERVICE_NAME.put("nuvio", "Nuvio");
         SERVICE_NAME.put("netflix", "Netflix");
         SERVICE_NAME.put("prime", "Prime Video");
         SERVICE_NAME.put("disney", "Disney+");
@@ -463,7 +472,7 @@ final class Recs {
     }
 
     /**
-     * Whether a title's own list has the service by subscription. /discover alone can't say: it matches the service and
+     * Whether a title's own list has the service by subscription, with ads or free. /discover alone can't say: it matches the service and
      * the type separately, so a store that only rents a title also comes back when someone else streams it.
      */
     private boolean hasTitles(int provider) {
@@ -477,13 +486,15 @@ final class Recs {
         try {
             boolean found = false;
             for (String kind : new String[] {"movie", "tv"}) {
-                JSONArray titles = get("/discover/" + kind + "?language=" + lang() + "&watch_region=" + REGION + "&with_watch_monetization_types=flatrate"
+                JSONArray titles = get("/discover/" + kind + "?language=" + lang() + "&watch_region=" + REGION + "&with_watch_monetization_types=" + WATCH_TYPES
                         + "&include_adult=false&sort_by=popularity.desc&with_watch_providers=" + provider).getJSONArray("results");
                 for (int i = 0; i < titles.length() && i < 5 && !found; i++) {
                     JSONObject br = get("/" + kind + "/" + titles.getJSONObject(i).getInt("id") + "/watch/providers?language=" + lang())
                             .getJSONObject("results").optJSONObject(REGION);
-                    JSONArray flat = br == null ? null : br.optJSONArray("flatrate");
-                    for (int j = 0; flat != null && j < flat.length(); j++) found |= flat.getJSONObject(j).optInt("provider_id") == provider;
+                    for (String type : new String[] {"flatrate", "ads", "free"}) {
+                        JSONArray list = br == null ? null : br.optJSONArray(type);
+                        for (int j = 0; list != null && j < list.length(); j++) found |= list.getJSONObject(j).optInt("provider_id") == provider;
+                    }
                 }
                 if (found) break;
             }
@@ -745,7 +756,7 @@ final class Recs {
         }
         StringBuilder ids = new StringBuilder();
         for (int id : services.keySet()) ids.append(ids.length() == 0 ? "" : "|").append(id);
-        String common = "&language=" + lang() + "&watch_region=" + REGION + "&with_watch_monetization_types=flatrate&include_adult=false"
+        String common = "&language=" + lang() + "&watch_region=" + REGION + "&with_watch_monetization_types=" + WATCH_TYPES + "&include_adult=false"
                 + "&sort_by=popularity.desc&with_watch_providers=" + URLEncoder.encode(ids.toString(), "UTF-8")
                 + (Prefs.hideAnimation() ? "&without_genres=" + ANIMATION : "");
         // 1. Trending this week (TMDB goes by what people are watching and searching for right now), only what is
@@ -774,6 +785,18 @@ final class Recs {
         List<Pick> newMovies = new ArrayList<>(), newShows = new ArrayList<>();
         for (int i = 0; i < movies.length(); i++) add(newMovies, movies.getJSONObject(i), "movie");
         for (int i = 0; i < shows.length(); i++) add(newShows, shows.getJSONObject(i), "tv");
+        newMovies.removeIf(x -> watched.contains(key(x)));
+        newShows.removeIf(x -> watched.contains(key(x)));
+        // Services with mostly older titles (free ones like Pluto TV) have few or no new ones: their most popular
+        // fill the rest, so a tab doesn't show empty cards.
+        if (newMovies.size() < MAX_CARDS) {
+            JSONArray more = get("/discover/movie?vote_count.gte=30" + common).getJSONArray("results");
+            for (int i = 0; i < more.length(); i++) add(newMovies, more.getJSONObject(i), "movie");
+        }
+        if (newShows.size() < MAX_CARDS) {
+            JSONArray more = get("/discover/tv?vote_count.gte=20" + common).getJSONArray("results");
+            for (int i = 0; i < more.length(); i++) add(newShows, more.getJSONObject(i), "tv");
+        }
         // One title of your Plex library per kind (one of the newest 8, another each time the list is made) among the
         // trending ones: a surprise, not half the row. Its images come now, so a server that sleeps later leaves no gray card.
         if (plexOn()) {
@@ -975,20 +998,29 @@ final class Recs {
         if (length != null) parts.add(length);
         JSONObject wp = o.optJSONObject("watch/providers");
         JSONObject br = wp == null ? null : wp.optJSONObject("results") == null ? null : wp.optJSONObject("results").optJSONObject(REGION);
-        JSONArray flat = br == null ? null : br.optJSONArray("flatrate");
-        for (int i = 0; flat != null && i < flat.length() && p.app == null; i++) {
-            String[] s = service(flat.getJSONObject(i).optString("provider_name"), flat.getJSONObject(i).optInt("provider_id"));
-            if (s != null && installed(s[2])) {
-                p.app = s[1];
-                p.pkg = s[2];
+        // A subscription first, then a free service with ads (Pluto TV, Tubi), then a free one: never rent or buy.
+        for (String type : new String[] {"flatrate", "ads", "free"}) {
+            JSONArray list = br == null ? null : br.optJSONArray(type);
+            for (int i = 0; list != null && i < list.length() && p.app == null; i++) {
+                String[] s = service(list.getJSONObject(i).optString("provider_name"), list.getJSONObject(i).optInt("provider_id"));
+                if (s != null && installed(s[2])) {
+                    p.app = s[1];
+                    p.pkg = s[2];
+                }
             }
         }
         if (p.app != null) parts.add(name(p.app));
         if (p.tag != null) parts.add(0, p.tag);
         JSONObject ext = o.optJSONObject("external_ids");
         String imdb = ext == null ? "" : ext.optString("imdb_id", "");
-        if (p.app != null && stremio() && imdb.startsWith("tt")) {     // the meta still names the TV's app it's on
+        String nuvio = p.app == null ? null : nuvio();
+        if (nuvio != null) {     // the meta still names the TV's app it's on
             p.servicePkg = p.pkg;   // its switch in Picks from (and the app itself) still decide whether it shows
+            p.app = "nuvio";
+            p.pkg = nuvio;
+            p.link = nuvioLink(p.kind, p.id);
+        } else if (p.app != null && stremio() && imdb.startsWith("tt")) {
+            p.servicePkg = p.pkg;
             p.app = "stremio";
             p.pkg = STREMIO;
             p.link = "stremio:///detail/" + (p.kind.equals("movie") ? "movie" : "series") + "/" + imdb;
@@ -1096,9 +1128,23 @@ final class Recs {
         return Config.OPEN_IN_STREMIO && HomeApps.launchIntent(context.getPackageManager(), STREMIO) != null;
     }
 
+    /** Nuvio's package when open_in_nuvio is on and the app is on the TV: the release APK first, else Google Play's. */
+    private String nuvio() {
+        if (!Config.OPEN_IN_NUVIO) return null;
+        for (String pkg : NUVIO) if (HomeApps.launchIntent(context.getPackageManager(), pkg) != null) return pkg;
+        return null;
+    }
+
+    /** Nuvio's own page for a title (nuvio://tmdb/movie/603), as the web app sends it to the TV on LG and Samsung. */
+    static String nuvioLink(String kind, long id) {
+        return "nuvio://tmdb/" + ("movie".equals(kind) ? "movie" : "series") + "/" + id;
+    }
+
     private long sourceStamp() {
         long stamp = ((key().hashCode() * 31L + REGION.hashCode()) * 31L + (Prefs.hideAnimation() ? 1 : 0)) * 31L + Config.PLEX_URL.hashCode();
         if (stremio()) stamp = stamp * 31L + 1;   // off: the same stamp as before, so nothing is fetched again
+        String nuvio = nuvio();
+        if (nuvio != null) stamp = stamp * 31L + nuvio.hashCode();
         for (String[] service : SERVICES) stamp = stamp * 31L + (installed(service[2]) ? service[2].hashCode() : 0);
         // Switched on, one found by name counts; off, finding it changes nothing, so nothing is fetched again (a 0 would:
         // it still multiplies the stamp by 31).
