@@ -301,7 +301,7 @@ var Data = (function () {
       }
     }
     if (inFx) {
-      if (!(fx > 0)) return 0;   // no USDT pair: the caller goes to dollars
+      if (!(fx > 0)) return 0;   // no rate in the answer: as for any answer without prices
       for (var c = 0; c < 3; c++) if (got[c]) prices[c] *= fx;
       prices[3] = fx;
       changes[3] = fxOpen > 0 ? (fx - fxOpen) / fxOpen * 100 : NaN;
@@ -338,7 +338,7 @@ var Data = (function () {
           return;
         }
         // Halted: dollars for this run, not saved like the 400's (the market may open again).
-        if (!err && !inFx && QUOTE !== 'USDT' && halted(body)) { fetchingPrices = false; inDollars(); refreshPrices(); return; }
+        if (!err && !inFx && QUOTE !== 'USDT' && halted(body)) { fetchingPrices = false; CURRENCY = 'USD'; QUOTE = 'USDT'; refreshPrices(); return; }
         if (err || !parsePrices(body)) {
           var refusal = !!err && err.message === 'HTTP 451';
           if (h + 1 < hosts.length && !(err && err.message === 'HTTP 400')) next(refusal ? 2 : h + 1, refused || refusal);
