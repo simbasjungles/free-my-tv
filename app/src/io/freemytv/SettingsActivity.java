@@ -1898,7 +1898,7 @@ public class SettingsActivity extends Activity {
             openChoices(PICK_ALBUM, list, "album".equals(Prefs.photoSource()) ? Prefs.photoAlbum() : "");
         }
 
-        /** OK in My Photos' lists: applied (the photos change at the next home screen), and back to its row. */
+        /** OK in My Photos' lists: applied (the sync starts now), and back to its row. */
         private void pickPhotoSource() {
             String[] choice = choices.get(pickScroll + focus);
             if (pickFor == PICK_PHOTOS && "album".equals(choice[0])) {
@@ -1924,6 +1924,7 @@ public class SettingsActivity extends Activity {
             }
             // Also when it's the same choice: My Photos turned off earlier (before the key came) is on again
             Prefs.setPhotos(!"default".equals(source));
+            ImmichPhotos.syncIfDue(getContext(), null);   // the new source starts coming now, not at the next home screen
             showSettingsRow(PHOTOS_ROW);
         }
 
