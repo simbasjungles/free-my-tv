@@ -354,6 +354,13 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   answers present and when, never the value, so the tool can tell it arrived; adb's `content write` needs
   Android 9. A new feature with such a
   key adds its name there and to the tool.
+- Android 8 and 9 have no `cmd role`, and with Free My TV installed beside the stock launcher and no default home, HOME
+  answers with the chooser, so the switch takes `stockHome` instead (Original's pick: never where launcherx is installed, nor
+  while an earlier switch's work is still off, after a reinstall), without timing its Home button. The boot check does
+  the same for a TV switched earlier, only for Google's `tvlauncher`, since it runs by itself (#453: `tvrecommendations`
+  started tvlauncher at wakes on a Philips TPM171E). `Capabilities.screensaver` (`stay_on_while_plugged_in`, read once) says whether
+  Android can start ours at all: that Philips stays awake and runs its own from its system UI, burn-in protection that must
+  not be turned off or raced (#451); the switch's texts leave the screensaver out there, and its rows are Unavailable.
 - Settings rows that need something this TV lacks stay, dimmed as *Unavailable*: `SettingsActivity.need` names what a
   row needs, `Capabilities.missing` says why it's missing (once per screen), and OK on the row shows it in a toast.
 - The remote's app buttons (`RemoteKeys`, `RemoteKeyService`) use each brand's key codes: they run only on TCL,

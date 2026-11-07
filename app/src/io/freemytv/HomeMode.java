@@ -537,9 +537,13 @@ final class HomeMode {
             String home = originalHome(s);
             if (home.isEmpty() || home.startsWith(PKG + "/")) {
                 String found = currentHome(adb);
-                // No holder to read (Android 8 and 9 have no `cmd role`, and the chooser answers until a default is
-                // set): the TV's own, when it has exactly one (#453).
-                if (found == null) found = stockHome(adb);
+                if (found == null) {
+                    // No holder to read (Android 8 and 9 have no `cmd role`, and the chooser answers until a default is
+                    // set), or it's ours: the TV's own, when it has exactly one (#453).
+                    found = stockHomeAtSwitch(adb, s);
+                    // Its Home button can't be timed now, nor at a retry: HOME opens the chooser or ours (Original times it).
+                    if (found != null && metrics(state(c), ORIGINAL) == null) putMetric(c, ORIGINAL, "at", System.currentTimeMillis());
+                }
                 home = found != null ? realHome(found) : "";
                 if (home.isEmpty()) AppLog.w("original home screen not recorded (HOME resolves to \"" + homeHolder(adb) + "\"): Original will pick the TV's own");
             }
@@ -782,10 +786,28 @@ final class HomeMode {
         return found;
     }
 
-    /** {@link #stockHome}, recorded as the original home screen for a switch that couldn't read it; or "". */
+    /**
+     * {@link #stockHome} for a switch that can't read HOME's holder. Not where Google TV's home is installed (Original
+     * takes that one), nor while an earlier switch's work is still off, after a reinstall: the home screen it turned off
+     * is no candidate then, and a lone vendor app that opens HOME would be taken for it.
+     */
+    private static String stockHomeAtSwitch(Adb adb, JSONObject s) throws IOException {
+        if (adb.shell("pm path " + packageOf(GOOGLE_HOME)).contains("package:")) return null;
+        Set<String> earlier = recorded(adb);
+        earlier.addAll(stringList(s, "disabled"));
+        earlier.retainAll(packages(adb, "-d"));
+        return earlier.isEmpty() ? stockHome(adb) : null;
+    }
+
+    /**
+     * {@link #stockHome}, recorded as the original home screen for a switch that couldn't read it; or "". Only Google's
+     * launcher here: this check runs by itself, and on a TV switched earlier the real home screen may be off, leaving a
+     * lone vendor app that opens HOME. Any other home screen is recorded by going through Original once.
+     */
     private static String recordStockHome(Context c, Adb adb) throws IOException, JSONException {
+        if (adb.shell("pm path " + packageOf(GOOGLE_HOME)).contains("package:")) return "";
         String stock = stockHome(adb);
-        if (stock == null) return "";
+        if (stock == null || !TV_LAUNCHER.equals(packageOf(stock))) return "";
         String home = realHome(stock);
         save(c, state(c).put("originalHome", home));
         AppLog.w("original home screen recorded at the check: " + home);
