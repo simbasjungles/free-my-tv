@@ -140,7 +140,7 @@ final class WatchArt {
             Bitmap b = null;
             try {
                 b = uri != null ? load(read(uri)) : key.startsWith(Plex.PICTURE)
-                        ? load(Plex.picture(app, key.substring(Plex.PICTURE.length()))) : banner(pkg);
+                        ? load(Plex.picture(app, key)) : banner(pkg);
             } catch (IOException | RuntimeException | OutOfMemoryError e) {
                 AppLog.w("continue watching picture: " + e.getMessage());
             }

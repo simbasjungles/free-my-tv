@@ -232,8 +232,9 @@ final class Plex {
         try {
             if (!saved.isEmpty()) {
                 JSONObject o = new JSONObject(saved);
-                parse(o.optJSONArray("watching"), out.watching);
-                parse(o.optJSONArray("watchlist"), out.watchlist);
+                String server = sp(c).getString("serverId", "");
+                parse(o.optJSONArray("watching"), server, out.watching);
+                parse(o.optJSONArray("watchlist"), server, out.watchlist);
             }
         } catch (Exception ignored) {
         }
@@ -372,11 +373,11 @@ final class Plex {
         }
     }
 
-    private static void parse(JSONArray a, List<WatchNext.Item> out) {
+    private static void parse(JSONArray a, String server, List<WatchNext.Item> out) {
         for (int i = 0; a != null && i < a.length(); i++) {
             JSONObject o = a.optJSONObject(i);
             if (o == null || o.optString("title").isEmpty()) continue;
-            WatchNext.Item it = WatchNext.Item.plex(o.optString("picture"));
+            WatchNext.Item it = WatchNext.Item.plex(o.optString("picture"), server);
             it.title = o.optString("title");
             int season = o.optInt("season"), episode = o.optInt("episode");
             if (o.optBoolean("watchlist")) it.episode = Ui.tr("On your watchlist");
@@ -414,7 +415,9 @@ final class Plex {
      * A card's picture: Plex's artwork (an https address it gave) as it is, or your server's, made 1280×720 by the
      * server. Off the UI thread (WatchArt's).
      */
-    static byte[] picture(Context c, String image) throws IOException {
+    static byte[] picture(Context c, String key) throws IOException {
+        // The key is PICTURE + server + "|" + the picture (WatchNext.Item.plex).
+        String image = key.startsWith(PICTURE) && key.indexOf('|') > 0 ? key.substring(key.indexOf('|') + 1) : "";
         if (!signedIn(c) || image.isEmpty()) throw new IOException("no Plex picture");
         HttpURLConnection conn;
         if (image.startsWith("https://")) {

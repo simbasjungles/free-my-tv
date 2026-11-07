@@ -269,7 +269,8 @@ public class SettingsActivity extends Activity {
                 // the minute (the notices' "{n} min ago").
                 String stamp = state.toString() + recs.toString() + updates.toString() + ":" + sleepLeft + ":" + whyNow
                         + ":" + hasKey + ":" + pendingAt + ":" + stalled + ":" + busy() + ":" + updatesValue()
-                        + ":" + (Trakt.available() ? traktValue() : "") + ":" + System.currentTimeMillis() / 60_000
+                        + ":" + (Trakt.available() ? traktValue() : "") + ":" + (Plex.available() ? watchValue(Plex.PKG) : "")
+                        + ":" + System.currentTimeMillis() / 60_000
                         + ":" + (screen == HOME_SETTINGS ? Photos.files(getContext()).size() : 0);
                 if (!stamp.equals(pollStamp)) invalidate();
                 pollStamp = stamp;

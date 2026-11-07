@@ -599,6 +599,12 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         return HomeApps.launchIntent(c.getPackageManager(), Plex.PKG) != null;
     }
 
+    /** What an empty Continue Watching row says, painted and spoken: nothing there, or the permission is missing. */
+    private String emptyWatchText() {
+        return watchAllowed ? Ui.tr("Nothing half-watched in your apps.")
+                : Ui.tr("Missing permission: pick Continue Watching again in Home Settings.");
+    }
+
     /** Under Continue Watching, painted and spoken (WATCH_HINT): where to sign in to Plex. */
     private static String plexHintText() {
         return Ui.tr("To see Plex here, sign in: Home Settings › Continue Watching apps › Plex.");
@@ -3729,7 +3735,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             case WIDGETS: return i == 0 ? weatherText() : quotesText();
             case WATCH_HINT:
                 if (!continueMode() || !plexHint) return "";
-                return (watching.isEmpty() ? Ui.tr("Nothing half-watched in your apps.") + " " : "") + plexHintText();
+                return (watching.isEmpty() ? emptyWatchText() + " " : "") + plexHintText();
             default: return "";
         }
     }
@@ -4179,8 +4185,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private void drawWatchRow(Canvas c) {
         if (watching.isEmpty()) {
             if (!watchLoaded) return;   // not read yet: saying "nothing" now could be wrong
-            String text = watchAllowed ? Ui.tr("Nothing half-watched in your apps.")
-                    : Ui.tr("Missing permission: pick Continue Watching again in Home Settings.");
+            String text = emptyWatchText();
             c.drawText(text, MARGIN * k, (L_CARDS_TOP + 60) * k, lCardMeta);
             if (plexHint) c.drawText(plexHintText(), MARGIN * k, (L_CARDS_TOP + 100) * k, lCardMeta);
             return;

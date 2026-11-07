@@ -53,16 +53,19 @@ final class WatchNext {
             bannerKey = "banner:" + pkg;
         }
 
-        /** From Plex (Plex.java): the picture is Plex's (a server path or Plex's https artwork), "" for the banner. */
-        static Item plex(String image) {
-            return new Item(image);
+        /**
+         * From Plex (Plex.java): the picture is Plex's (a server path or Plex's https artwork), "" for the banner.
+         * `server` scopes its key: a path on one server isn't the same picture on another account's.
+         */
+        static Item plex(String image, String server) {
+            return new Item(image, server);
         }
 
-        private Item(String image) {
+        private Item(String image, String server) {
             pkg = Plex.PKG;
             picture = image.isEmpty() ? null : image;
             pictureUri = null;
-            pictureKey = image.isEmpty() ? null : Plex.PICTURE + image;
+            pictureKey = image.isEmpty() ? null : Plex.PICTURE + server + "|" + image;
             bannerKey = "banner:" + pkg;
         }
 
