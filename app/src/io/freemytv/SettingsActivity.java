@@ -2065,11 +2065,13 @@ public class SettingsActivity extends Activity {
             new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                     .setTitle(signedIn && !Plex.user(c).isEmpty() ? "Plex · " + Plex.user(c) : "Plex")
                     .setItems(items, (d, which) -> {
+                        // Each choice does what its label said, if it still applies (a sign-in may have finished
+                        // while the menu was open): Sign in never starts a second account, Sign out only signs out.
                         if (which == 0 && signedIn) {
-                            Plex.signOut(c);
+                            if (Plex.signedIn(c)) Plex.signOut(c);
                         } else if (which == 0) {
                             // TalkBack reads the row again at each step: the code as it appears, then who signed in.
-                            Plex.signIn(c, () -> handler.post(() -> {
+                            if (!Plex.signedIn(c)) Plex.signIn(c, () -> handler.post(() -> {
                                 invalidate();
                                 spoken.focusMoved();
                             }));

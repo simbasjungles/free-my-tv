@@ -47,7 +47,9 @@ final class Plex {
 
     // Sign-in in progress (Settings shows it in the Plex row); null when none.
     private static volatile String code, message = "";
-    private static volatile boolean signingIn, fetching;
+    private static volatile boolean signingIn;
+    /** The token whose lists are being fetched now, or null: another account's slow fetch doesn't hold up a new one. */
+    private static volatile String fetchingFor;
     private static volatile long fetchedAt;
     private static volatile Runnable listener;
     private static final Object SIGN_IN = new Object();
@@ -92,7 +94,7 @@ final class Plex {
     /** Starts the code sign-in in the background; `changed` runs (on that thread) at every step. */
     static void signIn(Context c, Runnable changed) {
         synchronized (SIGN_IN) {
-            if (signingIn || !available()) return;
+            if (signingIn || !available() || signedIn(c)) return;   // one account at a time: sign out first
             signingIn = true;
         }
         code = null;
@@ -115,7 +117,11 @@ final class Plex {
                     } catch (Exception e) {
                         AppLog.w("plex user: " + e.getMessage());
                     }
-                    sp(app).edit().putString("token", token).putString("user", name).apply();
+                    synchronized (Plex.class) {
+                        // A new account starts clean: no server or lists of an earlier one can be mixed in.
+                        String client = sp(app).getString("client", "");
+                        sp(app).edit().clear().putString("client", client).putString("token", token).putString("user", name).apply();
+                    }
                     try {
                         findServer(app, token);
                     } catch (Exception e) {
@@ -237,12 +243,13 @@ final class Plex {
 
     static void refreshIfStale(Context c) {
         long age = System.currentTimeMillis() - fetchedAt;
-        if (!signedIn(c) || fetching || age >= 0 && age < EVERY) return;
-        fetching = true;
-        fetchedAt = System.currentTimeMillis();
+        if (!signedIn(c) || age >= 0 && age < EVERY) return;
         Context app = c.getApplicationContext();
         // The account this fetch is for: signed out (or into another one) meanwhile, its result is dropped.
         final String token = sp(app).getString("token", "");
+        if (token.equals(fetchingFor)) return;
+        fetchingFor = token;
+        fetchedAt = System.currentTimeMillis();
         new Thread(() -> {
             try {
                 if (!installed(app)) return;
@@ -274,7 +281,7 @@ final class Plex {
             } catch (Exception e) {
                 AppLog.w("plex: " + e.getMessage());
             } finally {
-                fetching = false;
+                if (token.equals(fetchingFor)) fetchingFor = null;
             }
         }, "plex").start();
     }
