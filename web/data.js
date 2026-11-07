@@ -242,11 +242,19 @@ var Data = (function () {
 
   var COINS = ['BTC', 'ETH', 'SOL', 'USDT'];
   var CURRENCY = Place.currency;
+  /** A currency Binance lists no pairs in (COP, MXN...): the coins come in USDT and convert with USDT<currency>. */
+  var FX = 'USDT' + CURRENCY, inFx = false;
   var QUOTE = CURRENCY === 'USD' ? 'USDT' : CURRENCY;
   /** Binance refuses the whole request when it has no pairs in the currency (INR...): the prices go in dollars then. */
   function inDollars() {
     store('dollarsFor', CURRENCY);
     CURRENCY = 'USD';
+    QUOTE = 'USDT';
+    inFx = false;   // dollars, not USDT converted: no USDT<currency> in the request any more
+  }
+  /** No direct pairs: USDT first, dollars only when Binance lists no USDT<currency> pair either. */
+  function fromUsdt() {
+    inFx = true;
     QUOTE = 'USDT';
   }
   /** A pair with no trade for a day: Binance halted it and keeps answering with the frozen last price (AUD since 2026-10-06). */
@@ -257,53 +265,80 @@ var Data = (function () {
   if (stored('dollarsFor') === CURRENCY && CURRENCY !== 'USD') {
     CURRENCY = 'USD';
     QUOTE = 'USDT';
+  } else if (stored('fxFor') === CURRENCY && CURRENCY !== 'USD') {
+    fromUsdt();
   }
   var prices = [NaN, NaN, NaN, NaN], changes = [NaN, NaN, NaN, NaN], pricesAt = 0, fetchingPrices = false;
 
-  /** Indexes in COINS of the coins that are on (the dollar only in Brazilian reais, where Binance lists it). */
+  /** The dollar card shows the USDT rate when there is one to show (reais, or a currency converted from USDT). */
+  function dollarRow() {
+    return CURRENCY !== 'USD' && (CURRENCY === 'BRL' || inFx);
+  }
+
+  /** Indexes in COINS of the coins that are on (and the dollar where there's a rate for it). */
   function activeCoins() {
     var out = [];
     if (!Prefs.quotes()) return out;
-    for (var i = 0; i < COINS.length; i++) if (Prefs.coin(i) && (i < 3 || CURRENCY === 'BRL')) out.push(i);
+    for (var i = 0; i < COINS.length; i++) if (Prefs.coin(i) && (i < 3 || dollarRow())) out.push(i);
     return out;
   }
 
   function parsePrices(list) {
-    var found = 0;
+    var found = 0, fx = NaN, fxOpen = NaN, got = [false, false, false, false];
     for (var i = 0; list && i < list.length; i++) {
+      if (inFx && list[i].symbol === FX) {
+        fx = parseFloat(list[i].lastPrice);
+        fxOpen = parseFloat(list[i].openPrice);
+        continue;
+      }
       for (var k = 0; k < COINS.length; k++) {
         if (list[i].symbol !== COINS[k] + QUOTE) continue;
         found++;
         var last = parseFloat(list[i].lastPrice), open = parseFloat(list[i].openPrice);
         prices[k] = last;
         changes[k] = open > 0 ? (last - open) / open * 100 : NaN;
+        got[k] = true;
       }
+    }
+    if (inFx) {
+      if (!(fx > 0)) return 0;   // no USDT pair: the caller goes to dollars
+      for (var c = 0; c < 3; c++) if (got[c]) prices[c] *= fx;
+      prices[3] = fx;
+      changes[3] = fxOpen > 0 ? (fx - fxOpen) / fxOpen * 100 : NaN;
+      return found + 1;
     }
     return found;
   }
 
   (function () {
     var p = stored('prices');
-    if (p && p.quote === QUOTE && parsePrices(p.body)) pricesAt = p.at;
+    if (p && p.quote === (inFx ? FX : QUOTE) && parsePrices(p.body)) pricesAt = p.at;
   })();
 
   function refreshPrices() {
-    var coins = activeCoins(), now = Date.now();
+    var coins = activeCoins(), now = Date.now(), symbols = [];
     if (!coins.length || fetchingPrices || (now - pricesAt < 5 * 60000 && now >= pricesAt)) return;
     fetchingPrices = true;
-    var symbols = coins.map(function (i) { return '%22' + COINS[i] + QUOTE + '%22'; }).join(',');
-    var path = '/api/v3/ticker/24hr?type=MINI&symbols=%5B' + symbols + '%5D';
+    for (var i = 0; i < coins.length; i++) if (!(inFx && coins[i] === 3)) symbols.push('%22' + COINS[coins[i]] + QUOTE + '%22');
+    if (inFx) symbols.push('%22' + FX + '%22');
+    var path = '/api/v3/ticker/24hr?type=MINI&symbols=%5B' + symbols.join(',') + '%5D';
     // Binance.com refuses the US (HTTP 451); Binance.US answers the same call in dollars. data-api.binance.vision is
     // Binance's own address for public market data, with Binance.com's pairs on another domain and certificate chain:
     // it answers where a network blocks or intercepts api.binance.com (#375). A refusal skips it.
     var hosts = ['https://api.binance.com', 'https://data-api.binance.vision', 'https://api.binance.us'];
     (function next(h, refused) {
       get(hosts[h] + path, {}, function (err, body) {
-        // A pair Binance doesn't list (HTTP 400): the prices go in dollars. Binance.US has only dollar pairs: its 400
-        // counts only where Binance.com refuses the US (HTTP 451), not after a timeout or a 5xx there.
-        if (err && err.message === 'HTTP 400' && QUOTE !== 'USDT' && (h < 2 || refused)) { fetchingPrices = false; inDollars(); refreshPrices(); return; }
+        // A pair Binance doesn't list (HTTP 400): direct pairs, then USDT converted, then dollars, and no further: a
+        // 400 in dollars stops here. Binance.US has only dollar pairs: its 400 counts only where Binance.com refuses
+        // the US (HTTP 451), not after a timeout or a 5xx there.
+        if (err && err.message === 'HTTP 400' && (inFx || QUOTE !== 'USDT') && (h < 2 || refused)) {
+          fetchingPrices = false;
+          if (inFx) inDollars(); else fromUsdt();
+          refreshPrices();
+          return;
+        }
         // Halted: dollars for this run, not saved like the 400's (the market may open again).
-        if (!err && QUOTE !== 'USDT' && halted(body)) { fetchingPrices = false; CURRENCY = 'USD'; QUOTE = 'USDT'; refreshPrices(); return; }
+        if (!err && !inFx && QUOTE !== 'USDT' && halted(body)) { fetchingPrices = false; inDollars(); refreshPrices(); return; }
         if (err || !parsePrices(body)) {
           var refusal = !!err && err.message === 'HTTP 451';
           if (h + 1 < hosts.length && !(err && err.message === 'HTTP 400')) next(refusal ? 2 : h + 1, refused || refusal);
@@ -312,7 +347,8 @@ var Data = (function () {
         }
         fetchingPrices = false;
         pricesAt = Date.now();
-        store('prices', {quote: QUOTE, body: body, at: pricesAt});
+        store('prices', {quote: inFx ? FX : QUOTE, body: body, at: pricesAt});
+        if (inFx) store('fxFor', CURRENCY);
         changed();
       });
     })(0);
