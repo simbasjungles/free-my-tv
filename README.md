@@ -132,7 +132,7 @@ Older LG TVs (webOS 3) don't let Free My TV see their apps at all, so the shelf 
 python3 webos/apps.py 192.168.1.50 && python3 webos/build.py && python3 webos/install.py 192.168.1.50
 ```
 
-Developer Mode lasts about 40 days: open the Developer Mode app now and then and press **EXTEND**. To remove Free My TV, run `python3 webos/install.py 192.168.1.50 --uninstall`.
+Developer Mode lasts about 40 days: open the Developer Mode app now and then and press **EXTEND**, or let your computer do it with `python3 webos/renew.py 192.168.1.50` (it needs the TV on and reachable, and the key `install.py` already saved). Run that on a schedule and you never touch EXTEND again — weekly is plenty; `webos/renew.py` shows a cron line for macOS and Linux and a Task Scheduler one for Windows. To remove Free My TV, run `python3 webos/install.py 192.168.1.50 --uninstall`.
 
 ## Samsung TVs (Tizen)
 
@@ -338,7 +338,7 @@ It's your code, and Claude Code finds its way around it. Try:
 | [`Watchdog.java`](app/src/io/freemytv/Watchdog.java) | The safety net |
 | [`web/home.js`](web/home.js) | The home screen on LG TVs |
 | [`web/tv.js`](web/tv.js) | The TV's apps and inputs, on LG and Samsung |
-| [`webos/build.py`](webos/build.py), [`webos/install.py`](webos/install.py) | The LG app package and its install |
+| [`webos/build.py`](webos/build.py), [`webos/install.py`](webos/install.py), [`webos/renew.py`](webos/renew.py) | The LG app package, its install, and renewing Developer Mode |
 | [`tizen/build.py`](tizen/build.py) | The Samsung app package |
 
 The website ([freemytv.io](https://freemytv.io)) is in [`docs/`](docs): plain HTML, CSS and JS on GitHub Pages.
