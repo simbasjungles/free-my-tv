@@ -19,7 +19,7 @@ if [ "$what" = all ] || [ "$what" = android ]; then
   ./build.sh
   bash tools/test-remote.sh
   bash tools/test-order.sh
-  bash tools/test-sun.sh
+  bash tools/test-weather.sh
 fi
 
 if [ "$what" = all ] || [ "$what" = web ]; then

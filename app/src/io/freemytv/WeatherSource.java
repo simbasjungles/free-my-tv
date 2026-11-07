@@ -104,6 +104,8 @@ final class WeatherSource {
         JSONObject first = series.getJSONObject(0).getJSONObject("data");
         JSONObject details = first.getJSONObject("instant").getJSONObject("details");
         w.temp = details.optDouble("air_temperature", Double.NaN);
+        // The current condition, whatever the hourly loop below finds: "now" is what the card shows first.
+        w.code = WeatherCodes.code(symbolOf(first));
 
         // Next hours: the series is hourly for the first days, then steps to 6 hours — the first point without a
         // next_1_hours block is where the switch happens.
@@ -117,13 +119,13 @@ final class WeatherSource {
             w.hours.add(at);
             w.hourTemp.add(data.getJSONObject("instant").getJSONObject("details").optDouble("air_temperature", Double.NaN));
             String symbol = next.getJSONObject("summary").optString("symbol_code", "");
-            w.hourCode.add(code(symbol));
+            w.hourCode.add(WeatherCodes.code(symbol));
             w.hourDay.add(!symbol.endsWith("_night"));
         }
         if (!w.hourCode.isEmpty()) {
             String symbol0 = first.optJSONObject("next_1_hours") == null ? ""
                     : first.getJSONObject("next_1_hours").getJSONObject("summary").optString("symbol_code", "");
-            w.code = code(symbol0);
+            if (w.code < 0) w.code = WeatherCodes.code(symbol0);
         }
 
         // Days: highs and lows per local date, the symbol from the point nearest noon. Today is left out (the app
@@ -159,7 +161,7 @@ final class WeatherSource {
                         ? data.getJSONObject("next_6_hours").getJSONObject("summary") : null;
                 if (summary != null) {
                     noonDistance.put(date, distance);
-                    noonCode.put(date, code(summary.optString("symbol_code", "")));
+                    noonCode.put(date, WeatherCodes.code(summary.optString("symbol_code", "")));
                 }
             }
         }
@@ -192,41 +194,13 @@ final class WeatherSource {
         return w;
     }
 
-    /** MET Norway's symbol_code → Open-Meteo's WMO weather code (what the app's symbols are drawn from). */
-    static int code(String symbol) {
-        if (symbol == null || symbol.isEmpty()) return -1;
-        String s = symbol.replace("_day", "").replace("_night", "").replace("_polartwilight", "");
-        Integer c = SYMBOL.get(s);
-        return c == null ? -1 : c;
-    }
-
-    private static final Map<String, Integer> SYMBOL = new HashMap<>();
-    static {
-        SYMBOL.put("clearsky", 0);
-        SYMBOL.put("fair", 1);
-        SYMBOL.put("partlycloudy", 2);
-        SYMBOL.put("cloudy", 3);
-        SYMBOL.put("fog", 45);
-        SYMBOL.put("lightrain", 61);
-        SYMBOL.put("lightrainshowers", 80);
-        SYMBOL.put("rain", 63);
-        SYMBOL.put("rainshowers", 81);
-        SYMBOL.put("heavyrain", 65);
-        SYMBOL.put("heavyrainshowers", 82);
-        SYMBOL.put("lightsleet", 66);
-        SYMBOL.put("sleet", 67);
-        SYMBOL.put("heavysleet", 67);
-        SYMBOL.put("lightsnow", 71);
-        SYMBOL.put("lightsnowshowers", 85);
-        SYMBOL.put("snow", 73);
-        SYMBOL.put("snowshowers", 86);
-        SYMBOL.put("heavysnow", 75);
-        SYMBOL.put("heavysnowshowers", 86);
-        SYMBOL.put("rainandthunder", 95);
-        SYMBOL.put("heavyrainandthunder", 99);
-        SYMBOL.put("sleetandthunder", 96);
-        SYMBOL.put("snowandthunder", 95);
-        SYMBOL.put("partlycloudyandthunder", 95);
+    /** The symbol of a timeseries point: the next hour when it's there, otherwise the next six. */
+    private static String symbolOf(JSONObject data) throws Exception {
+        if (data == null) return "";
+        JSONObject h1 = data.optJSONObject("next_1_hours");
+        if (h1 != null) return h1.getJSONObject("summary").optString("symbol_code", "");
+        JSONObject h6 = data.optJSONObject("next_6_hours");
+        return h6 == null ? "" : h6.getJSONObject("summary").optString("symbol_code", "");
     }
 
     // MARK: - Time
