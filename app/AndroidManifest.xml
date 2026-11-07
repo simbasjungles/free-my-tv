@@ -163,18 +163,27 @@
         </activity>
 
         <!-- Fire TV: the same home screen opened as a regular app (no resumeWhilePausing, which leaves window focus on
-             Amazon's paused launcher on Fire OS). -->
+             Amazon's paused launcher on Fire OS). It is exported and answers HOME so a launcher helper can start it by
+             name; RemoteKeyService also brings it back to the front on every Home press. -->
         <activity
             android:name=".FireHomeActivity"
             android:process=":home"
-            android:exported="false"
+            android:exported="true"
             android:label="Free My TV"
             android:launchMode="singleTask"
-            android:taskAffinity="io.freemytv.settings"
+            android:taskAffinity=""
+            android:stateNotNeeded="true"
+            android:clearTaskOnLaunch="true"
             android:excludeFromRecents="true"
             android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
-            android:theme="@style/FreeMyTV.Home" />
+            android:theme="@style/FreeMyTV.Home">
+            <intent-filter android:priority="1">
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <!-- The quick settings panel the remote's Settings button opens in Free My TV mode (RemoteKeys), over what's
              playing: a window on the left of the screen, not the whole screen. -->

@@ -125,6 +125,7 @@ public class QuickPanelActivity extends Activity {
     }
 
     private boolean open(Intent... intents) {
+        HomeMode.holdHome(this, 6_000);   // Fire TV: TV Settings is the launcher's own window
         for (Intent intent : intents) {
             try {
                 startActivity(new Intent(intent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));

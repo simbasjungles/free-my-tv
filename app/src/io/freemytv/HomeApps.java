@@ -640,9 +640,12 @@ final class HomeApps {
                 intent = inputIntent(a, it);
                 break;
             case SETTINGS:
-                intent = new Intent().setComponent(new ComponentName(a, SettingsActivity.class));
+                // On Fire TV the settings are reached only this way: any other launch of SettingsActivity opens Home.
+                intent = new Intent().setComponent(new ComponentName(a, SettingsActivity.class))
+                        .putExtra(SettingsActivity.EXTRA_SETTINGS, true);
                 break;
             case ANDROID_SETTINGS:
+                HomeMode.holdHome(a, 6_000);   // Fire TV: its settings are the launcher's own window
                 intent = new Intent(Settings.ACTION_SETTINGS);
                 // Where nothing answers it, Android TV's own settings by name: on the HY300 Pro+ the stock home
                 // (com.htc.magcubicos) is the one that does, and Free My TV mode turns it off (#379).

@@ -1,11 +1,13 @@
 package io.freemytv;
 
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.UiModeManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Build;
 import android.os.SystemClock;
+import android.view.accessibility.AccessibilityManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -47,8 +49,9 @@ final class HomeMode {
     static final String FREE = "free", ORIGINAL = "original";
 
     /**
-     * Fire TV (Fire OS): Amazon's launcher keeps the Home button (`priority=950` on `CATEGORY_HOME`), so the switch
-     * refuses Free My TV mode while Original and the watchdog still run.
+     * Fire TV (Fire OS): Amazon's launcher keeps the Home button (`priority=950` on `CATEGORY_HOME`), so the switch has
+     * nothing to change there. Free My TV mode is the accessibility service (RemoteKeyService) bringing our home
+     * screen back over Amazon's launcher on every Home press; Original leaves Amazon's launcher alone.
      */
     static final boolean AMAZON = "Amazon".equalsIgnoreCase(Build.MANUFACTURER) || "Amazon".equalsIgnoreCase(Build.BRAND);
 
@@ -87,6 +90,39 @@ final class HomeMode {
     /** What the settings and the refused switch say on a phone. */
     static String phoneText() {
         return Ui.tr("Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.");
+    }
+
+    /** Fire TV: whether our home screen answers the Home button (RemoteKeyService). */
+    static boolean fireHome(Context c) {
+        if (!AMAZON) return false;
+        JSONObject s = state(c);
+        return FREE.equals(s.optString("mode")) && !s.optBoolean("homeReverted");
+    }
+
+    /**
+     * Fire TV, first start of this version: older versions took the Home button over whenever the accessibility service
+     * was on, without a Home Screen choice. Keep that (the settings now show it), and leave it off where the service is.
+     */
+    static void ensureFireChoice(Context c) {
+        if (!AMAZON) return;
+        JSONObject s = state(c);
+        if (s.has("fireChoice")) return;
+        try {
+            s.put("fireChoice", true);
+            if (fireServiceOn(c)) s.put("mode", FREE).put("homeReverted", false);
+        } catch (JSONException ignored) {}
+        save(c, s);
+    }
+
+    /** Whether RemoteKeyService is enabled in the TV's accessibility settings. */
+    static boolean fireServiceOn(Context c) {
+        AccessibilityManager am = c.getSystemService(AccessibilityManager.class);
+        if (am == null) return false;
+        for (AccessibilityServiceInfo info : am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)) {
+            String id = info.getId();
+            if (id != null && id.startsWith(PKG + "/")) return true;
+        }
+        return false;
     }
 
     /** Classic Android TV's home screen; its recommendations service crashes on the screensaver while it's off (#11). */
@@ -301,6 +337,7 @@ final class HomeMode {
 
     /** After the TV boots (and after a TV update): wait for the system to settle and check Free My TV mode. */
     static void bootCheck(Context c) {
+        ensureFireChoice(c);
         if (AMAZON) return;
         ensureRemoteService(c, 30_000);
         ModeJob.schedule(c, ModeJob.VERIFY, null, 45_000);
@@ -520,7 +557,16 @@ final class HomeMode {
     private static void applyFree(Context c) {
         JSONObject s = state(c);
         if (AMAZON) {
-            done(c, Ui.tr("On Fire TV the Home button belongs to Amazon's home screen. Free My TV stays an app here: open it from your apps."));
+            busy(c, Ui.tr("Turning Free My TV on…"));
+            s = state(c);
+            try {
+                s.put("mode", FREE).put("since", System.currentTimeMillis()).put("homeReverted", false).put("error", "");
+            } catch (JSONException ignored) {}
+            save(c, s);
+            done(c, null);
+            notice(c, fireServiceOn(c)
+                    ? Ui.tr("Free My TV is on: the Home button brings it back.")
+                    : Ui.tr("Free My TV is on. Turn on Free My TV in Settings > Accessibility, so the Home button brings it back."));
             return;
         }
         if (BRICKS) {
@@ -660,6 +706,17 @@ final class HomeMode {
 
     private static void applyOriginal(Context c) {
         JSONObject s = state(c);
+        if (AMAZON) {
+            busy(c, Ui.tr("Turning Free My TV off…"));
+            s = state(c);
+            try {
+                s.put("mode", ORIGINAL).put("since", System.currentTimeMillis()).put("homeReverted", false).put("error", "");
+            } catch (JSONException ignored) {}
+            save(c, s);
+            done(c, null);
+            notice(c, Ui.tr("Original mode: the Home button opens Amazon's home screen again."));
+            return;
+        }
         try (Adb adb = connect(c, s)) {
             busy(c, Ui.tr("Turning the apps back on…"));
             String home = originalHome(s);
@@ -780,6 +837,14 @@ final class HomeMode {
     static void revertHomeNow(Context app) {
         synchronized (RUN) {
             JSONObject s = state(app);
+            if (AMAZON) {
+                try {
+                    s.put("mode", ORIGINAL).put("homeReverted", true);
+                } catch (JSONException ignored) {}
+                save(app, s);
+                notice(app, Ui.tr("Free My TV's home screen crashed 3 times in a row; the Home button goes back to Amazon's home screen."));
+                return;
+            }
             try (Adb adb = Adb.connect(app, 10_000, null)) {
                 boolean ours = homeHolder(adb).contains(PKG);
                 if (!ours && (!FREE.equals(s.optString("mode")) || s.optBoolean("homeReverted"))) return;
@@ -840,6 +905,7 @@ final class HomeMode {
      */
     static void verifyNow(Context app) {
         synchronized (RUN) {
+            ensureFireChoice(app);
             JSONObject s = state(app);
             String fingerprint = Build.FINGERPRINT;
             boolean updated = !fingerprint.equals(s.optString("fingerprint", fingerprint));
@@ -1354,6 +1420,32 @@ final class HomeMode {
     }
 
     // MARK: - State (a file shared by the two processes; atomic writes)
+
+    private static final String HOME_HOLD = "home-hold";
+
+    /**
+     * Fire TV: leave Amazon's launcher alone for a moment, so the settings it opens are not covered by our home screen.
+     * TV Settings is part of the launcher (SettingsActivity starts its home with navigate_node=l_settings), so it
+     * reports the same window as Home and would otherwise be taken over at once.
+     */
+    static void holdHome(Context c, long ms) {
+        if (!AMAZON) return;
+        try (FileOutputStream out = new FileOutputStream(new File(c.getFilesDir(), HOME_HOLD))) {
+            out.write(Long.toString(System.currentTimeMillis() + ms).getBytes(StandardCharsets.US_ASCII));
+        } catch (IOException e) {
+            AppLog.w("home hold: " + e.getMessage());
+        }
+    }
+
+    static boolean homeHeld(Context c) {
+        try (FileInputStream in = new FileInputStream(new File(c.getFilesDir(), HOME_HOLD))) {
+            byte[] data = new byte[32];
+            int n = in.read(data);
+            return n > 0 && System.currentTimeMillis() < Long.parseLong(new String(data, 0, n, StandardCharsets.US_ASCII).trim());
+        } catch (IOException | NumberFormatException e) {
+            return false;
+        }
+    }
 
     static JSONObject state(Context c) {
         synchronized (FILE_LOCK) {

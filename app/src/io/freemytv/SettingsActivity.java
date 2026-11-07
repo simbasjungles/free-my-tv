@@ -50,11 +50,18 @@ import java.util.Set;
  * (HomeMode) and this screen only asks for it and follows the state file.
  */
 public class SettingsActivity extends Activity {
+    /**
+     * Opens these settings on Fire TV: the app's icon and Launcher Manager start the home screen there, so only this
+     * extra (the gear on the home screen) keeps the settings themselves open.
+     */
+    static final String EXTRA_SETTINGS = "io.freemytv.SETTINGS";
+
     private SettingsView view;
     private DreamView preview;   // "Screensaver": the screensaver right here, without changing the system setting
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        HomeMode.ensureFireChoice(this);
         if (openFireHome(getIntent())) return;
         Watchdog.install(this);
         Updates.schedule(this);   // the week's update check, once (a fresh install has had no boot or update yet)
@@ -66,14 +73,13 @@ public class SettingsActivity extends Activity {
     }
 
     /**
-     * Fire TV: Amazon keeps the Home button, so the app's icon opens the home screen (FireHomeActivity) directly;
-     * the gear on the home screen opens these settings (no launcher category).
+     * Fire TV: Amazon keeps the Home button, so the app's icon and Launcher Manager open the home screen
+     * (FireHomeActivity) directly. Launcher Manager may start this activity by name, without a launcher category, so
+     * every launch goes to the home screen unless it comes from our gear (EXTRA_SETTINGS) or asks for the preview.
      */
     private boolean openFireHome(Intent intent) {
-        if (!HomeMode.AMAZON || intent == null || !(intent.hasCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-                || intent.hasCategory(Intent.CATEGORY_LAUNCHER)) || intent.getBooleanExtra("screensaver", false)) {
-            return false;
-        }
+        if (!HomeMode.AMAZON || intent == null) return false;
+        if (intent.getBooleanExtra("screensaver", false) || intent.getBooleanExtra(EXTRA_SETTINGS, false)) return false;
         startActivity(new Intent(this, FireHomeActivity.class));
         finish();
         return true;
@@ -224,6 +230,8 @@ public class SettingsActivity extends Activity {
         private final boolean phone;   // installed on a phone: the settings say where it goes (HomeMode.phone)
         private int w, h;
         private float k = 1;
+        // Burn-in: where the text and rows are drawn this minute (BurnIn); the background stays.
+        private float burnX, burnY;
         private Paint title, subtitle, version, rowLabel, rowValue, rowSub, header, cellLabel, cellValue, warn, spinner, white, shadow;
         private TextPaint notice, rowValueFit;
 
@@ -270,7 +278,7 @@ public class SettingsActivity extends Activity {
                 String stamp = state.toString() + recs.toString() + updates.toString() + ":" + sleepLeft + ":" + whyNow
                         + ":" + hasKey + ":" + pendingAt + ":" + stalled + ":" + busy() + ":" + updatesValue()
                         + ":" + (Trakt.available() ? traktValue() : "") + ":" + System.currentTimeMillis() / 60_000
-                        + ":" + (screen == HOME_SETTINGS ? Photos.files(getContext()).size() : 0);
+                        + ":" + (screen == HOME_SETTINGS ? Photos.files(getContext()).size() : 0) + ":" + BurnIn.step();
                 if (!stamp.equals(pollStamp)) invalidate();
                 pollStamp = stamp;
                 handler.postDelayed(this, busy() || updating() ? 500 : 2000);
@@ -567,6 +575,13 @@ public class SettingsActivity extends Activity {
             }
             scene.drawBackground(c);
 
+            // Burn-in: the title, rows and pictures step a few pixels off their resting place (the background stays).
+            int burn = BurnIn.step();
+            burnX = BurnIn.x(burn) * k;
+            burnY = BurnIn.y(burn) * k;
+            int save = c.save();
+            c.translate(burnX, burnY);
+
             // On the left: big symbol, title, description.
             float cx = 500 * k;
             Symbols.draw(getContext(), c, "sparkles", cx, 400 * k, 150 * k, 0xEBFFFFFF);
@@ -579,6 +594,7 @@ public class SettingsActivity extends Activity {
             else if (screen == PICK_FROM) drawServices(c);
             else if (screen == WATCH_APPS) drawWatchApps(c);
             else drawList(c);
+            c.restoreToCount(save);
         }
 
         private void drawMain(Canvas c, float seconds) {

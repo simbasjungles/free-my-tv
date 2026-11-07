@@ -162,6 +162,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private RecentApps recents;
     private int zone = Z_SHELF;
 
+    // Burn-in: where the drawn content rests this minute (BurnIn), in pixels.
+    private float burnX, burnY;
+    private int burnStep = -1;
+
     // Night look (like Apple's "Automatic" appearance): darker from sunset to sunrise, with a 2 s transition.
     private static final long NIGHT_MS = 2000;
     private boolean nightTarget;
@@ -591,6 +595,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private final Runnable tick = new Runnable() {
         @Override public void run() {
             if (!running) return;
+            updateBurn();
             wake();
             playing.start();   // the listener allowed after the screen showed (a no-op once watching)
             data.refreshIfStale();
@@ -721,6 +726,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         }
         sheet.snap(sheet.target);
         motionDirty = true;
+        updateBurn();
         invalidateAll();
         idle = false;
         Choreographer.getInstance().postFrameCallback(this);
@@ -878,10 +884,40 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         v.layout(x, y, x + v.getMeasuredWidth(), y + v.getMeasuredHeight());
     }
 
+    /**
+     * Burn-in: what stays on screen (the clock, the tabs and cards, the shelf and the corner buttons) is drawn a few
+     * pixels off its resting place, while the background stays. The layers cache their pixels, so moving them costs one
+     * translation, not a redraw. The overlays (the drawer, All Apps, the menu, Recents) are not moved: they are open for
+     * a moment and would leave an edge of the screen uncovered.
+     */
+    @Override protected void dispatchDraw(Canvas c) {
+        long time = getDrawingTime();
+        for (int i = 0; i < getChildCount(); i++) {
+            View v = getChildAt(i);
+            boolean still = v == heroLayer || v == status || v == platter || v == tiles;
+            int save = still ? c.save() : 0;
+            if (still) c.translate(burnX, burnY);
+            drawChild(c, v, time);
+            if (still) c.restoreToCount(save);
+        }
+    }
+
+    private void updateBurn() {
+        if (k == 0) return;
+        int step = BurnIn.step();
+        if (step == burnStep) return;
+        burnStep = step;
+        burnX = BurnIn.x(step) * k;
+        burnY = BurnIn.y(step) * k;
+        invalidate();   // the parent draws the layers: moving them changes its display list, not theirs
+    }
+
     @Override protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
         w = width;
         h = height;
         k = w / 1920f;
+        burnStep = -1;
+        updateBurn();
         screen.set(0, 0, w, h);
         scene.setSize(w, h);
         watchArt.setScale(k);
