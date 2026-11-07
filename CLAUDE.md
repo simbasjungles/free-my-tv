@@ -573,8 +573,8 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   and opacity animate. Tizen 2.4 (2016) runs WebKit 538: no Intl (`fmt` in data.js rounds by hand), SVGs need a width
   and height, and `tv.js` adds a `lite` class there that turns off shadows and transitions, which its GPU can't keep up
   with (LGs whose `navigator.deviceMemory` reads 1, up to about 1.5 GB, get it too: webOS TV Lite sets went from 25 to
-  60 fps at a ratio of 2, #318, and from 45-50 to 59 at a ratio of 1, #383; Samsungs only when they also draw the page
-  at twice its size, `devicePixelRatio`, since none at a ratio of 1 has been measured); it also
+  60 fps at a ratio of 2, #318, and from 45-50 to 59 at a ratio of 1, #383; Samsungs too, where a 1.5 GB UN50AU7700 at a
+  ratio of 1 still stuttered with `flat` alone, #461); it also
   can't open the TV's settings (`TV.canOpenSettings`). Without Intl, `toLocaleDateString` ignores its options and
   writes the whole date, so `strings.js` takes weekday and month names from the catalogues there (`I18N.dateNames` in
   data.js: `weekday|`, `month|` and `monthday|` keys, the last in the form next to a day). Tizen 2.3 and 2.4 don't
