@@ -61,6 +61,7 @@ public class SettingsActivity extends Activity {
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        HomeMode.ensureFireChoice(this);
         if (openFireHome(getIntent())) return;
         Watchdog.install(this);
         Updates.schedule(this);   // the week's update check, once (a fresh install has had no boot or update yet)

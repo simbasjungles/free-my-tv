@@ -27,9 +27,11 @@ public class RemoteKeyService extends AccessibilityService {
     @Override protected void onServiceConnected() {
         super.onServiceConnected();
         if (!HomeMode.AMAZON) return;
+        HomeMode.ensureFireChoice(this);
         // At a power-on the launcher can be up before this service (so its window change is never seen), and a task
         // left from before may be there but behind it: bring the home screen up once, after the TV has settled.
         handler.postDelayed(() -> {
+            if (!HomeMode.fireHome(this)) return;
             if (SystemClock.elapsedRealtime() < BOOT_SETTLE || !hasTask()) showHome();
         }, 3000);
     }
@@ -40,8 +42,12 @@ public class RemoteKeyService extends AccessibilityService {
 
     @Override public void onAccessibilityEvent(AccessibilityEvent event) {
         if (!HomeMode.AMAZON || event == null || event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
+        if (!HomeMode.fireHome(this)) return;
         CharSequence pkg = event.getPackageName();
         if (pkg == null || !"com.amazon.tv.launcher".contentEquals(pkg)) return;
+        // TV Settings is part of Amazon's launcher (the same home window, with navigate_node=l_settings): the app holds
+        // the Home button for a moment when it opens it, so the settings are not covered by our home screen at once.
+        if (HomeMode.homeHeld(this)) return;
         long now = SystemClock.uptimeMillis();
         if (now - lastHome < 1000) return;
         lastHome = now;
@@ -55,21 +61,36 @@ public class RemoteKeyService extends AccessibilityService {
     private void showHome() {
         ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
         List<ActivityManager.AppTask> tasks = am == null ? null : am.getAppTasks();
+        ActivityManager.AppTask any = null;
         if (tasks != null) {
             for (ActivityManager.AppTask task : tasks) {
-                if (task.getTaskInfo().id < 0) continue;   // one still being created
-                try {
-                    task.moveToFront();
-                    AppLog.w("Home: task " + task.getTaskInfo().id + " back to the front");
-                    return;
-                } catch (RuntimeException e) {
-                    AppLog.w("Home: couldn't bring task " + task.getTaskInfo().id + " back: " + e);
+                ActivityManager.RecentTaskInfo info = task.getTaskInfo();
+                if (info.id < 0) continue;   // one still being created
+                android.content.ComponentName top = info.topActivity != null ? info.topActivity : info.baseActivity;
+                String cls = top == null ? "" : top.getClassName();
+                // The settings task is ours too: Home must come back to the home screen, never to the settings.
+                if (cls.endsWith("HomeActivity")) {
+                    if (move(task)) return;
+                } else if (any == null) {
+                    any = task;
                 }
             }
+            if (any != null && move(any)) return;
         }
         AppLog.w("Home: no task of ours, starting the home screen");
         startActivity(new Intent(this, FireHomeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+    }
+
+    private boolean move(ActivityManager.AppTask task) {
+        try {
+            task.moveToFront();
+            AppLog.w("Home: task " + task.getTaskInfo().id + " back to the front");
+            return true;
+        } catch (RuntimeException e) {
+            AppLog.w("Home: couldn't bring task " + task.getTaskInfo().id + " back: " + e);
+            return false;
+        }
     }
 
     private boolean hasTask() {
