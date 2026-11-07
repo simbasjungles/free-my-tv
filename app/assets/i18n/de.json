@@ -438,6 +438,7 @@
  "{h} h {m} min left": "noch {h} Std. {m} Min.",
  "{h}h {m}m": "{h} h {m} min",
  "{i} of {n}": "{i} von {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} min",
  "{name}, tab {i} of {n}": "{name}, Tab {i} von {n}",
  "{name}, {state}": "{name}, {state}",

@@ -438,6 +438,7 @@
  "{h} h {m} min left": "nog {h} u {m} min",
  "{h}h {m}m": "{h} u {m} min",
  "{i} of {n}": "{i} van {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} min",
  "{name}, tab {i} of {n}": "{name}, tabblad {i} van {n}",
  "{name}, {state}": "{name}, {state}",

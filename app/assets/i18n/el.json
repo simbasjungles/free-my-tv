@@ -438,6 +438,7 @@
  "{h} h {m} min left": "απομένουν {h} ώ. {m} λ.",
  "{h}h {m}m": "{h} ώ {m} λ",
  "{i} of {n}": "{i} από {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} λ",
  "{name}, tab {i} of {n}": "{name}, καρτέλα {i} από {n}",
  "{name}, {state}": "{name}, {state}",

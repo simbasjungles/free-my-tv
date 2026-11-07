@@ -438,6 +438,7 @@
  "{h} h {m} min left": "au rămas {h} h {m} min",
  "{h}h {m}m": "{h} h {m} min",
  "{i} of {n}": "{i} din {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} min",
  "{name}, tab {i} of {n}": "{name}, fila {i} din {n}",
  "{name}, {state}": "{name}, {state}",

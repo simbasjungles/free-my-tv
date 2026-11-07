@@ -438,6 +438,7 @@
  "{h} h {m} min left": "{h} sa {m} dk kaldı",
  "{h}h {m}m": "{h} sa {m} dk",
  "{i} of {n}": "{i}, toplam {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} dk",
  "{name}, tab {i} of {n}": "{name}, sekme {i}, toplam {n}",
  "{name}, {state}": "{name}, {state}",

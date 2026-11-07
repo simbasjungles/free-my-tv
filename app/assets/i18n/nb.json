@@ -438,6 +438,7 @@
  "{h} h {m} min left": "{h} t {m} min igjen",
  "{h}h {m}m": "{h} t {m} min",
  "{i} of {n}": "{i} av {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} min",
  "{name}, tab {i} of {n}": "{name}, fane {i} av {n}",
  "{name}, {state}": "{name}, {state}",

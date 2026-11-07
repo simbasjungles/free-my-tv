@@ -438,6 +438,7 @@
  "{h} h {m} min left": "剩余 {h} 小时 {m} 分钟",
  "{h}h {m}m": "{h} 小时 {m} 分钟",
  "{i} of {n}": "第 {i} 项，共 {n} 项",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} 分钟",
  "{name}, tab {i} of {n}": "{name}，标签 {i}/{n}",
  "{name}, {state}": "{name}，{state}",

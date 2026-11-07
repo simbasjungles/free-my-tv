@@ -438,6 +438,7 @@
  "{h} h {m} min left": "{h} h {m} min left",
  "{h}h {m}m": "{h}h {m}m",
  "{i} of {n}": "{i} of {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m}m",
  "{name}, tab {i} of {n}": "{name}, tab {i} of {n}",
  "{name}, {state}": "{name}, {state}",

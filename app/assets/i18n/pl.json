@@ -438,6 +438,7 @@
  "{h} h {m} min left": "zostało {h} godz. {m} min",
  "{h}h {m}m": "{h} godz. {m} min",
  "{i} of {n}": "{i} z {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} min",
  "{name}, tab {i} of {n}": "{name}, karta {i} z {n}",
  "{name}, {state}": "{name}, {state}",

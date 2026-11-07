@@ -438,6 +438,7 @@
  "{h} h {m} min left": "残り{h}時間{m}分",
  "{h}h {m}m": "{h}時間{m}分",
  "{i} of {n}": "{n}件中{i}件目",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m}分",
  "{name}, tab {i} of {n}": "{name}、タブ {i}/{n}",
  "{name}, {state}": "{name}、{state}",

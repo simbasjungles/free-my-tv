@@ -438,6 +438,7 @@
  "{h} h {m} min left": "còn {h} giờ {m} phút",
  "{h}h {m}m": "{h} giờ {m} phút",
  "{i} of {n}": "{i} trên {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} phút",
  "{name}, tab {i} of {n}": "{name}, thẻ {i} trên {n}",
  "{name}, {state}": "{name}, {state}",

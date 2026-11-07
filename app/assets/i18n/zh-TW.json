@@ -438,6 +438,7 @@
  "{h} h {m} min left": "剩餘 {h} 小時 {m} 分鐘",
  "{h}h {m}m": "{h} 小時 {m} 分鐘",
  "{i} of {n}": "第 {i} 項，共 {n} 項",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} 分鐘",
  "{name}, tab {i} of {n}": "{name}，第 {i} 個索引標籤，共 {n} 個",
  "{name}, {state}": "{name}，{state}",

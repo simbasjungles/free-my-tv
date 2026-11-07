@@ -438,6 +438,7 @@
  "{h} h {m} min left": "осталось {h} ч {m} мин",
  "{h}h {m}m": "{h} ч {m} мин",
  "{i} of {n}": "{i} из {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} мин",
  "{name}, tab {i} of {n}": "{name}, вкладка {i} из {n}",
  "{name}, {state}": "{name}, {state}",

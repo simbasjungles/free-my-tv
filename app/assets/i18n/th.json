@@ -438,6 +438,7 @@
  "{h} h {m} min left": "เหลือ {h} ชม. {m} นาที",
  "{h}h {m}m": "{h} ชม. {m} นาที",
  "{i} of {n}": "{i} จาก {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} นาที",
  "{name}, tab {i} of {n}": "{name}, แท็บ {i} จาก {n}",
  "{name}, {state}": "{name}, {state}",

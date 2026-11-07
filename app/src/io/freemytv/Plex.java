@@ -51,8 +51,9 @@ final class Plex {
     /** The token whose lists are being fetched now, or null: another account's slow fetch doesn't hold up a new one. */
     private static volatile String fetchingFor;
     private static volatile long fetchedAt;
-    /** Your server's pictures failed to connect: until then, the others don't wait for it (WatchArt shows banners). */
+    /** A server's pictures failed to connect: until then, its others don't wait for it (WatchArt shows banners). */
     private static volatile long picturesDownUntil;
+    private static volatile String picturesDown = "";   // that server's id
     private static volatile Runnable listener;
     private static final Object SIGN_IN = new Object();
 
@@ -152,6 +153,7 @@ final class Plex {
         }
         message = "";
         fetchedAt = 0;
+        picturesDownUntil = 0;
         Runnable l = listener;
         if (l != null) l.run();
     }
@@ -428,11 +430,14 @@ final class Plex {
      */
     static byte[] picture(Context c, String key) throws IOException {
         // The key is PICTURE + server + "|" + the picture (WatchNext.Item.plex).
-        String image = key.startsWith(PICTURE) && key.indexOf('|') > 0 ? key.substring(key.indexOf('|') + 1) : "";
+        int bar = key.startsWith(PICTURE) ? key.indexOf('|') : -1;
+        String image = bar > 0 ? key.substring(bar + 1) : "", serverId = bar > 0 ? key.substring(PICTURE.length(), bar) : "";
         if (!signedIn(c) || image.isEmpty()) throw new IOException("no Plex picture");
         HttpURLConnection conn;
         boolean server = !image.startsWith("https://");
-        if (server && System.currentTimeMillis() < picturesDownUntil) throw new IOException("Plex server down");
+        if (server && serverId.equals(picturesDown) && System.currentTimeMillis() < picturesDownUntil) {
+            throw new IOException("Plex server down");
+        }
         if (!server) {
             conn = (HttpURLConnection) new URL(image).openConnection();
         } else {
@@ -449,7 +454,10 @@ final class Plex {
             try {
                 status = conn.getResponseCode();
             } catch (IOException e) {
-                if (server) picturesDownUntil = System.currentTimeMillis() + EVERY;   // no answer: a minute's rest
+                if (server) {   // no answer: a minute's rest for this server's pictures
+                    picturesDown = serverId;
+                    picturesDownUntil = System.currentTimeMillis() + EVERY;
+                }
                 throw e;
             }
             if (status != 200) throw new IOException("Plex picture: HTTP " + status);

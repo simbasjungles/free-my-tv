@@ -438,6 +438,7 @@
  "{h} h {m} min left": "{h} h {m} min kvar",
  "{h}h {m}m": "{h} h {m} min",
  "{i} of {n}": "{i} av {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} min",
  "{name}, tab {i} of {n}": "{name}, flik {i} av {n}",
  "{name}, {state}": "{name}, {state}",

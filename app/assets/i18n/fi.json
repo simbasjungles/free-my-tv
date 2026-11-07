@@ -438,6 +438,7 @@
  "{h} h {m} min left": "{h} h {m} min jäljellä",
  "{h}h {m}m": "{h} h {m} min",
  "{i} of {n}": "{i}/{n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} min",
  "{name}, tab {i} of {n}": "{name}, välilehti {i}/{n}",
  "{name}, {state}": "{name}, {state}",

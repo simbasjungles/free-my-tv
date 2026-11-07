@@ -438,6 +438,7 @@
  "{h} h {m} min left": "{h}시간 {m}분 남음",
  "{h}h {m}m": "{h}시간 {m}분",
  "{i} of {n}": "{n}개 중 {i}번째",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m}분",
  "{name}, tab {i} of {n}": "{name}, 탭 {i}/{n}",
  "{name}, {state}": "{name}, {state}",

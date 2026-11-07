@@ -617,7 +617,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private String spokenWatchNote() {
         if (!watching.isEmpty()) return watchNote();
         if (!watchLoaded) return null;
-        return plexHint ? emptyWatchText() + " " + plexHintText() : emptyWatchText();
+        return plexHint ? Ui.trf("{message} {hint}", "message", emptyWatchText(), "hint", plexHintText()) : emptyWatchText();
     }
 
     /** Under Continue Watching, painted and spoken (WATCH_HINT): where to sign in to Plex. */

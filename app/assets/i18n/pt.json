@@ -438,6 +438,7 @@
  "{h} h {m} min left": "faltam {h} h {m} min",
  "{h}h {m}m": "{h} h {m} min",
  "{i} of {n}": "{i} de {n}",
+ "{message} {hint}": "{message} {hint}",
  "{m}m": "{m} min",
  "{name}, tab {i} of {n}": "{name}, aba {i} de {n}",
  "{name}, {state}": "{name}, {state}",
