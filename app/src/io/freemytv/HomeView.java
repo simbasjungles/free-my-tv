@@ -605,6 +605,21 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                 : Ui.tr("Missing permission: pick Continue Watching again in Home Settings.");
     }
 
+    /**
+     * The line under a row with cards: the missing permission (the other apps' titles are hidden while Plex's show),
+     * else where to sign in to Plex; null for none.
+     */
+    private String watchNote() {
+        return !watchAllowed ? emptyWatchText() : plexHint ? plexHintText() : null;
+    }
+
+    /** What TalkBack reads below the cards (WATCH_HINT): the empty row's text and the Plex hint, or watchNote. */
+    private String spokenWatchNote() {
+        if (!watching.isEmpty()) return watchNote();
+        if (!watchLoaded) return null;
+        return plexHint ? emptyWatchText() + " " + plexHintText() : emptyWatchText();
+    }
+
     /** Under Continue Watching, painted and spoken (WATCH_HINT): where to sign in to Plex. */
     private static String plexHintText() {
         return Ui.tr("To see Plex here, sign in: Home Settings › Continue Watching apps › Plex.");
@@ -3691,7 +3706,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         for (int i = picksMode() ? 0 : 3; i < 3 + lightButtons.size(); i++) out.add(a11yId(Z_TOP, i));
         for (int i = 0; i < Math.min(Recs.MAX_CARDS, cards.size()); i++) out.add(a11yId(Z_CARDS, i));
         if (continueMode()) for (int i = 0; i < watching.size(); i++) out.add(a11yId(Z_WATCH, i));
-        if (continueMode() && plexHint) out.add(a11yId(WATCH_HINT, 0));   // where to sign in to Plex, read as text
+        if (continueMode() && spokenWatchNote() != null) out.add(a11yId(WATCH_HINT, 0));   // the row's note, read as text
         for (int i = shelfFirst; i < Math.min(shelf.size(), shelfFirst + shelfVisible); i++) out.add(a11yId(Z_SHELF, i));
         for (int i = 0; i < drawerItems.size(); i++) out.add(a11yId(Z_DRAWER, i));
         if (drawerOpen && Prefs.weather()) out.add(a11yId(WIDGETS, 0));
@@ -3733,9 +3748,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                 return label(shelf, i);
             case Z_DRAWER: return label(drawerItems, i);
             case WIDGETS: return i == 0 ? weatherText() : quotesText();
-            case WATCH_HINT:
-                if (!continueMode() || !plexHint) return "";
-                return (watching.isEmpty() ? emptyWatchText() + " " : "") + plexHintText();
+            case WATCH_HINT: {
+                String note = continueMode() ? spokenWatchNote() : null;
+                return note == null ? "" : note;
+            }
             default: return "";
         }
     }
@@ -3784,7 +3800,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                 dy = heroLayer.getTranslationY();
                 break;
             case WATCH_HINT: {
-                if (!continueMode() || !plexHint) return false;
+                if (!continueMode() || spokenWatchNote() == null) return false;
                 float top = (watching.isEmpty() ? L_CARDS_TOP + 30 : L_CARDS_TOP + WatchArt.H + 105) * k;
                 a11yRect.set(MARGIN * k, top, CONTENT_R * k, top + (watching.isEmpty() ? 80 : 50) * k);
                 dy = heroLayer.getTranslationY();
@@ -4200,7 +4216,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         for (int i = 0; i < watching.size(); i++) if (i != top) drawWatchCard(c, i);
         if (top >= 0) drawWatchCard(c, top);
         c.restore();
-        if (plexHint) c.drawText(plexHintText(), MARGIN * k, (L_CARDS_TOP + WatchArt.H + 140) * k, lCardMeta);
+        String note = watchNote();
+        if (note != null) c.drawText(note, MARGIN * k, (L_CARDS_TOP + WatchArt.H + 140) * k, lCardMeta);
     }
 
     private float watchLeftEdge() {

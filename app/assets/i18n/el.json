@@ -453,6 +453,7 @@
  "{state} · {account}": "{state} · {account}",
  "{time} left": "απομένουν {time}",
  "{url}, code {code}": "{url}, κωδικός {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "Βγήκε η {version}: φτιάξτε το ξανά",
  "← → to move · OK to drop · Back to cancel": "← → μετακίνηση · OK τοποθέτηση · Πίσω ακύρωση"
 }

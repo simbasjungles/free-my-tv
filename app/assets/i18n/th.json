@@ -453,6 +453,7 @@
  "{state} · {account}": "{state} · {account}",
  "{time} left": "เหลือ {time}",
  "{url}, code {code}": "{url}, รหัส {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} ออกแล้ว: บิลด์ใหม่อีกครั้ง",
  "← → to move · OK to drop · Back to cancel": "← → ย้าย · OK วาง · ย้อนกลับ ยกเลิก"
 }

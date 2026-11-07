@@ -453,6 +453,7 @@
  "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} jäljellä",
  "{url}, code {code}": "{url}, koodi {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} on julkaistu: rakenna se uudelleen",
  "← → to move · OK to drop · Back to cancel": "← → siirrä · OK pudota · Takaisin peruuta"
 }

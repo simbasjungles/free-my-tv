@@ -453,6 +453,7 @@
  "{state} · {account}": "{state} · {account}",
  "{time} left": "剩余 {time}",
  "{url}, code {code}": "{url},代码 {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} 已发布：请重新构建",
  "← → to move · OK to drop · Back to cancel": "← → 移动 · OK 放置 · 返回 取消"
 }

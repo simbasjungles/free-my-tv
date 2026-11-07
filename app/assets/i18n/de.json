@@ -453,6 +453,7 @@
  "{state} · {account}": "{state} · {account}",
  "{time} left": "noch {time}",
  "{url}, code {code}": "{url}, Code {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} ist da: neu bauen",
  "← → to move · OK to drop · Back to cancel": "← → verschieben · OK ablegen · Zurück abbrechen"
 }

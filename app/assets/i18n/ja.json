@@ -453,6 +453,7 @@
  "{state} · {account}": "{state} · {account}",
  "{time} left": "残り{time}",
  "{url}, code {code}": "{url}、コード {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} が出ました：もう一度ビルドしてください",
  "← → to move · OK to drop · Back to cancel": "← → 移動 · OK 配置 · 戻る キャンセル"
 }

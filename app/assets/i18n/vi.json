@@ -453,6 +453,7 @@
  "{state} · {account}": "{state} · {account}",
  "{time} left": "còn {time}",
  "{url}, code {code}": "{url}, mã {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "Đã có {version}: hãy build lại",
  "← → to move · OK to drop · Back to cancel": "← → di chuyển · OK đặt · Quay lại hủy"
 }

@@ -453,6 +453,7 @@
  "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} kvar",
  "{url}, code {code}": "{url}, kod {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} är ute: bygg den igen",
  "← → to move · OK to drop · Back to cancel": "← → flytta · OK släpp · Tillbaka avbryt"
 }

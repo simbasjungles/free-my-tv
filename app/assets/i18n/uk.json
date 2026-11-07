@@ -453,6 +453,7 @@
  "{state} · {account}": "{state} · {account}",
  "{time} left": "залишилось {time}",
  "{url}, code {code}": "{url}, код {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "Вийшла {version}: зберіть знову",
  "← → to move · OK to drop · Back to cancel": "← → перемістити · OK розмістити · Назад скасувати"
 }

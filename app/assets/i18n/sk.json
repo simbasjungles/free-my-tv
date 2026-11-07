@@ -453,6 +453,7 @@
  "{state} · {account}": "{state} · {account}",
  "{time} left": "zostáva {time}",
  "{url}, code {code}": "{url}, kód {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "Vyšla verzia {version}: zostavte ju znova",
  "← → to move · OK to drop · Back to cancel": "← → presunúť · OK umiestniť · Späť zrušiť"
 }

@@ -78,7 +78,7 @@ final class Plex {
     static String user(Context c) {
         if (!signedIn(c)) return "";
         String user = sp(c).getString("user", ""), server = sp(c).getString("serverName", "");
-        return server.isEmpty() ? user : user.isEmpty() ? server : user + " · " + server;
+        return server.isEmpty() ? user : user.isEmpty() ? server : Ui.trf("{user} · {server}", "user", user, "server", server);
     }
 
     static String code() { return signingIn ? code : null; }

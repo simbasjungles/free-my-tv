@@ -2064,7 +2064,7 @@ public class SettingsActivity extends Activity {
             boolean signedIn = Plex.signedIn(c), on = !Prefs.watchOff().contains(Plex.PKG);
             String[] items = {signedIn ? Ui.tr("Sign out") : Ui.tr("Sign in"), on ? Ui.tr("Turn off") : Ui.tr("Turn on")};
             new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                    .setTitle(signedIn && !Plex.user(c).isEmpty() ? "Plex · " + Plex.user(c) : "Plex")
+                    .setTitle("Plex")   // the row behind it already says who is signed in
                     .setItems(items, (d, which) -> {
                         // Each choice does what its label said, if it still applies (a sign-in may have finished
                         // while the menu was open): Sign in never starts a second account, Sign out only signs out.
