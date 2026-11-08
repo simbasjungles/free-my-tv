@@ -40,6 +40,17 @@ def key_path(ip):
     return os.path.join(os.path.expanduser('~'), '.ssh', 'freemytv_webos_' + ip.replace('.', '_'))
 
 
+def saved_key(ip):
+    """The key saved for this address or, if none, the newest one saved: Developer Mode's key belongs to the TV, and a
+    TV's address can change (a new DHCP lease after a power cut). The path for this address when nothing is saved."""
+    path = key_path(ip)
+    folder = os.path.dirname(path)
+    if os.path.exists(path) or not os.path.isdir(folder):
+        return path
+    saved = [os.path.join(folder, n) for n in os.listdir(folder) if n.startswith('freemytv_webos_') and '.' not in n]
+    return max(saved, key=os.path.getmtime) if saved else path
+
+
 def lock(path):
     """Only this user may read the key: chmod is enough on macOS and Linux, Windows' OpenSSH checks the file's ACL."""
     os.chmod(path, 0o600)
@@ -64,6 +75,11 @@ def fetch_key(ip):
         with urllib.request.urlopen(url, timeout=6) as r:
             data = r.read()
     except Exception as e:
+        # Key Server off (as it should be when not needed) and the TV at a new address: the key saved for it before.
+        saved = saved_key(ip)
+        if saved != path:
+            print('Using the key saved for this TV at its earlier address (%s).' % os.path.basename(saved))
+            return saved
         sys.exit('Couldn\'t reach the Key Server (%s). In the TV\'s Developer Mode app, turn on Key Server.' % e)
     passphrase = getpass.getpass('Passphrase shown in Developer Mode on the TV: ').strip()
     os.makedirs(os.path.dirname(path), exist_ok=True)
