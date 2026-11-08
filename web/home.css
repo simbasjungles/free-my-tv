@@ -5,11 +5,16 @@
  * No CSS variables, grid or backdrop-filter: older LG TVs (webOS 3 and 4) don't have them, and blur is too heavy for
  * their GPUs. Only transform and opacity animate.
  */
-@font-face {
-  font-family: 'Inter';
-  src: url('fonts/InterVariable.ttf') format('truetype');
-  font-weight: 100 900;
-}
+/* Inter in fixed weights (rsms/inter 4.1, web/fonts): Chromium before 62 (webOS 3 and 4, Tizen 3) can't use a variable
+   font's weights nor a "100 900" range. Measured on a 2016 LG (webOS 3.4): with the variable font alone, text at 200, 400
+   and 700 drew alike (the same width, 1102 px); with these, 700 is 1128 px. A TV loads only the weights a page shows,
+   and 100 falls back to 200. Without WOFF2 (Tizen 2.4's WebKit) each face falls back to the variable font, as before. */
+@font-face { font-family: 'Inter'; src: url('fonts/Inter-ExtraLight.woff2') format('woff2'), url('fonts/InterVariable.ttf') format('truetype'); font-weight: 200; }
+@font-face { font-family: 'Inter'; src: url('fonts/Inter-Light.woff2') format('woff2'), url('fonts/InterVariable.ttf') format('truetype'); font-weight: 300; }
+@font-face { font-family: 'Inter'; src: url('fonts/Inter-Regular.woff2') format('woff2'), url('fonts/InterVariable.ttf') format('truetype'); font-weight: 400; }
+@font-face { font-family: 'Inter'; src: url('fonts/Inter-Medium.woff2') format('woff2'), url('fonts/InterVariable.ttf') format('truetype'); font-weight: 500; }
+@font-face { font-family: 'Inter'; src: url('fonts/Inter-SemiBold.woff2') format('woff2'), url('fonts/InterVariable.ttf') format('truetype'); font-weight: 600; }
+@font-face { font-family: 'Inter'; src: url('fonts/Inter-Bold.woff2') format('woff2'), url('fonts/InterVariable.ttf') format('truetype'); font-weight: 700; }
 
 html, body {
   margin: 0;
