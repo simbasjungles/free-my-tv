@@ -23,6 +23,7 @@ import android.graphics.BlurMaskFilter;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.RadialGradient;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
@@ -2197,7 +2198,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         }
         boolean off = it.kind == HomeApps.INPUT && !it.connected
                 || it.kind == HomeApps.HOME_ASSISTANT && it.control != null && !it.control.on();
-        int ink = blend(tone(off ? 0xFF8E8E93 : L_INK, off ? 0x6BFFFFFF : 0xF2FFFFFF), INK, f);
+        // The console's icon carries its blue in the drawer too (the same tint as its shelf tile).
+        int ink = ConsoleShelf.SYMBOL.equals(it.symbol)
+                ? blend(Ui.alpha(ConsoleShelf.TINT, off ? 0.55f : 1f), INK, f)
+                : blend(tone(off ? 0xFF8E8E93 : L_INK, off ? 0x6BFFFFFF : 0xF2FFFFFF), INK, f);
         Symbols.draw(getContext(), c, it.symbol, cx, cell.top + cell.height() * 0.4f, 34 * k * s, ink);
         drawerLabel.setColor(ink);
         drawerLabel.setTextSize(23 * k * s);
@@ -3525,7 +3529,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             if (appsStale && running) reloadSoon();
             return;
         }
-        for (HomeApps.Item it : shelf) order.add(it.pkg);
+        order.addAll(HomeApps.packagesOf(shelf));
         final Context c = getContext().getApplicationContext();
         pendingOrderSaves++;
         LOADER.execute(() -> {
