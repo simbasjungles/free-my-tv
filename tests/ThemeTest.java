@@ -60,6 +60,29 @@ public final class ThemeTest {
         check(Theme.period(Theme.SCHEDULE, 24 * H + 13 * H, RISE, SET).equals(Theme.PERIOD_SUNSET),
                 "a time past a day is the next day's");
 
+        // The status icon per period (R2): sun by day, sunset in the afternoon, moon at night, badge at 22:00–05:29.
+        check(Theme.periodSymbol(Theme.PERIOD_LIGHT).equals("sunny"), "light is the sun");
+        check(Theme.periodSymbol(Theme.PERIOD_SUNSET).equals("sunset"), "the afternoon is the sunset");
+        check(Theme.periodSymbol(Theme.PERIOD_DARK).equals("clear_night"), "dark is the moon");
+        check(Theme.periodSymbol(Theme.PERIOD_LATE).equals("bedtime"), "late night is the badge");
+        check(Theme.periodSymbol("sepia").equals("sunny"), "an unknown period reads as light");
+        // Every mode reaches its icon: automatic through the sun, the fixed ones straight away.
+        check(Theme.periodSymbol(Theme.period(Theme.AUTO, 12 * H, RISE, SET)).equals("sunny"), "automatic by day");
+        check(Theme.periodSymbol(Theme.period(Theme.AUTO, 23 * H, RISE, SET)).equals("clear_night"), "automatic at night");
+        check(Theme.periodSymbol(Theme.period(Theme.LIGHT, 23 * H, RISE, SET)).equals("sunny"), "light stays the sun");
+        check(Theme.periodSymbol(Theme.period(Theme.SUNSET, 3 * H, RISE, SET)).equals("sunset"), "sunset stays itself");
+        check(Theme.periodSymbol(Theme.period(Theme.DARK, 12 * H, RISE, SET)).equals("clear_night"), "dark stays the moon");
+        check(Theme.periodSymbol(Theme.period(Theme.SCHEDULE, 8 * H, RISE, SET)).equals("sunny"), "schedule morning");
+        check(Theme.periodSymbol(Theme.period(Theme.SCHEDULE, 15 * H, RISE, SET)).equals("sunset"), "schedule afternoon");
+        check(Theme.periodSymbol(Theme.period(Theme.SCHEDULE, 20 * H, RISE, SET)).equals("clear_night"), "schedule evening");
+        check(Theme.periodSymbol(Theme.period(Theme.SCHEDULE, 23 * H, RISE, SET)).equals("bedtime"), "schedule late night");
+        // The warm list has to cover every icon the row can draw (the period changes without a relayout).
+        for (String period : new String[] {Theme.PERIOD_LIGHT, Theme.PERIOD_SUNSET, Theme.PERIOD_DARK, Theme.PERIOD_LATE}) {
+            boolean warmed = false;
+            for (String name : Theme.PERIOD_SYMBOLS) warmed |= name.equals(Theme.periodSymbol(period));
+            check(warmed, "the warmed icons cover " + period);
+        }
+
         check(Theme.inWindow(0, 22 * H, 6 * H), "midnight is in 22:00–06:00");
         check(!Theme.inWindow(6 * H, 22 * H, 6 * H), "06:00 is out (the end is exclusive)");
         check(Theme.inWindow(22 * H, 22 * H, 6 * H), "22:00 is in (the start is inclusive)");

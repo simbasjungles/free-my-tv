@@ -21,6 +21,9 @@ final class Theme {
     /** The fixed schedule's boundaries, in minutes from midnight. */
     static final int MORNING = 5 * 60 + 30, NOON = 12 * 60, EVENING = 18 * 60, NIGHT = 22 * 60;
 
+    /** Every icon periodSymbol can pick, so the layout warms them all (the period changes without a relayout). */
+    static final String[] PERIOD_SYMBOLS = {"sunny", "sunset", "clear_night", "bedtime"};
+
     /** Kept for older preferences and callers: the old default evening, now ignored by the fixed schedule. */
     static final int DEFAULT_START = EVENING, DEFAULT_END = 6 * 60;
 
@@ -53,6 +56,17 @@ final class Theme {
             return PERIOD_DARK;
         }
         return now < dayMinute(sunrise) || now >= dayMinute(sunset) ? PERIOD_DARK : PERIOD_LIGHT;
+    }
+
+    /**
+     * The status-bar icon for a period (the theme as it looks right now): the sun by day, the sunset in the
+     * afternoon, the moon at night and the late-night badge from 22:00–05:29. Unknown periods read as light.
+     */
+    static String periodSymbol(String period) {
+        if (PERIOD_SUNSET.equals(period)) return "sunset";
+        if (PERIOD_DARK.equals(period)) return "clear_night";
+        if (PERIOD_LATE.equals(period)) return "bedtime";
+        return "sunny";
     }
 
     /** Night now: dark or late night (the schedule's 18:00–05:29). */

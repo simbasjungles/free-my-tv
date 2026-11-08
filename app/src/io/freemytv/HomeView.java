@@ -171,6 +171,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private long nightAt;
     private float night, sunset;        // derived from `mood`
     private boolean lateNight;          // the fixed schedule's 22:00–05:29 badge
+    private String themeSymbol = Theme.periodSymbol(Theme.PERIOD_LIGHT);   // the active theme's status icon (R2)
     private Shader sunsetGradient;
     private final int[] glassNight = new int[Backdrop.GW * Backdrop.GH], frostNight = new int[Backdrop.FW * Backdrop.FH];
     private final int[] neutralGlassPx = new int[Backdrop.GW * Backdrop.GH], neutralFrostPx = new int[Backdrop.FW * Backdrop.FH];
@@ -1342,6 +1343,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         int want = Theme.SUNSET.equals(period) ? MOOD_SUNSET
                 : Theme.PERIOD_LIGHT.equals(period) ? MOOD_LIGHT : MOOD_DARK;
         lateNight = data.isLate(now);
+        themeSymbol = Theme.periodSymbol(period);   // the status icon follows a theme switch (resume and onData)
         if (want == moodTarget) return;
         moodTarget = want;
         if (animate && running) {
@@ -4021,6 +4023,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             for (String name : STATUS_SYMBOLS) {
                 Symbols.warm(getContext(), name, Symbols.pointSizeForHeight(getContext(), name, L_STATUS * k * statusScale(name)));
             }
+            // The theme's icon changes with the period (and a theme switch) without a relayout: warm every one.
+            for (String name : Theme.PERIOD_SYMBOLS) {
+                Symbols.warm(getContext(), name, Symbols.pointSizeForHeight(getContext(), name, L_STATUS * k * statusScale(name)));
+            }
         }
         Symbols.warmWeather(getContext(), 40 * k);
         heroDirty = statusDirty = true;
@@ -4864,7 +4870,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         Symbols.draw(getContext(), c, "bedtime", right - tw - size * 0.9f, cy, size, lQuote.getColor());
     }
 
-    /** Wi-Fi/Ethernet, Bluetooth (when something is connected) and a USB drive, at the top left. */
+    /**
+     * The active theme's icon (Theme.periodSymbol), then Wi-Fi/Ethernet, Bluetooth (when something is connected) and a
+     * USB drive, at the top left. Adding a status icon is one line here plus its warm below: the row lays itself out
+     * from `x`, nothing else needs to know about it.
+     */
     private void drawStatusIcons(Canvas c) {
         float height = L_STATUS * k, gap = L_STATUS_GAP * k;
         int color = Ui.alpha(tone(L_INK, 0xEBFFFFFF), 0.85f);
@@ -4874,6 +4884,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         // The late-night notice (22:00–05:29): a moon, whether or not the other status icons are on.
         if (lateNight) x = drawStatusIcon(c, "bedtime", x, height, gap, color);
         if (!Prefs.statusIcons()) return;
+        // The theme's icon joins the row; at 22:00–05:29 the badge above already is it, so no second moon.
+        if (!lateNight) x = drawStatusIcon(c, themeSymbol, x, height, gap, color);
         if (network != 0) x = drawStatusIcon(c, network == 2 ? "ethernet" : "wifi", x, height, gap, color);
         if (bluetoothConnected) x = drawStatusIcon(c, "bluetooth", x, height, gap, color);
         if (usbConnected) drawStatusIcon(c, "usb", x, height, gap, color);
