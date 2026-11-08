@@ -236,6 +236,11 @@ def main():
     # exec-in says nothing of what the TV did (it returns 0 either way): the TV's own answer tells
     after = settled(name, lambda r: bool(r) and r != before)
     if not after or after == before:
+        # On Android 9 (TCL BeyondTV, Mi Box 3), exec-in does not give its input to `content write`.
+        # `adb shell` without a terminal gives it.
+        adb('shell', 'content', 'write', '--uri', URI + name, input=key.encode() + b'\n')
+        after = settled(name, lambda r: bool(r) and r != before)
+    if not after or after == before:
         print(f'The TV didn\'t take {name}: it keeps one line of 8 or more printable characters. Nothing changed.')
         return 1
     print(f'Sent {name}. Free My TV uses it from the next time the home screen or its settings open.')

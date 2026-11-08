@@ -16,6 +16,9 @@ public class Screensaver extends DreamService {
         super.onAttachedToWindow();
         Watchdog.install(this);
         Ui.init(this);
+        // Also here, not only when the home screen resumes: on Android 11 the dream is in the main process, and a TV
+        // that idles here would go days without the home screen's check. ScreensaverAlone has reloaded the settings.
+        ImmichPhotos.syncIfDue(this, null);
         setInteractive(Prefs.saverWatch());   // interactive: the keys come here instead of waking the TV
         setFullscreen(true);
         setScreenBright(true);

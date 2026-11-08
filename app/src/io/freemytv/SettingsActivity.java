@@ -332,7 +332,8 @@ public class SettingsActivity extends Activity {
                     return row - 1 < names.length ? names[row - 1] : "";
                 }
                 case HOME_CHOICE: {
-                    String name = row == 0 ? "Free My TV, " + Ui.tr("no ads, with the new screensaver")
+                    String name = row == 0 ? "Free My TV, " + (Capabilities.screensaver(getContext())
+                            ? Ui.tr("no ads, with the new screensaver") : Ui.tr("no ads"))
                             : "Original, " + Ui.tr("the TV's factory home screen");
                     boolean inUse = (row == 0) == freeActive();
                     return name + (inUse ? Ui.tr(". In use") : "") + ", " + Ui.trf("{i} of {n}", "i", row + 1, "n", 2);
@@ -737,7 +738,8 @@ public class SettingsActivity extends Activity {
         private void drawChoice(Canvas c) {
             Paint heading = Ui.text(Ui.displaySemibold, 34 * k, 0xFFFFFFFF);
             c.drawText(Ui.tr("Home Screen"), LIST_X * k + 30 * k, (LIST_TOP - 24) * k, heading);
-            String[][] options = {{"Free My TV", Ui.tr("No ads, with the new screensaver")},
+            String free = Capabilities.screensaver(getContext()) ? Ui.tr("No ads, with the new screensaver") : Ui.tr("No ads");
+            String[][] options = {{"Free My TV", free},
                     {Ui.tr("Original"), Ui.tr("The TV's factory home screen")}};
             int current = freeActive() ? 0 : 1;
             for (int i = 0; i < 2; i++) {
@@ -1142,12 +1144,14 @@ public class SettingsActivity extends Activity {
         private String need(int i) {
             switch (screen) {
                 case MAIN:
-                    return i == 0 ? Capabilities.NEED_SWITCH : i == 5 ? Capabilities.NEED_REMOTE_BUTTONS
+                    return i == 0 ? Capabilities.NEED_SWITCH : i == 1 ? Capabilities.NEED_SCREENSAVER
+                            : i == 5 ? Capabilities.NEED_REMOTE_BUTTONS
                             : i == 6 ? Capabilities.NEED_ADB : null;
                 case HOME_SETTINGS:
                     return pickScroll + i == PLAYING_ROW ? Capabilities.NEED_LISTENER
                             : pickScroll + i == HOME_ROW ? Capabilities.NEED_HOME_ASSISTANT
-                            : pickScroll + i == POWER_ON_ROW ? Capabilities.NEED_LIVE_TV : null;
+                            : pickScroll + i == POWER_ON_ROW ? Capabilities.NEED_LIVE_TV
+                            : pickScroll + i == SAVER_ROW ? Capabilities.NEED_SCREENSAVER : null;
                 case POWER: {
                     int id = powerRows()[i];
                     return id == P_WHERE ? Capabilities.NEED_OVERLAY : null;
@@ -1307,11 +1311,15 @@ public class SettingsActivity extends Activity {
             if (RemoteKeys.GOOGLE_STREAMER) return new String[] {Ui.tr("YouTube button"), Ui.tr("Netflix button"),
                     Ui.tr("Custom button") + " \u2605"};
             if (RemoteKeys.JVC_SKYWORTH) return new String[] {Ui.tr("Inputs"), Ui.tr("Settings button")};
+            if (RemoteKeys.PHILIPS_GTV) return new String[] {Ui.tr("Settings button"), Ui.tr("All Apps button"), Ui.tr("TV Guide button"),
+                    Ui.tr("Netflix button"), Ui.tr("YouTube button"), Ui.tr("Prime Video button")};
             if (RemoteKeys.HISENSE) return new String[] {Ui.tr("Prime Video button"), Ui.tr("YouTube button"),
                     Ui.tr("Disney+ button"), Ui.tr("All Apps button"), Ui.tr("Settings button"), Ui.tr("Profile button")};
             if (RemoteKeys.STEM_NETFLIX) return new String[] {Ui.tr("Netflix button")};
             if (RemoteKeys.KTC) return new String[] {Ui.tr("Tabii button")};
             if (RemoteKeys.XIAOMI_PATCHWALL_ONLY) return new String[] {Ui.tr("PatchWall button")};
+            if (RemoteKeys.XIAOMI_AFKR0) return new String[] {Ui.tr("PatchWall button"), Ui.tr("Netflix button"),
+                    Ui.tr("Prime Video button"), Ui.tr("YouTube button")};
             if (RemoteKeys.XIAOMI) return new String[] {Ui.tr("Mi button"), Ui.tr("YouTube button"), Ui.tr("PatchWall button"),
                     Ui.tr("Okko button"), Ui.tr("VK button"), Ui.tr("Rutube button"), Ui.tr("KION button"),
                     Ui.tr("Wink button"), Ui.tr("IVI button")};
@@ -1344,14 +1352,15 @@ public class SettingsActivity extends Activity {
             appPkgs.add("");
             // An empty choice leaves the key to the system's receiver.
             appLabels.add(RemoteKeys.GOOGLE_STREAMER ? Ui.tr("Google default")
-                    : RemoteKeys.SONY ? Ui.tr("Sony default") : RemoteKeys.XIAOMI ? Ui.tr("Xiaomi default") : Ui.tr("Nothing"));
+                    : RemoteKeys.SONY ? Ui.tr("Sony default") : RemoteKeys.XIAOMI || RemoteKeys.XIAOMI_AFKR0
+                    ? Ui.tr("Xiaomi default") : RemoteKeys.PHILIPS_GTV ? Ui.tr("Philips default") : Ui.tr("Nothing"));
             if (RemoteKeys.JVC_SKYWORTH) {
                 appPkgs.add(Prefs.TV_SHORTCUTS);
                 appLabels.add(Ui.tr("Inputs"));
                 appPkgs.add(Prefs.QUICK_SETTINGS);
                 appLabels.add(Ui.tr("Quick Settings"));
             }
-            if (RemoteKeys.TCL) {
+            if (RemoteKeys.TCL || RemoteKeys.PHILIPS_GTV) {
                 appPkgs.add(Prefs.QUICK_PANEL);
                 appLabels.add(Ui.tr("Quick Settings"));
                 // The Settings button's default, listed even where TV Settings has no launcher entry.
@@ -1362,12 +1371,12 @@ public class SettingsActivity extends Activity {
                     appLabels.add(Ui.tr("TV Settings"));
                 }
             }
-            // On Xiaomi the Mi button is the remote's Home button: it can open this home screen.
-            if (RemoteKeys.XIAOMI) {
+            // On Xiaomi's MiTV-AFKR0 the Mi TV+ button can open this home screen too, like the Mi button elsewhere.
+            if (RemoteKeys.XIAOMI || RemoteKeys.XIAOMI_AFKR0) {
                 appPkgs.add(HomeMode.PKG);
                 appLabels.add("Free My TV");
             }
-            if (RemoteKeys.HISENSE || RemoteKeys.GOOGLE_STREAMER) {
+            if (RemoteKeys.HISENSE || RemoteKeys.GOOGLE_STREAMER || RemoteKeys.PHILIPS_GTV) {
                 appPkgs.add(Prefs.ALL_APPS);
                 appLabels.add(Ui.tr("All Apps"));
             }
@@ -1891,7 +1900,7 @@ public class SettingsActivity extends Activity {
             openChoices(PICK_ALBUM, list, "album".equals(Prefs.photoSource()) ? Prefs.photoAlbum() : "");
         }
 
-        /** OK in My Photos' lists: applied (the photos change at the next home screen), and back to its row. */
+        /** OK in My Photos' lists: applied (the sync starts now), and back to its row. */
         private void pickPhotoSource() {
             String[] choice = choices.get(pickScroll + focus);
             if (pickFor == PICK_PHOTOS && "album".equals(choice[0])) {
@@ -1917,6 +1926,7 @@ public class SettingsActivity extends Activity {
             }
             // Also when it's the same choice: My Photos turned off earlier (before the key came) is on again
             Prefs.setPhotos(!"default".equals(source));
+            ImmichPhotos.syncIfDue(getContext(), null);   // the new source starts coming now, not at the next home screen
             showSettingsRow(PHOTOS_ROW);
         }
 
@@ -2335,7 +2345,9 @@ public class SettingsActivity extends Activity {
                 c.drawText(RemoteKeys.VESTEL ? Ui.tr("YouTube, Prime Video and Google Play: the TV itself controls those buttons.")
                         : RemoteKeys.KTC ? Ui.tr("Netflix, YouTube and Prime Video: the TV itself controls those buttons.")
                         : RemoteKeys.SONY ? Ui.tr("Sony default: the button opens what it always did.")
-                        : RemoteKeys.FORMOVIE || RemoteKeys.JVC_SKYWORTH ? Ui.tr("The other buttons: the TV itself controls them.")
+                        : RemoteKeys.PHILIPS_GTV ? Ui.tr("Philips default: the button opens what it always did.")
+                        : RemoteKeys.FORMOVIE || RemoteKeys.JVC_SKYWORTH || RemoteKeys.XIAOMI_AFKR0
+                        ? Ui.tr("The other buttons: the TV itself controls them.")
                         : RemoteKeys.XIAOMI ? Ui.tr("Xiaomi default: the button opens what it always did.")
                         : RemoteKeys.HISENSE ? Ui.tr("Netflix: the TV itself controls that button.")
                         : RemoteKeys.GOOGLE_STREAMER ? Ui.tr("The other buttons: the TV itself controls them.")
