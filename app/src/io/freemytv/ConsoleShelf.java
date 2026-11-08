@@ -14,6 +14,9 @@ final class ConsoleShelf {
     /** The icon that marks a game console (HomeApps.deviceSymbol). */
     static final String SYMBOL = "gamepad";
 
+    /** The icon's blue (the PlayStation-like tone): the console's cards carry it so they read as the HDMI input. */
+    static final int TINT = 0xFF3E8BFF;
+
     /** The console's index in `symbols` (the icon picked for each input's name), or -1 when no input is a console. */
     static int consoleIndex(List<String> symbols) {
         for (int i = 0; i < symbols.size(); i++) if (SYMBOL.equals(symbols.get(i))) return i;

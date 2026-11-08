@@ -111,7 +111,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private static final long TOAST_MS = 6000, FADE_MS = 800;
     /** Blur radii of the shadow and shadowDeep paints (Shadows needs them to draw the same blur on older TVs). */
     private static final float SHADOW_BLUR = 26, DEEP_BLUR = 30;
-    private static final int SKY = 0, HERO = 1, STATUS = 2, PLATTER = 3, TILES = 4, DRAWER = 5, SHEET = 6, TOAST = 7, MENU = 8, RECENT = 9, LAUNCH = 10;
+    private static final int SKY = 0, HERO = 1, STATUS = 2, PLATTER = 3, TILES = 4, DRAWER = 5, SHEET = 6, TOAST = 7, MENU = 8, RECENT = 9;
     private static final int Z_STATUS = 0, Z_HERO = 1, Z_SHELF = 2, Z_DRAWER = 3;
     private static final ExecutorService LOADER = Executors.newSingleThreadExecutor();
     // Light design (the L_ constants): title, tab bar, three recommendation cards and the shelf.
@@ -159,7 +159,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         @Override public void hold(int id) { if (recentsOpen()) recents.closeFocused(); else if (sheetOpen) a11yHold(); else if (canReorder()) startReorder(); else showMenu(); }
     });
     private final RectF a11yRect = new RectF();
-    private final Layer sky, heroLayer, status, platter, tiles, drawerLayer, sheetLayer, toastLayer, menuLayer, recentLayer, launchLayer;
+    private final Layer sky, heroLayer, status, platter, tiles, drawerLayer, sheetLayer, toastLayer, menuLayer, recentLayer;
     private RecentApps recents;
     private int zone = Z_SHELF;
 
@@ -168,24 +168,6 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private boolean nightTarget;
     private float night, nightFrom;     // 0 = day, 1 = night
     private long nightAt;
-    // The blue console launch (PlayStation-like): a short full-screen card before the HDMI input opens.
-    private static final long CONSOLE_LAUNCH_MS = 1150;
-    private boolean consoleLaunch;
-    private long consoleLaunchAt;
-    private HomeApps.Item consolePending;
-    private int consoleX, consoleY, consoleW, consoleH;
-    private final Runnable consoleLaunchTick = new Runnable() {
-        @Override public void run() {
-            if (!consoleLaunch) return;
-            long age = SystemClock.uptimeMillis() - consoleLaunchAt;
-            launchLayer.invalidate();
-            if (age >= CONSOLE_LAUNCH_MS) {
-                finishConsoleLaunch();
-                return;
-            }
-            handler.postDelayed(this, 16);
-        }
-    };
     private final int[] glassNight = new int[Backdrop.GW * Backdrop.GH], frostNight = new int[Backdrop.FW * Backdrop.FH];
     private final int[] neutralGlassPx = new int[Backdrop.GW * Backdrop.GH], neutralFrostPx = new int[Backdrop.FW * Backdrop.FH];
     private boolean nightPair;          // the glass holds both photos (day and night), blended by `night`
@@ -353,8 +335,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private float touchX, touchY;
     private final RectF hitBox = new RectF();   // the mouse's hit tests (menu rows, Continue Watching cards)
 
-    private Paint labelPaint, metaPaint, clockPaint, buttonPaint, capsuleText, tipPaint, quotePaint, staleQuote,
-            launchTitle, launchTip;
+    private Paint labelPaint, metaPaint, clockPaint, buttonPaint, capsuleText, tipPaint, quotePaint, staleQuote;
     private Paint rowTitle, drawerLabel, cardTitle, cardText, cardDim, cardDimRight, bigTemp, hourPaint, hourTemp, dayLow;
     private Paint pricePaint, changePaint, sheetTitle;
     private TextPaint titlePaint, gridLabel, toastPaint;
@@ -433,7 +414,6 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                 case SHEET: drawSheet(c); break;
                 case MENU: drawMenu(c); break;
                 case RECENT: if (recents != null) recents.draw(c, w, h); break;
-                case LAUNCH: drawConsoleLaunch(c); break;
                 default: drawToast(c); break;
             }
             scene.setOffset(0, 0);
@@ -655,13 +635,12 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         toastLayer = new Layer(a, TOAST);
         menuLayer = new Layer(a, MENU);
         recentLayer = new Layer(a, RECENT);
-        launchLayer = new Layer(a, LAUNCH);
         // Hardware layers on the GPU: only the one that changed is redrawn; moving, fading and scaling stay cheap.
         // Not on Android 8 to 11: on older GPUs (a Mi Box 3's Mali-450) redrawing and compositing a big layer on every
         // frame cost more than drawing straight to the screen (measured: focus on the picks 33 → 12 ms a frame, the
         // drawer 19 → 17 ms).
         for (View v : new View[] {heroLayer, status, platter, tiles, drawerLayer, sheetLayer}) v.setLayerType(Ui.LEGACY ? LAYER_TYPE_NONE : LAYER_TYPE_HARDWARE, null);
-        for (View v : new View[] {sky, heroLayer, status, platter, tiles, drawerLayer, sheetLayer, menuLayer, toastLayer, recentLayer, launchLayer}) {
+        for (View v : new View[] {sky, heroLayer, status, platter, tiles, drawerLayer, sheetLayer, menuLayer, toastLayer, recentLayer}) {
             v.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);   // TalkBack reads the items (Spoken)
             addView(v);
         }
@@ -669,7 +648,6 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         recentLayer.setVisibility(INVISIBLE);
         drawerLayer.setVisibility(INVISIBLE);
         menuLayer.setVisibility(INVISIBLE);
-        launchLayer.setVisibility(INVISIBLE);
         for (int i = 0; i < topFocus.length; i++) {
             topFocus[i] = new Spring(0.26f, 0.85f, 0);
             topRects[i] = new RectF();
@@ -873,7 +851,6 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         measure(menuLayer, width, height);
         measure(toastLayer, width, Math.round(220 * kk));   // full width: a toast may sit right of a long title
         measure(recentLayer, width, height);
-        measure(launchLayer, width, height);
         setMeasuredDimension(width, height);
     }
 
@@ -896,7 +873,6 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         sheetLayer.setPivotY(height / 2f);
         place(toastLayer, 0, 0);
         recentLayer.layout(0, 0, width, height);
-        launchLayer.layout(0, 0, width, height);
     }
 
     private static void place(View v, int x, int y) {
@@ -960,10 +936,6 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         tipPaint = Ui.text(Ui.semibold, 25 * k, 0xF2FFFFFF);
         tipPaint.setTextAlign(Paint.Align.CENTER);
         tipPaint.setShadowLayer(16 * k, 0, 1 * k, 0x99000000);
-        launchTitle = Ui.text(Ui.medium, 46 * k, 0xFFFFFFFF);
-        launchTitle.setTextAlign(Paint.Align.CENTER);
-        launchTip = Ui.text(Ui.medium, 27 * k, 0xFFD7E6FF);
-        launchTip.setTextAlign(Paint.Align.CENTER);
         // Quotes: a subtle detail, smaller and dimmer than the rest.
         quotePaint = Ui.numbers(Ui.regular, 21 * k, 0xB8FFFFFF);
         quotePaint.setShadowLayer(14 * k, 0, 1 * k, 0x99000000);
@@ -2226,7 +2198,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         }
         boolean off = it.kind == HomeApps.INPUT && !it.connected
                 || it.kind == HomeApps.HOME_ASSISTANT && it.control != null && !it.control.on();
-        int ink = blend(tone(off ? 0xFF8E8E93 : L_INK, off ? 0x6BFFFFFF : 0xF2FFFFFF), INK, f);
+        // The console's icon carries its blue in the drawer too (the same tint as its shelf tile).
+        int ink = ConsoleShelf.SYMBOL.equals(it.symbol)
+                ? blend(Ui.alpha(ConsoleShelf.TINT, off ? 0.55f : 1f), INK, f)
+                : blend(tone(off ? 0xFF8E8E93 : L_INK, off ? 0x6BFFFFFF : 0xF2FFFFFF), INK, f);
         Symbols.draw(getContext(), c, it.symbol, cx, cell.top + cell.height() * 0.4f, 34 * k * s, ink);
         drawerLabel.setColor(ink);
         drawerLabel.setTextSize(23 * k * s);
@@ -3341,81 +3316,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             retarget(false);
             return;
         }
-        if (isConsole(it)) {
-            showConsoleLaunch(it, r);
-            return;
-        }
         boolean opened = HomeApps.open(activity, it, this, Math.round(r.left), Math.round(r.top),
                 Math.round(r.width()), Math.round(r.height()));
         if (!opened) showToast(Ui.trf("Couldn't open {app}.", "app", it.label));
-    }
-
-    /** The shelf's console card (the HDMI input the TV names as a game console). */
-    private static boolean isConsole(HomeApps.Item it) {
-        return it != null && ("console".equals(it.key) || it.kind == HomeApps.INPUT && it.symbol != null
-                && "gamepad".equals(it.symbol));
-    }
-
-    /** The short blue PlayStation-like card, then the input itself (HomeApps.open in finishConsoleLaunch). */
-    private void showConsoleLaunch(HomeApps.Item it, RectF r) {
-        handler.removeCallbacks(consoleLaunchTick);
-        consolePending = it;
-        consoleX = Math.round(r.left);
-        consoleY = Math.round(r.top);
-        consoleW = Math.round(r.width());
-        consoleH = Math.round(r.height());
-        consoleLaunchAt = SystemClock.uptimeMillis();
-        consoleLaunch = true;
-        launchLayer.setVisibility(VISIBLE);
-        launchLayer.invalidate();
-        handler.post(consoleLaunchTick);
-    }
-
-    private void finishConsoleLaunch() {
-        if (!consoleLaunch) return;
-        consoleLaunch = false;
-        handler.removeCallbacks(consoleLaunchTick);
-        launchLayer.setVisibility(INVISIBLE);
-        HomeApps.Item it = consolePending;
-        consolePending = null;
-        if (it == null) return;
-        if (!HomeApps.open(activity, it, this, consoleX, consoleY, Math.max(1, consoleW), Math.max(1, consoleH))) {
-            showToast(Ui.trf("Couldn't open {app}.", "app", it.label));
-        }
-    }
-
-    /** The blue launch: a soft glow, the gamepad and the input's name, fading in and out like a console's start-up. */
-    private void drawConsoleLaunch(Canvas c) {
-        long age = SystemClock.uptimeMillis() - consoleLaunchAt;
-        float t = Ui.clamp(age / (float) CONSOLE_LAUNCH_MS);
-        float in = Ui.clamp(age / 220f), out = Ui.clamp((CONSOLE_LAUNCH_MS - age) / 260f);
-        float alpha = Math.min(in, out);
-        // Deep navy to PlayStation blue, with a brighter pool behind the gamepad.
-        fill.setShader(new LinearGradient(0, 0, 0, h, 0xFF020A24, 0xFF0A3FA8, Shader.TileMode.CLAMP));
-        c.drawRect(0, 0, w, h, fill);
-        fill.setShader(new RadialGradient(w / 2f, h * 0.44f, h * 0.62f,
-                new int[] {0x663E8BFF, 0x000A3FA8}, null, Shader.TileMode.CLAMP));
-        c.drawRect(0, 0, w, h, fill);
-        fill.setShader(null);
-        float cx = w / 2f, cy = h * 0.43f, size = 230 * k;
-        Symbols.draw(getContext(), c, "gamepad", cx, cy, size, Ui.alpha(0xFFFFFFFF, alpha));
-        // Three small PlayStation-like face buttons, in the brand's colours, under the pad.
-        float by = cy + size * 0.72f, gap = 34 * k, rr = 13 * k;
-        int[] colors = {0xFF2E7DFF, 0xFFFF4D6D, 0xFF35C46A, 0xFFFFC53D};
-        for (int i = 0; i < colors.length; i++) {
-            float bx = cx + (i - 1.5f) * gap;
-            fill.setColor(Ui.alpha(colors[i], alpha * 0.9f));
-            c.drawCircle(bx, by, rr, fill);
-        }
-        String label = consolePending == null ? "" : consolePending.label;
-        launchTitle.setColor(Ui.alpha(0xFFFFFFFF, alpha));
-        c.drawText(label, cx, by + 96 * k, launchTitle);
-        launchTip.setColor(Ui.alpha(0xFFD7E6FF, alpha * 0.92f));
-        c.drawText(Ui.tr("Starting…"), cx, by + 146 * k, launchTip);
-        // A thin blue progress line, as the console boots.
-        float lw = w * 0.26f * t;
-        fill.setColor(Ui.alpha(0xFF8FC2FF, alpha * 0.85f));
-        c.drawRoundRect(cx - w * 0.13f, by + 176 * k, cx - w * 0.13f + lw, by + 182 * k, 3 * k, 3 * k, fill);
     }
 
     // MARK: - Holding OK: All Apps puts the app on the shelf or takes it off; on the shelf, the app is lifted to move;

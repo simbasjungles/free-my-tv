@@ -1289,12 +1289,21 @@ final class HomeApps {
         return out;
     }
 
-    /** Settings and the like: the icon in white on a dark card. */
+    /** Settings and the like: the icon in white on a dark card; the console's is blue, the HDMI input it opens. */
     private static synchronized Bitmap symbolTile(Context c, String key, String symbol) {
         if (TILES.containsKey(key)) return TILES.get(key);
         Bitmap b = darkTile(TILE_W, TILE_H);
+        boolean console = ConsoleShelf.SYMBOL.equals(symbol);
+        if (console) {
+            // A soft blue pool inside the card: the colour sits in the icon itself, at rest and focused.
+            Paint glow = new Paint();
+            glow.setShader(new RadialGradient(TILE_W / 2f, TILE_H / 2f, TILE_H * 0.62f,
+                    0x3D3E8BFF, 0x000A3FA8, Shader.TileMode.CLAMP));
+            new Canvas(b).drawRect(0, 0, TILE_W, TILE_H, glow);
+        }
         Symbols.warm(c, symbol, TILE_H * 0.36f);
-        Symbols.draw(c, new Canvas(b), symbol, TILE_W / 2f, TILE_H / 2f, TILE_H * 0.36f, 0xF2FFFFFF);
+        Symbols.draw(c, new Canvas(b), symbol, TILE_W / 2f, TILE_H / 2f, TILE_H * 0.36f,
+                console ? ConsoleShelf.TINT : 0xF2FFFFFF);
         b.setHasMipMap(true);
         TILES.put(key, b);
         return b;
