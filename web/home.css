@@ -629,6 +629,29 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 
 /* Tizen 2 and 1 GB TVs (see tv.js): no shadows or animations; their GPUs can't keep up while the focus moves. */
 .lite * { box-shadow: none !important; -webkit-transition: none !important; transition: none !important; }
+/* webOS 3 (see tv.js): each tile and pick is its own compositor layer, so a move re-rasterizes almost nothing and what
+   moves is a transform. Measured on a 4K UH6150 (installed at 1280x720, which drew the same pixels faster): 31-43 ms
+   from key to screen along the apps (91 before), 67-93 ms along 10 picks, 60 fps at rest. Only the focused app keeps
+   its shadow; a slow zoom on the photo was left out (30 fps even at rest). */
+.layered .tile { will-change: transform; }
+/* The picks' photos are layers of a fixed size (the poster's 320 px, the backdrop's 1040 px) that the card only clips:
+   a card that changes width no longer re-rasterizes its photo at 4K (3.5 s of raster in 6 moves, then 1.2 s). The
+   row slides as one layer; the grey behind the photos and the edge glow went, since they were repainted at each move. */
+.layered #cards { will-change: transform; }
+.layered .card .layer { width: 320px; will-change: transform; }
+.layered .card .back { width: 1040px; }
+.layered .card .img { background-color: transparent; box-shadow: none !important; }
+.layered .card .img::after { display: none; }
+.layered .tile { -webkit-transition: -webkit-transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.15) !important; transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.15) !important; }
+.layered .card { -webkit-transition: -webkit-transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.15) !important; transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.15) !important; }
+.layered #cards {
+  -webkit-transition: -webkit-transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+  transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1) !important;
+}
+.layered .card .back { -webkit-transition: opacity 0.45s !important; transition: opacity 0.45s !important; }
+.layered #sky canvas { -webkit-transition: opacity 0.8s !important; transition: opacity 0.8s !important; }
+.layered .tile.focus { box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34) !important; }
+.layered .night .tile.focus { box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6) !important; }
 
 /* Samsungs up to 2 GB (see tv.js): the parts that move lose their soft shadows, which the TV repainted on every frame of
    a move, and what slides is a layer from the start, so a move starts at once. */
