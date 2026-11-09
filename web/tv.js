@@ -52,6 +52,68 @@ var TV = (function () {
     bridge.call(uri, JSON.stringify(params || {}));
   }
 
+  // Executed on the TV by Node through Homebrew Channel's root service.
+  function configureBoot(mode) {
+    var fs = require('fs'), crypto = require('crypto');
+    var stock = '/etc/palm/bootd.json', override = '/var/luna/preferences/bootd.json';
+    var hook = '/var/lib/webosbrew/init.d/90-freemytv';
+    var receipt = '/var/lib/webosbrew/freemytv-boot.json';
+    function hash(bytes) { return crypto.createHash('sha256').update(bytes).digest('hex'); }
+    function read(path) { return fs.existsSync(path) ? fs.readFileSync(path) : null; }
+    function remove(path) { if (fs.existsSync(path)) fs.unlinkSync(path); }
+    function shellQuote(value) { return "'" + value.replace(/'/g, "'\"'\"'") + "'"; }
+    function write(path, content, permissions) {
+      var temp = path + '.freemytv-' + process.pid;
+      fs.writeFileSync(temp, content, {flag: 'wx', mode: permissions});
+      try { fs.renameSync(temp, path); } finally { remove(temp); }
+    }
+
+    var current = read(override), record = read(receipt);
+    var owned = !!(current && record && JSON.parse(record).override === hash(current));
+    var original = read(stock);
+    if (mode === 'guard') {
+      if (owned && (!original || JSON.parse(record).stock !== hash(original) ||
+          !fs.existsSync('/media/developer/apps/usr/palm/applications/io.freemytv/appinfo.json'))) {
+        remove(override);
+        remove(receipt);
+        remove(hook);
+      }
+      return;
+    }
+    if (current && !owned) throw Error('Another boot configuration is present');
+    if (mode === 'off') {
+      if (owned) remove(override);
+      remove(receipt);
+      remove(hook);
+    } else if (mode === 'on' && !owned) {
+      var binary = read('/usr/sbin/bootd');
+      if (!original || !binary || binary.indexOf(override) === -1) throw Error('Unsupported boot configuration');
+      var settings = JSON.parse(original.toString('utf8'));
+      var reasons = settings.common && settings.common.firstAppByPowerOnReason;
+      if (!reasons || reasons.remoteKey !== '{LAST_APP}') throw Error('Unsupported power button configuration');
+      ['remoteKey', 'localKey', 'micomPower'].forEach(function (reason) { reasons[reason] = 'io.freemytv'; });
+      var contents = JSON.stringify(settings, null, 2) + '\n';
+      var guard = '(' + configureBoot.toString() + ')("guard")';
+      write(receipt, JSON.stringify({stock: hash(original), override: hash(contents)}), 384);
+      write(hook, '#!/bin/sh\n/usr/bin/node -e ' + shellQuote(guard) + '\n', 493);
+      var staged = override + '.freemytv-' + process.pid;
+      fs.writeFileSync(staged, contents, {flag: 'wx', mode: 420});
+      try { fs.linkSync(staged, override); } finally { remove(staged); }
+      owned = true;
+    }
+    console.log(mode !== 'off' && owned ? 'on' : 'off');
+  }
+
+  function bootLaunch(enabled, done) {
+    var mode = enabled === true ? 'on' : enabled === false ? 'off' : 'status';
+    var source = '(' + configureBoot.toString() + ')(' + JSON.stringify(mode) + ')';
+    var command = '[ "$(id -u)" = 0 ] && /usr/bin/node -e ' + "'" + source.replace(/'/g, "'\"'\"'") + "'";
+    luna('luna://org.webosbrew.hbchannel.service/exec', {command: command}, function (res) {
+      var status = res && !res.error && (res.stdoutString || '').trim();
+      done(status === 'on' ? true : status === 'off' ? false : null);
+    });
+  }
+
   // LG's own screensaver asks every subscribed app first. While Free My TV is on screen and its own screensaver will
   // take over (`hold`, from home.js), it says no; otherwise, and in the background, the TV's runs as before.
   var saverBridge = null;
@@ -219,6 +281,7 @@ var TV = (function () {
   // has one, as on Samsung, and otherwise their name on the brand's color: [id, title, logo, color].
   var KNOWN = [
     ['netflix', 'Netflix', 'icons/netflix.svg'], ['youtube.leanback.v4', 'YouTube', 'icons/youtube.png'],
+    ['canalplus', 'CANAL+'],
     ['amazon', 'Prime Video', 'icons/prime.png'], ['com.disney.disneyplus-prod', 'Disney+'],
     ['com.wbd.stream', 'HBO Max', 'icons/max.svg'], ['com.hbo.hbomax', 'Max', 'icons/max.svg'],
     ['com.apple.appletv', 'Apple TV'], ['hulu', 'Hulu'], ['com.peacock.tv', 'Peacock'], ['com.nfl.app', 'NFL'],
@@ -509,6 +572,7 @@ var TV = (function () {
      * and 4, where org.tizen.menu freezes the TV (#257): the remote's own Settings button still works there.
      */
     canOpenSettings: !tizen2 && !tizen34,
+    bootLaunch: bootLaunch,
 
     /** Installed apps, as the TV's launcher lists them: [{id, title, icon, color}]. */
     apps: function (done) {

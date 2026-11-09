@@ -442,6 +442,10 @@ var Data = (function () {
     ['crunchyroll', 'crunchyroll', /crunchyroll/, /crunchyroll/i, 'Crunchyroll'],
     ['now tv', 'now', /nowtv|now\.tv/, /^now( tv)?$/i, 'NOW']
   ];
+  if (TV.name === 'webos') {
+    SERVICES.push(['canal+', 'canalplus', /mycanal|canal[. _-]*plus/i, /mycanal|canal\s*\+|canal plus/i, 'CANAL+'],
+      ['youtube', 'youtube', /^youtube(?:\.leanback\.v\d+)?$/i, /^youtube$/i, 'YouTube']);
+  }
 
   var installed = [];   // the TV's apps, from TV.apps()
 
@@ -473,6 +477,7 @@ var Data = (function () {
     for (var i = 0; i < SERVICES.length; i++) {
       var s = SERVICES[i];
       if (s[1] === 'appletv' && providerId !== 350) continue;
+      if (s[1] === 'youtube' && !/^youtube( free| premium)?$/.test(n)) continue;
       if (s[0] === 'max' ? /\bmax\b/.test(n) : n.indexOf(s[0]) >= 0) return s;
     }
     return null;
@@ -597,6 +602,13 @@ var Data = (function () {
         var s = service(flat[i].provider_name, flat[i].provider_id);
         if (s && usable(s[1])) { p.app = s[1]; p.service = s[4]; }
       }
+      if (!p.app && here && usable('youtube')) {
+        var free = (here.free || []).concat(here.ads || []);
+        for (var j = 0; j < free.length && !p.app; j++) {
+          var youtube = service(free[j].provider_name, free[j].provider_id);
+          if (youtube && youtube[1] === 'youtube') { p.app = 'youtube'; p.service = 'YouTube'; }
+        }
+      }
       if (p.service && p.app) parts.push(p.service);
       p.meta = parts.join(' · ');
       title(p, o, function () {
@@ -662,7 +674,8 @@ var Data = (function () {
         if (s && usable(s[1])) ids.push(res.results[i].provider_id);
       }
       if (!ids.length) { done(new Error("none of the TV's streaming apps are on TMDB (or switched on in Picks from)")); return; }
-      var common = '&language=' + lang() + '&watch_region=' + REGION + '&with_watch_monetization_types=flatrate&include_adult=false'
+      var monetization = usable('youtube') ? 'flatrate%7Cfree%7Cads' : 'flatrate';
+      var common = '&language=' + lang() + '&watch_region=' + REGION + '&with_watch_monetization_types=' + monetization + '&include_adult=false'
           + '&sort_by=popularity.desc&with_watch_providers=' + encodeURIComponent(ids.join('|'))
           + (Prefs.hideAnimation() ? '&without_genres=' + ANIMATION : '');
       var hot = {movie: [], tv: []}, fresh = {movie: [], tv: []};
