@@ -1813,7 +1813,11 @@
   document.addEventListener('webOSRelaunch', reopened);   // LG: opened again while running
   window.addEventListener('appcontrol', reopened);        // Samsung: the same
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { hideSaver(); hideAmbient(); return; }
+    // Going behind another app or coming back, the screensaver goes: coming back (Back from Netflix, say, which is no
+    // relaunch) shows the home screen, never a screensaver that started while the app was out of sight.
+    hideSaver();
+    hideAmbient();
+    if (document.hidden) return;
     idleAt = Date.now();
     loadApps(function () { renderShelf(); renderDrawer(); updateFocus(); Data.refresh(); });
   });
@@ -1835,7 +1839,9 @@
     checkNight();
     Data.refresh();
     applyDim();   // automatic: medium from 22:00, off again at 07:00
-    if (!saverOn && !ambientOn && !sheetOpen() && Date.now() - idleAt > SAVER_AFTER) {
+    // Only on screen: behind another app nobody presses our keys, so idleAt grows old and the screensaver would start
+    // there, turning photos every 12 s for nothing while Netflix or YouTube plays.
+    if (!document.hidden && !saverOn && !ambientOn && !sheetOpen() && Date.now() - idleAt > SAVER_AFTER) {
       if (saverMode() === 'clock') showAmbient(); else showSaver();
     }
     if (saverOn) tickSaverClock($('saver').querySelector('.clock'));
