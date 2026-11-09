@@ -131,7 +131,10 @@ stays, and Free My TV opens with a long press of a number key.
 5. **Install:** the first time needs the TV's passphrase, typed by them: ask them to run
    `python3 webos/install.py <IP>` in their own terminal (yours can't answer its prompt, and the passphrase doesn't go
    in the chat). It keeps the unlocked key in `~/.ssh/freemytv_webos_<IP>` (dots as underscores), so later updates
-   run from your terminal with the same command. On a TV that isn't 4K (`getSystemInfo` says `"UHD":"false"`), it
+   run from your terminal with the same command. The TV's SSH host key is kept in `~/.ssh/freemytv_known_hosts` and
+   checked from then on (a TV whose Developer Mode was set up again is refused until its line there is deleted, #474),
+   and a TV that got a new address uses the newest key saved, with the Key Server off (`install.saved_key`, #475; also
+   `renew.py` and `apps.py`). On a TV that isn't 4K (`getSystemInfo` says `"UHD":"false"`), it
    changes the package's `resolution` to 1280x720 before copying it: LG's Full HD and HD sets draw apps at that size,
    and a 2019 HD one (webOS 3.9) showed a 1920x1080 app in its top-left two thirds (#402). `--1080p` installs it as
    built; `python3 webos/build.py --hd` builds it at 1280x720.
@@ -586,8 +589,11 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   and height, and `tv.js` adds a `lite` class there that turns off shadows and transitions, which its GPU can't keep up
   with (LGs whose `navigator.deviceMemory` reads 1, up to about 1.5 GB, get it too: webOS TV Lite sets went from 25 to
   60 fps at a ratio of 2, #318, and from 45-50 to 59 at a ratio of 1, #383; Samsungs too, where a 1.5 GB UN50AU7700 at a
-  ratio of 1 still stuttered with `flat` alone, #461); it also
-  can't open the TV's settings (`TV.canOpenSettings`). Without Intl, `toLocaleDateString` ignores its options and
+  ratio of 1 still stuttered with `flat` alone, #461; webOS 1 to 3, Chromium 38 with no `deviceMemory`, get it with
+  `layered`, each tile and pick on its own compositor layer, measured on a 4K 60UH6150, #476); Tizen 2.4 also
+  can't open the TV's settings (`TV.canOpenSettings`). Chromium before 62 (webOS 3 and 4, Tizen 3) draws a variable
+  font's weights alike, so `web/fonts/` has Inter in six fixed weights (rsms/inter 4.1) and each `@font-face` falls
+  back to `InterVariable.ttf` where WOFF2 isn't known (#477). Without Intl, `toLocaleDateString` ignores its options and
   writes the whole date, so `strings.js` takes weekday and month names from the catalogues there (`I18N.dateNames` in
   data.js: `weekday|`, `month|` and `monthday|` keys, the last in the form next to a day). Tizen 2.3 and 2.4 don't
   trust Let's Encrypt's ISRG root, so Open-Meteo falls back to plain http there (`getMeteo`; only coordinates and the
