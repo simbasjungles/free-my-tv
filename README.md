@@ -135,6 +135,12 @@ python3 webos/apps.py 192.168.1.50 && python3 webos/build.py && python3 webos/in
 
 Developer Mode lasts about 40 days: open the Developer Mode app now and then and press **EXTEND**, or let your computer do it with `python3 webos/renew.py 192.168.1.50` (it needs the TV on and reachable, and the key `install.py` already saved). Run that on a schedule and you never touch EXTEND again — weekly is plenty; `webos/renew.py` shows a cron line for macOS and Linux and a Task Scheduler one for Windows. To remove Free My TV, run `python3 webos/install.py 192.168.1.50 --uninstall`.
 
+### Optional startup and Home button on rooted LG TVs
+
+On a rooted LG with Homebrew Channel, **Home Settings → Open at startup** can select Free My TV as the first app for the power button on compatible firmware. Restart the TV after changing the setting. This has been tested on an LG CX with webOS 5.6.2. The feature uses the optional boot configuration supported by that firmware and checks that an existing override belongs to Free My TV before changing it. Turn it off and restart before updating the TV firmware.
+
+To make the physical Home button open Free My TV, install and launch [LG Input Hook](https://github.com/Simon34545/lginputhook), identify the Home button in its input log, and assign it **Launch App → Free My TV**. On the tested LG CX remote the input code was `773`. Remove that binding in LG Input Hook to restore the original Home button.
+
 ## Samsung TVs (Tizen)
 
 The same home screen as a Samsung app, with everything the LG one has: the picks, the shelf, the drawer with the inputs, the weather and the prices, day and night, and its own settings. It installs through Samsung's own Developer Mode, with nothing rooted or changed on the TV, and Samsung's home screen stays where it is.

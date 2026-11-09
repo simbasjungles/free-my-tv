@@ -905,6 +905,12 @@
     }
     rows.push({label: tr('Live TV button'), value: boxLabel(),
       step: function (d) { cycle('boxInput', ['live', 'hdmi1', 'hdmi2', 'hdmi3', 'hdmi4'], Prefs.boxInput(), d); renderTop(); }});
+    if (TV.name === 'webos') {
+      rows.push({label: tr('Open at startup'), toggle: bootLaunchEnabled === true, dim: bootLaunchPending || bootLaunchEnabled === null,
+        step: function () {
+          if (!bootLaunchPending) updateBootLaunch(bootLaunchEnabled !== true);
+        }});
+    }
     rows.push({label: tr('Shelf'), value: '›', shelf: true, step: function (d) { if (d >= 0) openShelfEdit(); }});
     rows.push({label: tr('About this TV'), value: '›', about: true, step: function (d) { if (d >= 0) openAbout(); }});
     if (TV.canOpenSettings) rows.push({label: tr('TV Settings'), value: '›', step: function (d) { if (d >= 0) tvSettings(); }});
@@ -917,6 +923,17 @@
   }
 
   var rowsNow = [];
+  var bootLaunchEnabled = null, bootLaunchPending = false;
+
+  function updateBootLaunch(enabled) {
+    bootLaunchPending = true;
+    TV.bootLaunch(enabled, function (status) {
+      bootLaunchPending = false;
+      bootLaunchEnabled = status;
+      if (status === null && enabled !== null) toast(tr('Startup requires Homebrew Channel with root access.'));
+      if (st.zone === Z.SETTINGS) renderSettings();
+    });
+  }
 
   function renderSettings() {
     var box = $('settings').firstChild;
@@ -948,6 +965,7 @@
     renderSettings();
     setClass($('settings'), 'open', true);
     updateFocus();
+    if (TV.name === 'webos' && !bootLaunchPending) updateBootLaunch(null);
   }
 
   // MARK: - Language: a list of every catalogue in its own name, as on Android (moving through it doesn't switch the app)
