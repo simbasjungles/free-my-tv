@@ -91,8 +91,8 @@ var I18N = (function () {
   function formatDate(key, at) {
     var minute = Math.floor(at / 60000), last = formatted[key];
     if (last && last.minute === minute && last.lang === lang) return last.text;   // the clocks ask every second
-    var d = new Date(at), pattern = tr(key), clock = window.CONFIG && CONFIG.clockFormat;
-    // clock_format in config.properties: 24 or 12 overrides the catalogue's clock patterns.
+    var d = new Date(at), pattern = tr(key);
+    // Home Settings > Clock (or clock_format in config.properties): 24 or 12 overrides the catalogue's clock patterns.
     if (clock === '24' && CLOCK24[key]) pattern = CLOCK24[key];
     else if (clock === '12' && CLOCK12[key]) pattern = CLOCK12[key];
     var out = format(pattern, d, locale);
@@ -101,6 +101,7 @@ var I18N = (function () {
     return out;
   }
 
+  var clock = 'auto';
   var CLOCK24 = {'format|h:mm': 'HH:mm', 'format|h:mm a': 'HH:mm', 'format|h a': 'HH:00'};
   var CLOCK12 = {'format|h:mm': 'h:mm', 'format|h:mm a': 'h:mm a', 'format|h a': 'h a'};
 
@@ -278,7 +279,9 @@ var I18N = (function () {
     tr: tr,
     trf: trf,
     plural: plural,
-    formatDate: formatDate
+    formatDate: formatDate,
+    /** Home Settings > Clock: '24', '12' or 'auto' (the language's own). */
+    setClock: function (choice) { clock = choice; formatted = {}; }
   };
 })();
 
