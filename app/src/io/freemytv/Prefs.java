@@ -45,6 +45,8 @@ final class Prefs {
             KEY_SONY_PLAY = SONY_KEY + 587;   // the Google Play button of older remotes: BUTTON_8 (BRAVIA 4K UR3, Android 10)
     /** The SonyLIV button of the BRAVIA VU31's remote (India, Google TV 14), a key code of its own (#395). */
     static final int KEY_SONY_LIV = 3004;
+    /** The gear on Sony's Google TV remotes (BRAVIA 8 II): NOTIFICATION, which only launcherx's dashboard answers. */
+    static final int KEY_SONY_SETTINGS = KeyEvent.KEYCODE_NOTIFICATION;
 
     /**
      * A Sony app button by scan code. The BRAVIA VU31's remote (Google TV 14, #395) sends other codes for the same
@@ -107,7 +109,7 @@ final class Prefs {
                     KEY_HISENSE_APPS, KEY_HISENSE_SETTINGS, KEY_HISENSE_PROFILE}
             : RemoteKeys.SONY
             ? new int[] {KEY_SONY_CORE, KEY_SONY_NETFLIX, KEY_SONY_DISNEY, KEY_SONY_PRIME, KEY_SONY_YOUTUBE, KEY_SONY_CRUNCHYROLL,
-                    KEY_SONY_PLAY, KEY_SONY_LIV}
+                    KEY_SONY_PLAY, KEY_SONY_LIV, KEY_SONY_SETTINGS}
             : RemoteKeys.STEM_NETFLIX ? new int[] {KEY_STEM_NETFLIX}
             : RemoteKeys.KTC ? new int[] {KEY_KTC_TABII}
             : RemoteKeys.XIAOMI_PATCHWALL_ONLY ? new int[] {KEY_XIAOMI_PATCHWALL}
@@ -490,6 +492,7 @@ final class Prefs {
                 case KEY_SONY_YOUTUBE: return "com.google.android.youtube.tv";
                 case KEY_SONY_CRUNCHYROLL: return "com.crunchyroll.crunchyroid";
                 case KEY_SONY_LIV: return "com.sonyliv";
+                case KEY_SONY_SETTINGS: return "com.android.tv.settings";
                 default: return "";
             }
         }

@@ -35,6 +35,8 @@ final class RemoteKeys {
 
     /** Some TCL remotes (BT_RC833) send TCL's own YouTube key instead of BUTTON_3: the same button. */
     private static final int KEY_YOUTUBE_TCL = 4065;
+    /** KeyEvent.KEYCODE_VIDEO_APP_1 to _8 (API 28): numbers here, since minSdk is 26. */
+    private static final int KEYCODE_VIDEO_APP_1 = 289, KEYCODE_VIDEO_APP_8 = 296;
 
     /**
      * The key codes are the brand's own: on other brands they can be other buttons, so nothing here runs there.
@@ -113,10 +115,12 @@ final class RemoteKeys {
             else return false;
         }
         // Sony sends BUTTON_9 for five app buttons (BUTTON_4 for Netflix, BUTTON_8 for Google Play): only the scan code
-        // tells them apart. The BRAVIA VU31's remote sends BUTTON_2 and BUTTON_15 too (Prefs.sonyKey).
+        // tells them apart. The BRAVIA VU31's remote sends BUTTON_2 and BUTTON_15 too (Prefs.sonyKey). The BRAVIA 8 II
+        // (BRAVIA_AE2, Google TV 14) sends VIDEO_APP_1 to _8 with the same scan codes (583 Netflix, 485 YouTube).
         if (SONY && (keyCode == KeyEvent.KEYCODE_BUTTON_4 || keyCode == KeyEvent.KEYCODE_BUTTON_8
                 || keyCode == KeyEvent.KEYCODE_BUTTON_9 || keyCode == KeyEvent.KEYCODE_BUTTON_2
-                || keyCode == KeyEvent.KEYCODE_BUTTON_15)) {
+                || keyCode == KeyEvent.KEYCODE_BUTTON_15
+                || keyCode >= KEYCODE_VIDEO_APP_1 && keyCode <= KEYCODE_VIDEO_APP_8)) {
             keyCode = Prefs.sonyKey(e.getScanCode());
         }
         boolean ours = false;
@@ -141,7 +145,7 @@ final class RemoteKeys {
                             "com.smartdevice.dailyshortcut.ui.MainActivity")
                     : (TCL || PHILIPS_GTV) && pkg.equals(Prefs.QUICK_PANEL)
                     ? new Intent(c, QuickPanelActivity.class)
-                    : (JVC_SKYWORTH || TCL || PHILIPS_GTV) && pkg.equals("com.android.tv.settings")
+                    : (JVC_SKYWORTH || TCL || PHILIPS_GTV || SONY) && pkg.equals("com.android.tv.settings")
                     ? new Intent(android.provider.Settings.ACTION_SETTINGS).setPackage(pkg)
                     : launchIntent(c.getPackageManager(), pkg);
             if (pkg.equals(Prefs.ALL_APPS)) intent.putExtra(HomeActivity.EXTRA_ALL_APPS, true);

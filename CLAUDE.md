@@ -391,7 +391,12 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   Netflix, `BUTTON_2` (652) for Prime Video, `BUTTON_15` (653) for YouTube and key code 3004 for SonyLIV; `Prefs.sonyKey`
   puts the first three on the same rows. There the TV hands the buttons to launcherx, so with it off "Sony default" does
   nothing: on a Sony with launcherx installed (`Prefs.sonyGoogleTv`) the buttons default to their apps. Another remote's
-  codes go in `sonyKey` the same way, as long as they don't clash with a known one. Sony ships its own Apple TV build,
+  codes go in `sonyKey` the same way, as long as they don't clash with a known one. The BRAVIA 8 II (K-65XR8M2,
+  `BRAVIA_AE2_EU`, MediaTek, Google TV 14; remote `SONY TV VRC 001`) sends `KEYCODE_VIDEO_APP_1` to `_8` instead, with
+  the same scan codes (583 Netflix, 485 YouTube), so `RemoteKeys` maps those through `sonyKey` too. Its gear sends
+  `KEYCODE_NOTIFICATION`, which SystemUI turns into launcherx's dashboard panel ("Could not resolve activityInfo for
+  intent android.app.action.TOGGLE_NOTIFICATION_HANDLER_PANEL" with launcherx off): `Prefs.KEY_SONY_SETTINGS` opens TV
+  Settings by default on a Sony with launcherx installed. Sony ships its own Apple TV build,
   `com.apple.atve.sony.appletv`.
   Xiaomi projectors made by Formovie (Fengmi; L1, MediaTek, Google TV 14 tested) send the same `KEYCODE_STEM_1` for
   Netflix (`RemoteKeys.STEM_NETFLIX`); their YouTube button goes to MediaTek's `GlobalKeyReceiver` and stays with the system.
