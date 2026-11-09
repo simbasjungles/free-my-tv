@@ -113,6 +113,13 @@ def files(config, made_by):
     for name in ('InterVariable.ttf', 'OFL.txt'):
         with open(os.path.join(ROOT, 'app', 'assets', 'fonts', name), 'rb') as f:
             out['fonts/' + name] = f.read()
+    # Inter in fixed weights for Chromium before 62 (home.css's @font-face); the variable font above stays for WOFF2-less
+    # Tizen 2.4. Same family, same OFL licence.
+    fonts = os.path.join(web, 'fonts')
+    for name in sorted(os.listdir(fonts)):
+        if name.endswith('.woff2'):
+            with open(os.path.join(fonts, name), 'rb') as f:
+                out['fonts/' + name] = f.read()
     return out
 
 
