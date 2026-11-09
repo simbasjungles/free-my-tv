@@ -10,7 +10,7 @@ import android.view.accessibility.AccessibilityEvent;
  */
 public class RemoteKeyService extends AccessibilityService {
     @Override protected boolean onKeyEvent(KeyEvent event) {
-        return RemoteKeys.onKey(this, event);
+        return RemoteKeys.onVolumeKey(event) || RemoteKeys.onKey(this, event);
     }
 
     @Override public void onAccessibilityEvent(AccessibilityEvent event) {}

@@ -74,10 +74,11 @@ final class RemoteKeys {
     /** Brands whose Netflix button is STEM_1, a global key (MediaTek): only that button is ours. */
     static final boolean STEM_NETFLIX = VESTEL || FORMOVIE;
     /**
-     * With a key filter on, TCL's Android 11 changes the volume twice for one press, and a held key gets stuck (#325).
-     * There the service stays off: the buttons work on our home screen, whose window gets them (BUTTON_3 never does).
+     * TCL's Android 11 changes the volume as soon as a volume key arrives, before the key filter sees it, and again when
+     * the filter hands the key back: two steps per press, and a held key got stuck (#325). There the filter keeps volume
+     * up and down (onVolumeKey), so the service can stay on.
      */
-    static final boolean FILTER_SAFE = !(TCL && Build.VERSION.SDK_INT == Build.VERSION_CODES.R);
+    private static final boolean VOLUME_BEFORE_FILTER = TCL && Build.VERSION.SDK_INT == Build.VERSION_CODES.R;
 
     /** Xiaomi's remote sends one press as a burst of separate presses: a press this soon after the last one is the same. */
     private static final long BURST_MS = 1000;
@@ -88,11 +89,20 @@ final class RemoteKeys {
         return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || XIAOMI_AFKR0 || HISENSE || GOOGLE_STREAMER || JVC_SKYWORTH || PHILIPS_GTV;
     }
 
-    /** The key service is on only where the filter is safe, and while a button opens something (else it has no work). */
+    /** The key service is on only while a button opens something (else it has no work). */
     static boolean serviceWanted() {
-        if (!supported() || !FILTER_SAFE) return false;
+        if (!supported()) return false;
         for (int key : Prefs.KEYS) if (!Prefs.keyApp(key).isEmpty()) return true;
         return false;
+    }
+
+    /**
+     * For the key filter only: true for volume up and down on TCL's Android 11, which the system has already applied
+     * (VOLUME_BEFORE_FILTER). The key is then consumed; mute and every other key go on as before.
+     */
+    static boolean onVolumeKey(KeyEvent e) {
+        return VOLUME_BEFORE_FILTER
+                && (e.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP || e.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN);
     }
 
     private static boolean is(String maker) {

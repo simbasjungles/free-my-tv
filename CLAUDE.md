@@ -97,8 +97,7 @@ before you do it, and let them do the taps on the TV.
 7. **Tell them what the switch does** before they make it: the home screen and screensaver change, a short list of
    promo apps is turned off (never uninstalled), and *Original* brings it all back. On TCL, the remote's Netflix,
    YouTube and Prime buttons keep working through a small accessibility service that only reads those buttons
-   (*Free My TV* → *Remote Buttons* picks what each opens); *Original* turns it off. On TCL's Android 11 there's no
-   service (the TV moved the volume twice with it), so there the buttons work only on Free My TV's home screen. On
+   (*Free My TV* → *Remote Buttons* picks what each opens); *Original* turns it off. On
    Xiaomi TVs whose remote has no Home button, the same service makes its Mi button open Free My TV instead of PatchWall.
 8. **They switch on the TV:** *Free My TV* → *Home Screen* → *Free My TV*. The app uses the TV's own ADB on
    127.0.0.1 with its own key, so the TV asks once more to allow debugging. Don't switch modes from the computer.
@@ -375,9 +374,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   Vestel, KTC (NextStar), Sony, Xiaomi, Hisense and Philips' Google TV TVs, the JVC G24, Formovie projectors and the Google TV Streamer, the service is on only in Free My TV mode, and *Original* takes it out of the enabled accessibility
   services. The system waits for the service on every key, so it lives alone in the `:keys` process: what it reads is
   in `remote-keys.txt` (`Prefs.keyApp`), never in SharedPreferences, and `onKeyEvent` does no heavy work.
-  The service is also off while every button is *Nothing*, and always on TCL's Android 11 (`RemoteKeys.FILTER_SAFE`):
-  there any key filter makes the TV act on a volume key twice (one press moves 2 steps and a held key gets stuck, #325;
-  turning off only our service fixed it), so the buttons work only where they reach our home screen's window.
+  The service is also off while every button is *Nothing*. On TCL's Android 11 the TV applies a volume key before
+  the filter sees it and again when the filter hands it back (one press moved 2 steps and a held key got stuck, #325),
+  so there the filter keeps volume up and down (`RemoteKeys.onVolumeKey`); mute and the other keys go on as usual.
   Vestel (F&U and other store brands; MediaTek, Android TV 14 tested) maps its Netflix button to `KEYCODE_STEM_1`, a
   global key (`dumpsys window policy` lists them) that the key filter sees first; its YouTube, Prime Video and Google
   Play buttons stay with the system. The stock lists needed no Vestel entries.
@@ -437,8 +436,7 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   TCL's Settings button sends `KEYCODE_NOTIFICATION`, which only Google TV's home app (launcherx, off in our mode)
   answers with its quick settings panel. It is a *Remote Buttons* row (`Prefs.KEY_TCL_SETTINGS`) whose default is TV
   Settings (`com.android.tv.settings`, as #289 does from the home screen); its choice `Prefs.QUICK_PANEL` makes
-  `RemoteKeys` open `QuickPanelActivity`, and *Nothing* leaves the key alone (`HomeView` too, as for Hisense). On TCL's
-  Android 11 the key service is off (#325), so there the row works on the home screen only. The panel is our own, over
+  `RemoteKeys` open `QuickPanelActivity`, and *Nothing* leaves the key alone (`HomeView` too, as for Hisense). The panel is our own, over
   what's playing (a window on the left, drawn as glass since TVs turn window blur off), whose tiles open the TV's own screens
   (TCL's Picture and Sound panels through `DISPLAY_SETTINGS` and `VIEW_SOUND_SETTINGS`; TCL Google TV 14 tested).
   TCL's BeyondTV (Android 9, Realtek RTD2851, build `PPR1.180610.011`) sends each remote key through

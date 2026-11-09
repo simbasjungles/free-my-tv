@@ -433,7 +433,7 @@ final class HomeMode {
      * on TCL, Vestel, KTC, Sony, Xiaomi and Hisense TVs and the JVC G24 (and Formovie projectors and the Google TV
      * Streamer) in Free My TV mode, and goes off with Original. Android turns it off when this app is updated, so the
      * boot check and an update turn it back on. A change in Remote Buttons asks again: with every button on Nothing
-     * (or the brand's default), and on TCL's Android 11, it goes off (RemoteKeys.serviceWanted).
+     * (or the brand's default), it goes off (RemoteKeys.serviceWanted).
      */
     static void ensureRemoteService(Context c, long delayMs) {
         if (RemoteKeys.supported()) ModeJob.schedule(c, ModeJob.REMOTE, null, delayMs);
