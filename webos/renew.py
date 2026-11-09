@@ -52,7 +52,7 @@ def read_token(ip, key):
 
 
 def renew(ip):
-    key = install.key_path(ip)
+    key = install.saved_key(ip)   # also when the TV's address changed since the install
     if not os.path.exists(key):
         sys.exit('No saved key for %s. Install Free My TV first: python3 webos/install.py %s' % (ip, ip))
 
