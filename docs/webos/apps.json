@@ -26,9 +26,9 @@
         "rootRequired": false,
         "ipkUrl": "https://freemytv.io/webos/FreeMyTV-webos-1.4.0.ipk",
         "ipkHash": {
-          "sha256": "a8092ee49c639b38ec8cc0eadb0ab676121c148fbe459381f715192313aba8ae"
+          "sha256": "991c3a24f002b1f02620c79a74286707ede52112da12edda420db82891966e09"
         },
-        "ipkSize": 777870
+        "ipkSize": 1461086
       }
     }
   ]
