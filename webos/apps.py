@@ -114,7 +114,12 @@ def key_path(ip):
 def launch_points(ip):
     """The TV's launcher list, pairing first (the TV asks once)."""
     path = key_path(ip)
-    key = open(path).read().strip() if os.path.exists(path) else None
+    # The TV gives the key, not its address: at a new address (DHCP after a power cut) the newest saved key is tried
+    # first, so the TV doesn't ask again (with another TV's key, the TV just asks, as without one).
+    folder = os.path.dirname(path)
+    saved = [os.path.join(folder, n) for n in os.listdir(folder) if n.startswith('freemytv_ssap_')] if os.path.isdir(folder) else []
+    found = path if os.path.exists(path) else max(saved, key=os.path.getmtime) if saved else None
+    key = open(found).read().strip() if found else None
     try:
         ws = Socket(ip)
     except OSError:

@@ -1326,7 +1326,8 @@ public class SettingsActivity extends Activity {
             if (RemoteKeys.SONY) return new String[] {Ui.tr("BRAVIA CORE button"),
                     Ui.tr("Netflix button"), Ui.tr("Disney+ button"),
                     Ui.tr("Prime Video button"), Ui.tr("YouTube button"),
-                    Ui.tr("Crunchyroll button"), Ui.tr("Google Play button"), Ui.tr("SonyLIV button")};
+                    Ui.tr("Crunchyroll button"), Ui.tr("Google Play button"), Ui.tr("SonyLIV button"),
+                    Ui.tr("Settings button")};
             return new String[] {Ui.tr("Netflix button"), Ui.tr("YouTube button"),
                     Ui.tr("Prime Video button"), Ui.tr("TCL Channel button"), Ui.tr("Settings button")};
         }
@@ -1360,9 +1361,11 @@ public class SettingsActivity extends Activity {
                 appPkgs.add(Prefs.QUICK_SETTINGS);
                 appLabels.add(Ui.tr("Quick Settings"));
             }
-            if (RemoteKeys.TCL || RemoteKeys.PHILIPS_GTV) {
-                appPkgs.add(Prefs.QUICK_PANEL);
-                appLabels.add(Ui.tr("Quick Settings"));
+            if (RemoteKeys.TCL || RemoteKeys.PHILIPS_GTV || RemoteKeys.SONY) {
+                if (!RemoteKeys.SONY) {
+                    appPkgs.add(Prefs.QUICK_PANEL);
+                    appLabels.add(Ui.tr("Quick Settings"));
+                }
                 // The Settings button's default, listed even where TV Settings has no launcher entry.
                 boolean listed = false;
                 for (String[] f : found) listed |= f[0].equals("com.android.tv.settings");
