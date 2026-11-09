@@ -38,5 +38,9 @@ expect(prefs({boxInput: 'hdmi5'}).boxInput(), 'live', 'no port 5');
 expect(prefs({boxInput: 'apple'}).boxInput(), 'live', 'not an input');
 expect(prefs({boxInput: 2}).boxInput(), 'live', 'not a string');
 
+expect(prefs({}).liveInput(), true, 'Live TV in the inputs until hidden');
+expect(prefs({liveInput: false}).liveInput(), false, 'Live TV hidden');
+expect(prefs({liveInput: 'off'}).liveInput(), true, 'not a boolean');
+
 if (failures) process.exit(1);
 console.log('WebPrefsTest: all checks passed.');

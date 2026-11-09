@@ -109,6 +109,9 @@ var Prefs = (function () {
       var k = String(pick('boxInput', 'live')).toLowerCase();
       return /^hdmi[1-4]$/.test(k) ? k : 'live';
     },
+    /** The Live TV tile in the drawer's inputs (Home Settings > Live TV), on until turned off on a TV with no
+     * antenna; the first top button still opens it. */
+    liveInput: function () { return pick('liveInput', true) !== false; },
     set: function (name, value) { v[name] = value; save(); this.version++; },
     setCoin: function (i, on) {
       var c = (pick('coins', null) || [true, true, true, true]).slice();
