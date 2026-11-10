@@ -1310,6 +1310,8 @@ public class SettingsActivity extends Activity {
         private String[] keyLabels() {
             if (RemoteKeys.GOOGLE_STREAMER) return new String[] {Ui.tr("YouTube button"), Ui.tr("Netflix button"),
                     Ui.tr("Custom button") + " \u2605"};
+            if (RemoteKeys.ONN) return new String[] {Ui.tr("YouTube button"), Ui.tr("Netflix button"),
+                    Ui.tr("Disney+ button"), Ui.tr("Paramount+ button"), Ui.tr("Free TV button")};
             if (RemoteKeys.JVC_SKYWORTH) return new String[] {Ui.tr("Inputs"), Ui.tr("Settings button")};
             if (RemoteKeys.PHILIPS_GTV) return new String[] {Ui.tr("Settings button"), Ui.tr("All Apps button"), Ui.tr("TV Guide button"),
                     Ui.tr("Netflix button"), Ui.tr("YouTube button"), Ui.tr("Prime Video button")};
@@ -1352,7 +1354,7 @@ public class SettingsActivity extends Activity {
             appLabels.clear();
             appPkgs.add("");
             // An empty choice leaves the key to the system's receiver.
-            appLabels.add(RemoteKeys.GOOGLE_STREAMER ? Ui.tr("Google default")
+            appLabels.add(RemoteKeys.GOOGLE_STREAMER ? Ui.tr("Google default") : RemoteKeys.ONN ? Ui.tr("onn default")
                     : RemoteKeys.SONY ? Ui.tr("Sony default") : RemoteKeys.XIAOMI || RemoteKeys.XIAOMI_AFKR0
                     ? Ui.tr("Xiaomi default") : RemoteKeys.PHILIPS_GTV ? Ui.tr("Philips default") : Ui.tr("Nothing"));
             if (RemoteKeys.JVC_SKYWORTH) {
@@ -1375,11 +1377,11 @@ public class SettingsActivity extends Activity {
                 }
             }
             // On Xiaomi's MiTV-AFKR0 the Mi TV+ button can open this home screen too, like the Mi button elsewhere.
-            if (RemoteKeys.XIAOMI || RemoteKeys.XIAOMI_AFKR0) {
+            if (RemoteKeys.XIAOMI || RemoteKeys.XIAOMI_AFKR0 || RemoteKeys.ONN) {
                 appPkgs.add(HomeMode.PKG);
                 appLabels.add("Free My TV");
             }
-            if (RemoteKeys.HISENSE || RemoteKeys.GOOGLE_STREAMER || RemoteKeys.PHILIPS_GTV) {
+            if (RemoteKeys.HISENSE || RemoteKeys.GOOGLE_STREAMER || RemoteKeys.ONN || RemoteKeys.PHILIPS_GTV) {
                 appPkgs.add(Prefs.ALL_APPS);
                 appLabels.add(Ui.tr("All Apps"));
             }
@@ -2354,6 +2356,7 @@ public class SettingsActivity extends Activity {
                         : RemoteKeys.XIAOMI ? Ui.tr("Xiaomi default: the button opens what it always did.")
                         : RemoteKeys.HISENSE ? Ui.tr("Netflix: the TV itself controls that button.")
                         : RemoteKeys.GOOGLE_STREAMER ? Ui.tr("The other buttons: the TV itself controls them.")
+                        : RemoteKeys.ONN ? Ui.tr("onn default: the button opens what it always did.")
                         : RemoteKeys.supported() ? Ui.tr("Disney and Globoplay: the TV itself controls those buttons.")
                         : Ui.tr("TCL remote buttons: on this TV they work as always."), LIST_X * k + 30 * k, hy + 38 * k, hint);
                 // No key service on this TV (RemoteKeys.FILTER_SAFE): inside other apps the buttons do nothing.

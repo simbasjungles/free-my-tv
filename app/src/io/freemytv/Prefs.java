@@ -90,6 +90,15 @@ final class Prefs {
     /** Google TV Streamer's Vendor_18d1_Product_9451.kl; MACRO_1 (313) was added in API 34. */
     static final int KEY_GOOGLE_YOUTUBE = KeyEvent.KEYCODE_BUTTON_3, KEY_GOOGLE_NETFLIX = KeyEvent.KEYCODE_BUTTON_4,
             KEY_GOOGLE_CUSTOM = 313;
+    /**
+     * The onn remote (Vendor_0957_Product_0031.kl; onn 4K Pro, Google TV 14): HID usages 0x77 to 0x7A. YouTube goes to
+     * launcherx (off in our mode); Netflix, Disney+ and Paramount+ to droidlogic's and gretzky's receivers. Free TV is
+     * usage 0x187, FEATURED_APP_1 (297 on that build, read with KeyEvent.keyCodeFromString; not in API 34's SDK), also
+     * for launcherx: without the filter it does nothing in our mode.
+     */
+    static final int KEY_ONN_YOUTUBE = KeyEvent.KEYCODE_BUTTON_3, KEY_ONN_NETFLIX = KeyEvent.KEYCODE_BUTTON_4,
+            KEY_ONN_DISNEY = KeyEvent.KEYCODE_BUTTON_9, KEY_ONN_PARAMOUNT = KeyEvent.KEYCODE_BUTTON_10,
+            KEY_ONN_FREE_TV = 297;
     /** A button's value that opens this home screen's All Apps. */
     static final String ALL_APPS = HomeMode.PKG + "#all";
     /**
@@ -102,6 +111,8 @@ final class Prefs {
     static final String QUICK_SETTINGS = HomeMode.PKG + "#quicksettings";
     static final int[] KEYS = RemoteKeys.GOOGLE_STREAMER
             ? new int[] {KEY_GOOGLE_YOUTUBE, KEY_GOOGLE_NETFLIX, KEY_GOOGLE_CUSTOM}
+            : RemoteKeys.ONN ? new int[] {KEY_ONN_YOUTUBE, KEY_ONN_NETFLIX, KEY_ONN_DISNEY, KEY_ONN_PARAMOUNT,
+                    KEY_ONN_FREE_TV}
             : RemoteKeys.JVC_SKYWORTH ? new int[] {KEY_JVC_SHORTCUT, KEY_JVC_SETTINGS}
             : RemoteKeys.PHILIPS_GTV ? new int[] {KEY_PHILIPS_SETTINGS, KEY_PHILIPS_APPS, KEY_PHILIPS_GUIDE, KEY_PHILIPS_NETFLIX,
                     KEY_PHILIPS_YOUTUBE, KEY_PHILIPS_PRIME}
@@ -478,6 +489,10 @@ final class Prefs {
     private static String defaultApp(int keyCode) {
         if (RemoteKeys.GOOGLE_STREAMER) {
             return keyCode == KEY_GOOGLE_YOUTUBE ? "com.google.android.youtube.tv" : "";
+        }
+        if (RemoteKeys.ONN) {
+            // YouTube's receiver (launcherx) is off in our mode; the others keep opening their apps until one is picked.
+            return keyCode == KEY_ONN_YOUTUBE ? "com.google.android.youtube.tv" : "";
         }
         if (RemoteKeys.JVC_SKYWORTH) {
             if (keyCode == KEY_JVC_SHORTCUT) return TV_SHORTCUTS;
