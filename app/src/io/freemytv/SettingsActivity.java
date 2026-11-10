@@ -1137,6 +1137,11 @@ public class SettingsActivity extends Activity {
             return v;
         }
 
+        /** The choices for At power-on: Live TV only where the TV has live TV to open. */
+        private String[] powerOnValues() {
+            return HomeApps.liveTv(getContext()) != null ? Prefs.POWER_ON : new String[] {"tv", "home"};
+        }
+
         /**
          * What the focused screen's row `i` needs from the TV (Capabilities.NEED_…), or null. A new option that needs
          * something adds its line here; drawing, keys and TalkBack then treat it as unavailable where the TV lacks it.
@@ -1150,7 +1155,6 @@ public class SettingsActivity extends Activity {
                 case HOME_SETTINGS:
                     return pickScroll + i == PLAYING_ROW ? Capabilities.NEED_LISTENER
                             : pickScroll + i == HOME_ROW ? Capabilities.NEED_HOME_ASSISTANT
-                            : pickScroll + i == POWER_ON_ROW ? Capabilities.NEED_LIVE_TV
                             : pickScroll + i == SAVER_ROW ? Capabilities.NEED_SCREENSAVER : null;
                 case POWER: {
                     int id = powerRows()[i];
@@ -1473,8 +1477,10 @@ public class SettingsActivity extends Activity {
                     break;
                 }
                 case POWER_ON_ROW: {   // read at the next full start (HomeMode.bootCheck, HomeActivity)
-                    int at = java.util.Arrays.asList(Prefs.POWER_ON).indexOf(Prefs.powerOn());
-                    Prefs.setPowerOn(Prefs.POWER_ON[(at + dir + Prefs.POWER_ON.length) % Prefs.POWER_ON.length]);
+                    String[] values = powerOnValues();
+                    int at = java.util.Arrays.asList(values).indexOf(Prefs.powerOn());
+                    if (at < 0) at = 0;   // the value it had isn't among the ones this TV can use
+                    Prefs.setPowerOn(values[(at + dir + values.length) % values.length]);
                     return;
                 }
                 case ANDROID_APPS_ROW: Prefs.setAndroidApps(!Prefs.androidApps()); break;

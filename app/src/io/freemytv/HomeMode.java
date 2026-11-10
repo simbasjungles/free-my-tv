@@ -396,26 +396,41 @@ final class HomeMode {
      * At power-on "Home screen": some MediaTek TV centers put themselves on top about a second after the home screen
      * comes up at boot ("Please scan channels" where there's no antenna, #396). Gives the screen back to ours, but only
      * while no key has been pressed since our home screen first came up, and only in the first 4 minutes.
+     *
+     * And where the TV starts its own screen and never ours (some Android TV boxes start their launcher instead of the
+     * home screen, and Free My TV turns that launcher off), ours comes up instead: nothing has been touched since the
+     * boot, so the screen is ours to take.
      */
     static void powerOnNow(Context app) {
         Prefs.reload();
         if (!"home".equals(Prefs.powerOn())) return;
         List<String> tvApps = Arrays.asList(HomeApps.LIVE_TV_APPS);
-        for (int i = 0; i < 6 && SystemClock.elapsedRealtime() < 240_000; i++) {
+        for (int i = 0; i < 8 && SystemClock.elapsedRealtime() < 240_000; i++) {
             if (i > 0) SystemClock.sleep(10_000);
             long shown = homeShownAt(app);
-            if (shown == 0) continue;   // our home screen isn't up yet
             synchronized (RUN) {   // never in the middle of a switch or the boot check's changes
                 JSONObject s = state(app);
                 if (!FREE.equals(s.optString("mode")) || s.optBoolean("homeReverted")) return;
                 try (Adb adb = Adb.connect(app, 10_000, null)) {
-                    if (lastUserActivity(adb) >= shown) return;   // a key since: what's in front is their choice
-                    String front = resumedPackage(adb);
-                    if (front != null && tvApps.contains(front)) {
-                        adb.shell("am start -a android.intent.action.MAIN -c android.intent.category.HOME");
-                        AppLog.w("at power-on: " + front + " took the screen before any key, back to the home screen");
+                    if (shown > 0) {
+                        // Our home screen came up: only a TV app taking the screen over it is ours to correct.
+                        if (lastUserActivity(adb) >= shown) return;   // a key since: their choice
+                        String front = resumedPackage(adb);
+                        if (front != null && tvApps.contains(front)) {
+                            adb.shell("am start -a android.intent.action.MAIN -c android.intent.category.HOME");
+                            AppLog.w("at power-on: " + front + " took the screen before any key, back to the home screen");
+                        }
                         return;
                     }
+                    // It never came up: the TV started its own (which Free My TV turns off). Nothing has been touched for
+                    // a while (some boxes count their own starting up as the user being there), so ours takes the
+                    // screen; the TV may start over it, and the next round brings it back.
+                    if (lastUserActivity(adb) > SystemClock.uptimeMillis() - 15_000) continue;   // touched: wait
+                    String front = resumedPackage(adb);
+                    if (front == null) continue;   // unreadable: what can't be read counts as a key, nothing moves
+                    if (PKG.equals(front)) continue;   // ours is up: wait, the TV may start over it
+                    adb.shell("am start -a android.intent.action.MAIN -c android.intent.category.HOME");
+                    AppLog.w("at power-on: our home screen wasn't up (" + front + "), bringing it up");
                 } catch (IOException e) {
                     AppLog.w("at power-on: " + e.getMessage());
                 }
