@@ -716,6 +716,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             allAppsOnResume = false;
             reset(false);
             openSheet();
+        } else if (inputsOnResume) {
+            inputsOnResume = false;
+            reset(false);
+            openInputs();
         } else if (sheetOpen) {
             closeSheet();
         }
@@ -2451,6 +2455,29 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
 
     private boolean allAppsOnResume;
 
+    /** The remote's Input key (RemoteKeys, through HomeActivity): the drawer on the first input, as the top button. */
+    void showInputs() {
+        if (!running) {
+            inputsOnResume = true;
+            return;
+        }
+        reset(false);
+        openInputs();
+    }
+
+    private boolean inputsOnResume;
+
+    private void openInputs() {
+        openDrawer();
+        for (int i = 0; i < drawerItems.size(); i++) {
+            if (drawerItems.get(i).kind == HomeApps.INPUT) {
+                drawerIndex = i;
+                break;
+            }
+        }
+        retarget(false);
+    }
+
     private void openSheet() {
         sheetOpen = true;
         gridIndex = 0;
@@ -3302,14 +3329,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             return;
         }
         if (it.kind == HomeApps.INPUTS) {
-            openDrawer();
-            for (int i = 0; i < drawerItems.size(); i++) {
-                if (drawerItems.get(i).kind == HomeApps.INPUT) {
-                    drawerIndex = i;
-                    break;
-                }
-            }
-            retarget(false);
+            openInputs();
             return;
         }
         boolean opened = HomeApps.open(activity, it, this, Math.round(r.left), Math.round(r.top),
