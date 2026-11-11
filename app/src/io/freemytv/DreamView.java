@@ -282,8 +282,10 @@ final class DreamView extends View implements Choreographer.FrameCallback, HomeD
 
     // MARK: - Photos
 
-    /** Your photos when they are on, otherwise the picks'. */
+    /** The photo chosen in the settings, your photos when they are on, otherwise the picks'. */
     private List<Recs.Pick> photos() {
+        Recs.Pick one = Photos.chosenPick(getContext(), Prefs.saverPhoto());
+        if (one != null) return java.util.Collections.singletonList(one);
         return Photos.on(getContext()) ? Photos.picks(getContext()) : recs.showcase();
     }
 

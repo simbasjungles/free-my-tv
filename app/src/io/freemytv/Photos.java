@@ -126,6 +126,24 @@ final class Photos {
         return out;
     }
 
+    /** The photo chosen by its name (the file name), or null when there is none or it is gone. */
+    static File chosen(Context c, String name) {
+        if (name == null || name.isEmpty()) return null;
+        File f = new File(dir(c), name);
+        return f.exists() ? f : null;
+    }
+
+    /** The photo chosen for the screensaver, as the one pick of its list; null when there is none. */
+    static Recs.Pick chosenPick(Context c, String name) {
+        File f = chosen(c, name);
+        if (f == null) return null;
+        Recs.Pick p = new Recs.Pick();
+        p.kind = "photo";
+        p.id = 0;
+        p.photo = f;
+        return p;
+    }
+
     // MARK: - The home screen's background
 
     private static final ExecutorService worker = Executors.newSingleThreadExecutor();
@@ -134,32 +152,37 @@ final class Photos {
     private static Backdrop backdrop;
 
     /**
-     * This hour's photo, ready to draw as the home screen's background, or null (off, or the first one still being
-     * built). When the hour changes, the previous one stays until the new one is ready; then `ready` runs.
+     * The background to draw: the photo chosen in the settings, or (without one) this hour's photo; ready to draw, or
+     * null (off, or the first one still being built). When the hour changes, the previous one stays until the new one
+     * is ready; then `ready` runs.
      */
     static synchronized Backdrop backdrop(Context c, Runnable ready) {
-        if (!on(c)) {
-            backdrop = null;
-            built = null;
-            return null;
+        File want = chosen(c, Prefs.wallpaper());
+        if (want == null) {
+            if (!on(c)) {
+                backdrop = null;
+                built = null;
+                return null;
+            }
+            List<File> list = files(c);
+            want = list.get((int) ((System.currentTimeMillis() / 3_600_000L) % list.size()));
         }
-        List<File> list = files(c);
-        File want = list.get((int) ((System.currentTimeMillis() / 3_600_000L) % list.size()));
-        if (!want.equals(built) && !want.equals(building)) {
-            building = want;
+        final File photo = want;
+        if (!photo.equals(built) && !photo.equals(building)) {
+            building = photo;
             worker.execute(() -> {
                 Backdrop b = null;
                 try {
-                    Bitmap src = BitmapFactory.decodeFile(want.getPath());
+                    Bitmap src = BitmapFactory.decodeFile(photo.getPath());
                     if (src != null) b = Backdrop.make(src, true, true);
                 } catch (RuntimeException | OutOfMemoryError e) {
-                    AppLog.w("photos: background from " + want.getName() + ": " + e.getMessage());
+                    AppLog.w("photos: background from " + photo.getName() + ": " + e.getMessage());
                 }
                 synchronized (Photos.class) {
                     building = null;
                     if (b == null) return;
                     backdrop = b;
-                    built = want;
+                    built = photo;
                 }
                 main.post(ready);
             });

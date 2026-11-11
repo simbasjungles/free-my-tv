@@ -382,6 +382,28 @@ final class Prefs {
         version++;
     }
 
+    /**
+     * The photo chosen as the home screen's background (its file name), or "" for none: then the background is the
+     * focused pick's photo, as before.
+     */
+    static String wallpaper() { return sp().getString("wallpaper", ""); }
+
+    static void setWallpaper(String name) {
+        sp().edit().putString("wallpaper", name).apply();
+        version++;
+    }
+
+    /**
+     * The photo chosen for the screensaver (its file name), or "" for none: then the screensaver shows the photos
+     * in turn, as before.
+     */
+    static String saverPhoto() { return sp().getString("saverPhoto", ""); }
+
+    static void setSaverPhoto(String name) {
+        sp().edit().putString("saverPhoto", name).apply();
+        version++;
+    }
+
     static boolean coin(int i) { return sp().getBoolean("coin" + i, true); }
     static void setCoin(int i, boolean on) { put("coin" + i, on); }
 
