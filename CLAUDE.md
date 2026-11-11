@@ -527,7 +527,11 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
 - *At power-on* (Home Settings, `Prefs.powerOn()`: `tv`, the default, `home` or `live`; #396, #346) acts only after a
   full start, never on a wake from standby. `HomeActivity` keeps the uptime of the first time the home screen came up
   in this start (`HomeMode.noteHomeShown`, the file `home-shown` with `Settings.Global.BOOT_COUNT`). `live`: 10 s later,
-  if no key reached our window and it's still in front, it opens Live TV as the button does. `home`: a `POWER_ON` job
+  if no key reached our window and it's still in front, it opens Live TV as the button does. If the screen went off
+  first (a TV that starts in standby after a power cut, as Android's quiescent boot does: a TCL Smart TV Pro
+  reports `ro.boot.bootreason` `cold,quiescent`, #489), the 10 s count again
+  when it comes on with our home screen in front; a key or Home before that cancels it, and each outcome is in the
+  log (`at power-on: ...`). `home`: a `POWER_ON` job
   10 s after boot, for up to a minute, sends the HOME intent through the TV's ADB when an app of `LIVE_TV_APPS` is in
   front and `dumpsys power`'s last user activity (`mLastUserActivityTime`; `lastUserActivityTime` per display group on
   Android 14) is still older than that uptime (a key moves it; a Changhong on
