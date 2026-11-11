@@ -1,0 +1,68 @@
+name: My TV (works or doesn't)
+description: Tell us how Free My TV runs on your TV, so the next person with the same model knows what to expect.
+title: "[TV] Brand Model (platform and version)"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! One report per TV model helps the next person with the same set. Do not paste your TMDB key,
+        Plex token, Wi-Fi name or any other secret.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Google TV / Android TV
+        - Fire TV
+        - LG webOS
+        - Samsung Tizen
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Brand, model and year
+      placeholder: "Xiaomi Mi TV Stick (MiTV-AESP0), 2020"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS version
+      description: "Android version, webOS version or Tizen version."
+      placeholder: "Android TV 9 (SDK 28)"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Free My TV version
+      placeholder: "v1.3.0 (release APK)"
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Works fully
+        - Works, with problems (describe below)
+        - Does not install or does not start
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What happened
+      description: |
+        Install steps that were needed (USB debugging only, pairing, a Developer Mode app), what worked and what didn't:
+        Home button, remote buttons, HDMI inputs, Live TV, sleep and wake, stock screensaver.
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Output that helps (optional)
+      description: "For example `adb shell getprop ro.product.model` and `adb logcat -s FreeMyTV`. Remove anything private first."
+      render: shell

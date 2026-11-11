@@ -19,6 +19,17 @@ if [ "$what" = all ] || [ "$what" = android ]; then
   ./build.sh
   bash tools/test-remote.sh
   bash tools/test-order.sh
+
+  # Size budget: the app is a ~1.6 MB APK on purpose (no Gradle, no libraries). A change that grows it past the
+  # budget fails here, so a new feature has to say why it needs the room. Raise APK_MAX_BYTES in a PR that
+  # explains the growth, or run with APK_MAX_BYTES=<bytes> to try a different limit.
+  apk_max="${APK_MAX_BYTES:-1800000}"
+  apk_size="$(wc -c < FreeMyTV.apk | tr -d ' ')"
+  echo "FreeMyTV.apk: $apk_size bytes (budget $apk_max)"
+  if [ "$apk_size" -gt "$apk_max" ]; then
+    echo "FreeMyTV.apk is $((apk_size - apk_max)) bytes over its size budget (tools/check.sh, APK_MAX_BYTES)." >&2
+    exit 1
+  fi
 fi
 
 if [ "$what" = all ] || [ "$what" = web ]; then
