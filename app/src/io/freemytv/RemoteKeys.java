@@ -114,6 +114,19 @@ final class RemoteKeys {
             InputDevice device = InputDevice.getDevice(e.getDeviceId());
             if (device == null || !SabrinaRemote.isRemote(device.getVendorId(), device.getProductId())) return false;
         }
+        if (e.getKeyCode() == KeyEvent.KEYCODE_TV_INPUT && inputsUnanswered(c)) {
+            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
+                AppLog.w("remote key " + e.getKeyCode() + " -> inputs");
+                Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                        .putExtra(HomeActivity.EXTRA_INPUTS, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                try {
+                    c.startActivity(intent);
+                } catch (android.content.ActivityNotFoundException | SecurityException ex) {
+                    AppLog.w("remote target unavailable: inputs");
+                }
+            }
+            return true;   // its key-up too, as for the app keys
+        }
         int keyCode = TCL && e.getKeyCode() == KEY_YOUTUBE_TCL ? Prefs.KEY_YOUTUBE : e.getKeyCode();
         if (JVC_SKYWORTH) {
             if (SkyworthRemote.settings(keyCode)) keyCode = Prefs.KEY_JVC_SETTINGS;
@@ -167,6 +180,17 @@ final class RemoteKeys {
         }
         return true;
     }
+
+    /**
+     * The firmware turns the Input key into VIEW_INPUTS (Hisense: HisensePhoneWindowHelper), which only the stock home
+     * screen's inputs panel answers. With that home screen off nothing does and the key is lost, so our drawer takes it.
+     * In Original mode the stock panel answers again and the key is left alone.
+     */
+    private static boolean inputsUnanswered(Context c) {
+        return c.getPackageManager().resolveActivity(new Intent(VIEW_INPUTS), 0) == null;
+    }
+
+    private static final String VIEW_INPUTS = "com.android.tv.action.VIEW_INPUTS";
 
     /** The app's TV launcher, or its plain one (kept here, not in HomeApps, so the key process stays small). */
     private static Intent launchIntent(PackageManager pm, String pkg) {
