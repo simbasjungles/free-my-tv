@@ -27,6 +27,8 @@ import android.view.KeyEvent;
  * On Hisense TVs, the Prime Video, YouTube, Disney+, All Apps, Settings (gear) and profile buttons go to Google TV's
  * home app, which Free My TV mode turns off: without the filter they do nothing. Netflix stays with the system.
  * On Google TV Streamer, YouTube and the custom star button go to that home app too; Netflix goes to Google's service.
+ * On onn streamers (Walmart; the 4K Pro, Amlogic, Google TV 14 tested), YouTube goes to Google TV's home app, which Free
+ * My TV mode turns off, and so does Free TV; Netflix, Disney+ and Paramount+ go to the box's own receivers (droidlogic, gretzky), which stay on.
  * On the JVC G24 (Skyworth Android 11), the input shortcut's vendor receiver crashes without Google TV's content
  * provider, and Quick Settings targets its disabled notification panel. Open the native TV menus directly.
  */
@@ -46,6 +48,8 @@ final class RemoteKeys {
             HISENSE = is("Hisense");
     static final boolean CHROMECAST_SABRINA = SabrinaRemote.supported(Build.DEVICE, Build.MODEL);
     static final boolean GOOGLE_STREAMER = is("Google") && Build.MODEL.equals("Google TV Streamer");
+    /** onn streamers (Walmart's Google TV boxes): their remote's Vendor_0957_Product_0031.kl, the same on the 4K and 4K Pro. */
+    static final boolean ONN = is("onn");
     static final boolean JVC_SKYWORTH = SkyworthRemote.supported(Build.MANUFACTURER, Build.BRAND,
             Build.MODEL, Build.VERSION.SDK_INT);
     /**
@@ -89,7 +93,7 @@ final class RemoteKeys {
 
     static boolean supported() {
         return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || XIAOMI_AFKR0 || HISENSE || CHROMECAST_SABRINA
-                || GOOGLE_STREAMER || JVC_SKYWORTH || PHILIPS_GTV;
+                || GOOGLE_STREAMER || ONN || JVC_SKYWORTH || PHILIPS_GTV;
     }
 
     /**
