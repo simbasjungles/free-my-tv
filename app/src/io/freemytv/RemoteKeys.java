@@ -92,9 +92,13 @@ final class RemoteKeys {
                 || GOOGLE_STREAMER || JVC_SKYWORTH || PHILIPS_GTV;
     }
 
-    /** The key service is on only where the filter is safe, and while a button opens something (else it has no work). */
+    /**
+     * The key service is on only where the filter is safe, and while a button opens something (else it has no work); on
+     * Hisense always, for the Input key.
+     */
     static boolean serviceWanted() {
         if (!supported() || !FILTER_SAFE) return false;
+        if (HISENSE) return true;   // the Input key: our drawer while the stock inputs panel is off (#494)
         for (int key : Prefs.KEYS) if (!Prefs.keyApp(key).isEmpty()) return true;
         return false;
     }
@@ -114,7 +118,7 @@ final class RemoteKeys {
             InputDevice device = InputDevice.getDevice(e.getDeviceId());
             if (device == null || !SabrinaRemote.isRemote(device.getVendorId(), device.getProductId())) return false;
         }
-        if (e.getKeyCode() == KeyEvent.KEYCODE_TV_INPUT && inputsUnanswered(c)) {
+        if (HISENSE && e.getKeyCode() == KeyEvent.KEYCODE_TV_INPUT && inputsUnanswered(c)) {
             if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
                 AppLog.w("remote key " + e.getKeyCode() + " -> inputs");
                 Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
@@ -182,9 +186,10 @@ final class RemoteKeys {
     }
 
     /**
-     * The firmware turns the Input key into VIEW_INPUTS (Hisense: HisensePhoneWindowHelper), which only the stock home
-     * screen's inputs panel answers. With that home screen off nothing does and the key is lost, so our drawer takes it.
-     * In Original mode the stock panel answers again and the key is left alone.
+     * Hisense's firmware turns the Input key into VIEW_INPUTS (HisensePhoneWindowHelper), which only the stock home
+     * screen's inputs panel answers (#494). With that home screen off nothing does and the key is lost, so our drawer
+     * takes it. In Original mode the stock panel answers again and the key is left alone. Only on Hisense: another
+     * firmware may open its own panel some other way, and then both would come up (TCL's own panel answers VIEW_INPUTS).
      */
     private static boolean inputsUnanswered(Context c) {
         return c.getPackageManager().resolveActivity(new Intent(VIEW_INPUTS), 0) == null;

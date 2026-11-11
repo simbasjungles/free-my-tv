@@ -380,9 +380,10 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   mode, and *Original* takes it out of the enabled accessibility
   services. The system waits for the service on every key, so it lives alone in the `:keys` process: what it reads is
   in `remote-keys.txt` (`Prefs.keyApp`), never in SharedPreferences, and `onKeyEvent` does no heavy work.
-  The service is also off while every button is *Nothing*, and always on TCL's Android 11 (`RemoteKeys.FILTER_SAFE`):
-  there any key filter makes the TV act on a volume key twice (one press moves 2 steps and a held key gets stuck, #325;
-  turning off only our service fixed it), so the buttons work only where they reach our home screen's window.
+  The service is also off while every button is *Nothing* (not on Hisense, for the Input key), and always on TCL's
+  Android 11 (`RemoteKeys.FILTER_SAFE`): there any key filter makes the TV act on a volume key twice (one press moves
+  2 steps and a held key gets stuck, #325; turning off only our service fixed it), so the buttons work only where they
+  reach our home screen's window.
   Vestel (F&U and other store brands; MediaTek, Android TV 14 tested) maps its Netflix button to `KEYCODE_STEM_1`, a
   global key (`dumpsys window policy` lists them) that the key filter sees first; its YouTube, Prime Video and Google
   Play buttons stay with the system. The stock lists needed no Vestel entries.
@@ -437,7 +438,10 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   for the profile button, all global keys for Google TV's home app (`launcherx`), which Free My TV mode turns off, and
   `607` for Disney+: without the service they do nothing. Netflix (`KEYCODE_STEM_1`) stays with the system. The gear
   opens TV Settings and All Apps opens our own sheet (`Prefs.ALL_APPS`, `HomeActivity.EXTRA_ALL_APPS`); the profile
-  button has nothing to open without `launcherx`. Hisense keeps only error logs: `adb shell setprop log.tag.FreeMyTV I`
+  button has nothing to open without `launcherx`. Its Input key (`KEYCODE_TV_INPUT`) becomes VIEW_INPUTS in the firmware
+  (`HisensePhoneWindowHelper`), answered only by the stock home screen's inputs panel (#494): while nothing resolves it,
+  the service opens our drawer on the first input (`HomeActivity.EXTRA_INPUTS`). Only on Hisense, since another
+  firmware could open its own panel another way. Hisense keeps only error logs: `adb shell setprop log.tag.FreeMyTV I`
   before reading `adb logcat -s FreeMyTV`.
   Philips' Google TV models (`RemoteKeys.PHILIPS_GTV`: Android 13 and newer, by brand, maker or model name; a 65OLED910,
   `Philips Google TV TA5`, Android 14, gave the codes, #437, and no one has run it yet) send TP Vision's own numbers: 811
