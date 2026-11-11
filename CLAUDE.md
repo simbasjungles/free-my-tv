@@ -482,12 +482,12 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   long-press mapping. Home, Back, voice, power and volume stay with the system.
   onn streamers (`RemoteKeys.ONN`, by brand; the onn 4K Pro, `onn. Streaming Device 4K pro`, device `SNA`, Amlogic,
   Google TV 14 tested) read their remote through `Vendor_0957_Product_0031.kl`: YouTube is HID usage 0x77 (`BUTTON_3`,
-  for launcherx), Netflix 0x78 (`BUTTON_4`), Disney+ 0x79 (`BUTTON_9`) and Paramount+ 0x7A (`BUTTON_10`), the last
-  three for the box's own receivers (`com.droidlogic`, `com.gretzky.GlobalKey`), which stay on. Free TV is 0x187,
-  `FEATURED_APP_1`, also launcherx's: 297 on that build (read on the box with `KeyEvent.keyCodeFromString` through
-  `app_process`; API 34's SDK doesn't name it). With launcherx off, YouTube and Free TV do nothing, so YouTube opens
-  YouTube by default and Free TV waits for a pick; *onn default* (empty) leaves the others to the box. Each can also
-  open Free My TV's home screen or All Apps. `getevent -l` on the remote's device shows each press's usage (`MSC_SCAN`).
+  for launcherx), Netflix 0x78 (`BUTTON_4`), Disney+ 0x79 (`BUTTON_9`) and Paramount+ 0x7A (`BUTTON_10`), the last three
+  for the box's own receivers (`com.droidlogic`, `com.gretzky.GlobalKey`), which stay on. Free TV is 0x187,
+  `FEATURED_APP_1` (297; public only since API 33, so a number in the code), also launcherx's. With launcherx off,
+  YouTube and Free TV do nothing, so YouTube opens YouTube by default and Free TV waits for a pick; *onn default*
+  (empty) leaves the others to the box. Each can also open Free My TV's home screen or All Apps. `getevent -l` on the
+  remote's device shows each press's usage (`MSC_SCAN`).
   The JVC G24 (Skyworth, Android 11 tested; `RemoteKeys.JVC_SKYWORTH`, by model name and Android version) sends its
   Inputs button as `KEYCODE_BUTTON_16` with scan code 383 (Bluetooth) or 79 (IR), or as `BUTTON_14` with 240, and its
   gear as `KEYCODE_NOTIFICATION` (`SkyworthRemote`; `BUTTON_16` with other scan codes is its app buttons, which stay

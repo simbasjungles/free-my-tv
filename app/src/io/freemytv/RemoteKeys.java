@@ -28,7 +28,8 @@ import android.view.KeyEvent;
  * home app, which Free My TV mode turns off: without the filter they do nothing. Netflix stays with the system.
  * On Google TV Streamer, YouTube and the custom star button go to that home app too; Netflix goes to Google's service.
  * On onn streamers (Walmart; the 4K Pro, Amlogic, Google TV 14 tested), YouTube goes to Google TV's home app, which Free
- * My TV mode turns off, and so does Free TV; Netflix, Disney+ and Paramount+ go to the box's own receivers (droidlogic, gretzky), which stay on.
+ * My TV mode turns off, and so does Free TV; Netflix, Disney+ and Paramount+ go to the box's own receivers (droidlogic,
+ * gretzky), which stay on.
  * On the JVC G24 (Skyworth Android 11), the input shortcut's vendor receiver crashes without Google TV's content
  * provider, and Quick Settings targets its disabled notification panel. Open the native TV menus directly.
  */

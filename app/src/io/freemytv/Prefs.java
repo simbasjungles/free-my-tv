@@ -93,8 +93,8 @@ final class Prefs {
     /**
      * The onn remote (Vendor_0957_Product_0031.kl; onn 4K Pro, Google TV 14): HID usages 0x77 to 0x7A. YouTube goes to
      * launcherx (off in our mode); Netflix, Disney+ and Paramount+ to droidlogic's and gretzky's receivers. Free TV is
-     * usage 0x187, FEATURED_APP_1 (297 on that build, read with KeyEvent.keyCodeFromString; not in API 34's SDK), also
-     * for launcherx: without the filter it does nothing in our mode.
+     * usage 0x187, KEYCODE_FEATURED_APP_1 (297, public since API 33: a number here, since minSdk is 26), also for
+     * launcherx: without the filter it does nothing in our mode.
      */
     static final int KEY_ONN_YOUTUBE = KeyEvent.KEYCODE_BUTTON_3, KEY_ONN_NETFLIX = KeyEvent.KEYCODE_BUTTON_4,
             KEY_ONN_DISNEY = KeyEvent.KEYCODE_BUTTON_9, KEY_ONN_PARAMOUNT = KeyEvent.KEYCODE_BUTTON_10,

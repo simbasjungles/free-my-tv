@@ -1381,7 +1381,8 @@ public class SettingsActivity extends Activity {
                     appLabels.add(Ui.tr("TV Settings"));
                 }
             }
-            // On Xiaomi's MiTV-AFKR0 the Mi TV+ button can open this home screen too, like the Mi button elsewhere.
+            // On Xiaomi's MiTV-AFKR0 the Mi TV+ button can open this home screen too, like the Mi button elsewhere; so
+            // can onn's buttons.
             if (RemoteKeys.XIAOMI || RemoteKeys.XIAOMI_AFKR0 || RemoteKeys.ONN) {
                 appPkgs.add(HomeMode.PKG);
                 appLabels.add("Free My TV");
