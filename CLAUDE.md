@@ -486,8 +486,10 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   for the box's own receivers (`com.droidlogic`, `com.gretzky.GlobalKey`), which stay on. Free TV is 0x187,
   `FEATURED_APP_1` (297; public only since API 33, so a number in the code), also launcherx's. With launcherx off,
   YouTube and Free TV do nothing, so YouTube opens YouTube by default and Free TV waits for a pick; *onn default*
-  (empty) leaves the others to the box. Each can also open Free My TV's home screen or All Apps. `getevent -l` on the
-  remote's device shows each press's usage (`MSC_SCAN`).
+  (empty) leaves the others to the box. Each can also open Free My TV's home screen or All Apps. Only that remote
+  (vendor 0957, product 0031) is ours: `RemoteKeys.onKey` checks it as it does Sabrina's, so another onn model's remote
+  stays with the box until its codes are read. `getevent -l` on the remote's device shows each press's usage
+  (`MSC_SCAN`).
   The JVC G24 (Skyworth, Android 11 tested; `RemoteKeys.JVC_SKYWORTH`, by model name and Android version) sends its
   Inputs button as `KEYCODE_BUTTON_16` with scan code 383 (Bluetooth) or 79 (IR), or as `BUTTON_14` with 240, and its
   gear as `KEYCODE_NOTIFICATION` (`SkyworthRemote`; `BUTTON_16` with other scan codes is its app buttons, which stay

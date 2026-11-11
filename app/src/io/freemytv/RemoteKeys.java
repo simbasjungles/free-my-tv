@@ -49,8 +49,13 @@ final class RemoteKeys {
             HISENSE = is("Hisense");
     static final boolean CHROMECAST_SABRINA = SabrinaRemote.supported(Build.DEVICE, Build.MODEL);
     static final boolean GOOGLE_STREAMER = is("Google") && Build.MODEL.equals("Google TV Streamer");
-    /** onn streamers (Walmart's Google TV boxes): their remote's Vendor_0957_Product_0031.kl, the same on the 4K and 4K Pro. */
+    /**
+     * onn streamers (Walmart's Google TV boxes). Only the remote whose buttons were read (the 4K Pro's,
+     * Vendor_0957_Product_0031.kl) is ours: onKey checks it, as for Sabrina, so another onn remote, a gamepad's or a
+     * keyboard's BUTTON_3 to _10 go on as before.
+     */
     static final boolean ONN = is("onn");
+    private static final int ONN_REMOTE_VENDOR = 0x0957, ONN_REMOTE_PRODUCT = 0x0031;
     static final boolean JVC_SKYWORTH = SkyworthRemote.supported(Build.MANUFACTURER, Build.BRAND,
             Build.MODEL, Build.VERSION.SDK_INT);
     /**
@@ -154,6 +159,7 @@ final class RemoteKeys {
         boolean ours = false;
         for (int key : Prefs.KEYS) ours |= key == keyCode;
         if (!ours) return false;
+        if (ONN && !onnRemote(e)) return false;
         String pkg = Prefs.keyApp(keyCode);
         if (pkg.isEmpty()) return false;   // "Nothing": the key goes on as if we weren't here
         if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
@@ -201,6 +207,12 @@ final class RemoteKeys {
     }
 
     private static final String VIEW_INPUTS = "com.android.tv.action.VIEW_INPUTS";
+
+    /** The key comes from the onn remote that was read (only for our keys: the others never look it up). */
+    private static boolean onnRemote(KeyEvent e) {
+        InputDevice device = InputDevice.getDevice(e.getDeviceId());
+        return device != null && device.getVendorId() == ONN_REMOTE_VENDOR && device.getProductId() == ONN_REMOTE_PRODUCT;
+    }
 
     /** The app's TV launcher, or its plain one (kept here, not in HomeApps, so the key process stays small). */
     private static Intent launchIntent(PackageManager pm, String pkg) {
