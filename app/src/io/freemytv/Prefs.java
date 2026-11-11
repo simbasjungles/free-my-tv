@@ -100,7 +100,8 @@ final class Prefs {
     static final int KEY_JVC_SHORTCUT = 200_383, KEY_JVC_SETTINGS = KeyEvent.KEYCODE_NOTIFICATION;
     static final String TV_SHORTCUTS = HomeMode.PKG + "#tvshortcuts";
     static final String QUICK_SETTINGS = HomeMode.PKG + "#quicksettings";
-    static final int[] KEYS = RemoteKeys.GOOGLE_STREAMER
+    static final int[] KEYS = RemoteKeys.CHROMECAST_SABRINA ? new int[] {SabrinaRemote.KEY_YOUTUBE}
+            : RemoteKeys.GOOGLE_STREAMER
             ? new int[] {KEY_GOOGLE_YOUTUBE, KEY_GOOGLE_NETFLIX, KEY_GOOGLE_CUSTOM}
             : RemoteKeys.JVC_SKYWORTH ? new int[] {KEY_JVC_SHORTCUT, KEY_JVC_SETTINGS}
             : RemoteKeys.PHILIPS_GTV ? new int[] {KEY_PHILIPS_SETTINGS, KEY_PHILIPS_APPS, KEY_PHILIPS_GUIDE, KEY_PHILIPS_NETFLIX,
@@ -476,6 +477,9 @@ final class Prefs {
     // MARK: - Remote buttons
 
     private static String defaultApp(int keyCode) {
+        if (RemoteKeys.CHROMECAST_SABRINA) {
+            return keyCode == SabrinaRemote.KEY_YOUTUBE ? "com.google.android.youtube.tv" : "";
+        }
         if (RemoteKeys.GOOGLE_STREAMER) {
             return keyCode == KEY_GOOGLE_YOUTUBE ? "com.google.android.youtube.tv" : "";
         }

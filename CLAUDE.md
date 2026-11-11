@@ -375,7 +375,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
 - Settings rows that need something this TV lacks stay, dimmed as *Unavailable*: `SettingsActivity.need` names what a
   row needs, `Capabilities.missing` says why it's missing (once per screen), and OK on the row shows it in a toast.
 - The remote's app buttons (`RemoteKeys`, `RemoteKeyService`) use each brand's key codes: they run only on TCL,
-  Vestel, KTC (NextStar), Sony, Xiaomi, Hisense and Philips' Google TV TVs, the JVC G24, Formovie projectors and the Google TV Streamer, the service is on only in Free My TV mode, and *Original* takes it out of the enabled accessibility
+  Vestel, KTC (NextStar), Sony, Xiaomi, Hisense and Philips' Google TV TVs, the JVC G24, Formovie projectors,
+  Chromecast with Google TV (Sabrina, YouTube only) and the Google TV Streamer; the service is on only in Free My TV
+  mode, and *Original* takes it out of the enabled accessibility
   services. The system waits for the service on every key, so it lives alone in the `:keys` process: what it reads is
   in `remote-keys.txt` (`Prefs.keyApp`), never in SharedPreferences, and `onKeyEvent` does no heavy work.
   The service is also off while every button is *Nothing*, and always on TCL's Android 11 (`RemoteKeys.FILTER_SAFE`):
@@ -456,6 +458,13 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   as global keys (`GlobalKeyManager handleGlobalKey`; 4020 goes to the receiver of `com.realtek.tv.settings`). Thus
   the TV also does its own action: on the home screen, a Netflix button set to a different choice did that choice, and
   Netflix also opened.
+  Chromecast with Google TV (Sabrina, Android 14; device `sabrina`, remote 18d1:9450) sends scan usage `0x000c0077`
+  for YouTube and `0x000c0078` for Netflix. The public `Vendor_18d1_Product_9450.kl` maps these to BUTTON_3 and
+  BUTTON_4; a read-only `getevent` capture on this TV confirmed both scan usages. User testing confirmed Netflix
+  continues through Google's handler while YouTube does not; launcherx owns YouTube and is off in Free My TV mode.
+  Only YouTube is ours: `SabrinaRemote` matches the exact device/model and `RemoteKeys.onKey` also checks the physical
+  remote's vendor/product before opening the selected app (YouTube by default). Netflix and all other buttons stay
+  with Android.
   The Google TV Streamer (`RemoteKeys.GOOGLE_STREAMER`: model `Google TV Streamer`, device `kirkwood`, Android 14
   tested) maps YouTube to `BUTTON_3`, Netflix to `BUTTON_4` and its custom star button to `MACRO_1` (313, API 34), from
   `Vendor_18d1_Product_9451.kl`. YouTube and the star go to launcherx; Netflix goes to chromecastservice. The model

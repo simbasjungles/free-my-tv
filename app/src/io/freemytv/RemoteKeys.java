@@ -44,6 +44,7 @@ final class RemoteKeys {
      */
     static final boolean TCL = is("TCL"), VESTEL = is("Vestel"), KTC = is("KTC"), SONY = is("Sony"), FORMOVIE = is("Formovie"),
             HISENSE = is("Hisense");
+    static final boolean CHROMECAST_SABRINA = SabrinaRemote.supported(Build.DEVICE, Build.MODEL);
     static final boolean GOOGLE_STREAMER = is("Google") && Build.MODEL.equals("Google TV Streamer");
     static final boolean JVC_SKYWORTH = SkyworthRemote.supported(Build.MANUFACTURER, Build.BRAND,
             Build.MODEL, Build.VERSION.SDK_INT);
@@ -87,7 +88,8 @@ final class RemoteKeys {
     private static long lastDown;
 
     static boolean supported() {
-        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || XIAOMI_AFKR0 || HISENSE || GOOGLE_STREAMER || JVC_SKYWORTH || PHILIPS_GTV;
+        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || XIAOMI_AFKR0 || HISENSE || CHROMECAST_SABRINA
+                || GOOGLE_STREAMER || JVC_SKYWORTH || PHILIPS_GTV;
     }
 
     /** The key service is on only where the filter is safe, and while a button opens something (else it has no work). */
@@ -108,6 +110,10 @@ final class RemoteKeys {
         int source = e.getSource();
         if ((source & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
                 || (source & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) return false;
+        if (CHROMECAST_SABRINA) {
+            InputDevice device = InputDevice.getDevice(e.getDeviceId());
+            if (device == null || !SabrinaRemote.isRemote(device.getVendorId(), device.getProductId())) return false;
+        }
         int keyCode = TCL && e.getKeyCode() == KEY_YOUTUBE_TCL ? Prefs.KEY_YOUTUBE : e.getKeyCode();
         if (JVC_SKYWORTH) {
             if (SkyworthRemote.settings(keyCode)) keyCode = Prefs.KEY_JVC_SETTINGS;

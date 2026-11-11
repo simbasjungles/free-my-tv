@@ -1308,6 +1308,7 @@ public class SettingsActivity extends Activity {
         }
 
         private String[] keyLabels() {
+            if (RemoteKeys.CHROMECAST_SABRINA) return new String[] {Ui.tr("YouTube button")};
             if (RemoteKeys.GOOGLE_STREAMER) return new String[] {Ui.tr("YouTube button"), Ui.tr("Netflix button"),
                     Ui.tr("Custom button") + " \u2605"};
             if (RemoteKeys.JVC_SKYWORTH) return new String[] {Ui.tr("Inputs"), Ui.tr("Settings button")};
