@@ -59,6 +59,9 @@ var TV = (function () {
 
   // LG's own screensaver asks every subscribed app first. While Free My TV is on screen and its own screensaver will
   // take over (`hold`, from home.js), it says no; otherwise, and in the background, the TV's runs as before.
+  // Only where the TV lets the app subscribe: webOS 3.4 denies the call to Developer Mode apps (getPowerState too), so
+  // there the one reply is that refusal, with no timestamp: nothing is held, and saverBridge stays set, so it isn't
+  // tried again. A 60UH6150 didn't start its own screensaver over Free My TV anyway (#478).
   var saverBridge = null;
 
   function holdScreenSaver(hold) {
