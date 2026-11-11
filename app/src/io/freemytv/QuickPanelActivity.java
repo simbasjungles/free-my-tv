@@ -628,7 +628,7 @@ public class QuickPanelActivity extends Activity {
                 return;
             }
             if (focus == INPUTS) {
-                inputs = HomeApps.allInputs(getContext());
+                inputs = HomeApps.orderedInputs(getContext());
                 inputsOpen = true;
                 inputFocus = 0;
                 page.target = 1;
