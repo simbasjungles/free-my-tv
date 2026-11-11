@@ -294,6 +294,13 @@ final class Prefs {
         version++;
     }
 
+    /**
+     * The host to ask for the weather instead of api.open-meteo.com, where an ISP blocks it (#450). Empty: the
+     * official host. The city search follows it too (with its geocoding- prefix).
+     */
+    static String weatherHost() { return sp().getString("weatherHost", "").trim(); }
+    static void setWeatherHost(String host) { put("weatherHost", host.trim()); }
+
     /** The home screen's soft click when moving and opening. */
     static boolean sounds() { return sp().getBoolean("sounds", true); }
     static void setSounds(boolean on) { put("sounds", on); }

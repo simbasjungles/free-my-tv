@@ -36,14 +36,17 @@ import java.util.regex.Pattern;
 final class HomeMode {
     private HomeMode() {}
 
-    static final String PKG = "io.freemytv";
-    static final String HOME_ACTIVITY = PKG + "/" + PKG + ".HomeActivity";
-    static final String SETTINGS_ACTIVITY = PKG + "/" + PKG + ".SettingsActivity";
+    /** The application id the APK is built under; build.sh --pkg makes a build that lives next to another one. */
+    static final String PKG = Config.PACKAGE;
+    /** The classes' package: the same as PKG unless --pkg renamed the manifest. */
+    static final String JAVA = "io.freemytv";
+    static final String HOME_ACTIVITY = PKG + "/" + JAVA + ".HomeActivity";
+    static final String SETTINGS_ACTIVITY = PKG + "/" + JAVA + ".SettingsActivity";
     /** Our screensaver: on Android 11 to 12L the copy that runs in the main process (ScreensaverAlone, #10). */
     private static final boolean DREAM_ALONE = Build.VERSION.SDK_INT >= 30 && Build.VERSION.SDK_INT <= 32;
-    static final String DREAM = PKG + "/" + PKG + (DREAM_ALONE ? ".ScreensaverAlone" : ".Screensaver");
+    static final String DREAM = PKG + "/" + JAVA + (DREAM_ALONE ? ".ScreensaverAlone" : ".Screensaver");
     /** The other copy: an update (ours or the TV's) moves the setting from it, without a notice. */
-    private static final String OTHER_DREAM = PKG + "/" + PKG + (DREAM_ALONE ? ".Screensaver" : ".ScreensaverAlone");
+    private static final String OTHER_DREAM = PKG + "/" + JAVA + (DREAM_ALONE ? ".Screensaver" : ".ScreensaverAlone");
     static final String FREE = "free", ORIGINAL = "original";
 
     /**
@@ -449,7 +452,7 @@ final class HomeMode {
         }
     }
 
-    private static final String REMOTE_SERVICE = PKG + "/" + PKG + ".RemoteKeyService";
+    private static final String REMOTE_SERVICE = PKG + "/" + JAVA + ".RemoteKeyService";
     private static final Pattern SERVICE = Pattern.compile("[\\w.]+/[\\w.$]+");
 
     /** Adds ours to the enabled accessibility services (keeping the others, like TalkBack), or takes it out. */
@@ -482,7 +485,7 @@ final class HomeMode {
         AppLog.w("remote buttons service " + (on ? "on" : "off"));
     }
 
-    private static final String NOW_PLAYING = PKG + "/" + PKG + ".NowPlaying";
+    private static final String NOW_PLAYING = PKG + "/" + JAVA + ".NowPlaying";
 
     /**
      * Home Settings' Now Playing widget reads what apps play through our notification listener, which could read every
@@ -1366,7 +1369,7 @@ final class HomeMode {
             if (!mode.equals(s.optString("mode"))) return;
             try (Adb adb = Adb.connect(c, 10_000, null)) {
                 String homePkg = packageOf(originalHome(s));   // dumpsys names an activity as "package/.Class"
-                String front = FREE.equals(mode) ? PKG + "/.HomeActivity" : homePkg == null ? null : homePkg + "/";
+                String front = FREE.equals(mode) ? PKG + "/" + JAVA + ".HomeActivity" : homePkg == null ? null : homePkg + "/";
                 if (front != null && !adb.shell("dumpsys activity activities | grep ResumedActivity").contains(front)) {
                     boolean again = System.currentTimeMillis() - s.optLong("since") < 600_000;
                     AppLog.w("memory of " + mode + " not measured: its home screen isn't in front" + (again ? ", again in a minute" : ""));
