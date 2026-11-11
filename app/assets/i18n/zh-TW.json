@@ -175,6 +175,7 @@
  "OK or the arrows change the value.": "按下 OK 或方向鍵可變更數值。",
  "OK picks, Back cancels.": "按下 OK 可選取，按返回可取消。",
  "OK removes them; the arrows turn them on or off.": "按下 OK 可移除；方向鍵可開啟或關閉。",
+ "OK shows or hides an input. ← → change the order.": "按下 OK 可顯示或隱藏輸入源。按 ← → 可調整順序。",
  "OK turns an app on or off in Continue Watching.": "按 OK 在繼續觀看中開啟或關閉應用程式。",
  "OK: send it from your phone, or type it.": "OK：用手機傳送，或直接輸入。",
  "Off": "關閉",

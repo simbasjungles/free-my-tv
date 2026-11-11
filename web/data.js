@@ -109,9 +109,17 @@ var Prefs = (function () {
       var k = String(pick('boxInput', 'live')).toLowerCase();
       return /^hdmi[1-4]$/.test(k) ? k : 'live';
     },
-    /** The Live TV tile in the drawer's inputs (Home Settings > Live TV), on until turned off on a TV with no
-     * antenna; the first top button still opens it. */
+    /** The Live TV tile in the drawer's inputs, on until turned off on a TV with no antenna; the first top button
+     * still opens it. Home Settings > Inputs carries the choice over: this says it only until that's used. */
     liveInput: function () { return pick('liveInput', true) !== false; },
+    /** The drawer's inputs in the person's order (Home Settings > Inputs): the shown ones' keys, an input the TV
+     * no longer lists keeping its place. Null until the editor is used: the TV's own order then. */
+    inputsOrder: function () { var a = pick('inputsOrder', null); return a instanceof Array ? a : null; },
+    /** The inputs hidden in Home Settings > Inputs; until that's used, the Live TV switch above is this list. */
+    inputsHidden: function () {
+      var a = pick('inputsHidden', null);
+      return a instanceof Array ? a : (this.liveInput() ? [] : ['live']);
+    },
     /** Home Settings > Clock: '24' or '12', or 'auto' for the language's own; config.properties' clock_format until
      * it's picked on the TV. */
     clockFormat: function () {

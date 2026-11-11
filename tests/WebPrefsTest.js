@@ -42,6 +42,15 @@ expect(prefs({}).liveInput(), true, 'Live TV in the inputs until hidden');
 expect(prefs({liveInput: false}).liveInput(), false, 'Live TV hidden');
 expect(prefs({liveInput: 'off'}).liveInput(), true, 'not a boolean');
 
+expect(prefs({}).inputsOrder(), null, 'the TV inputs order until the editor is used');
+expect(prefs({inputsOrder: ['hdmi2', 'live']}).inputsOrder().join(','), 'hdmi2,live', 'the saved inputs order');
+expect(prefs({inputsOrder: 'hdmi2'}).inputsOrder(), null, 'an order that is not a list');
+expect(prefs({}).inputsHidden().join(','), '', 'no input hidden until picked');
+expect(prefs({liveInput: false}).inputsHidden().join(','), 'live', 'the Live TV switch until the editor is used');
+expect(prefs({liveInput: false, inputsHidden: []}).inputsHidden().join(','), '', 'the editor carries the switch over');
+expect(prefs({inputsHidden: ['hdmi3']}).inputsHidden().join(','), 'hdmi3', 'a hidden input');
+expect(prefs({inputsHidden: 'none'}).inputsHidden().join(','), '', 'hidden inputs that are not a list');
+
 expect(prefs({}).clockFormat(), 'auto', 'the clock of the language until picked');
 expect(prefs({}, {clockFormat: '24'}).clockFormat(), '24', 'clock_format from the build');
 expect(prefs({clockFormat: '12'}, {clockFormat: '24'}).clockFormat(), '12', 'the choice on the TV wins');
