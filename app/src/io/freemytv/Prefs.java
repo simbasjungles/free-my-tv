@@ -356,6 +356,11 @@ final class Prefs {
 
     static void setPowerOn(String v) { put("powerOn", v); }
 
+    /** Home Settings > Live TV button: the TV input (its id) the Live TV button opens instead, or "" for Live TV. */
+    static String liveButton() { return sp().getString("liveButton", ""); }
+
+    static void setLiveButton(String inputId) { put("liveButton", inputId); }
+
     // MARK: - Widgets and coins
 
     static boolean weather() { return sp().getBoolean("weather", true); }
