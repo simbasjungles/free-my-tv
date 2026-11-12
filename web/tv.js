@@ -525,7 +525,7 @@ var TV = (function () {
     'org.tizen.netflix-app': '3201907018807', 'org.tizen.primevideo': '3201910019365', 'com.samsung.tv.aria-video': '3201807016597',
     'org.tizen.globoplayapp': '3202007021424', '9Ur5IzDKqV.TizenYouTube': '111299001912', 'MCmYXNxgcu.DisneyPlus': '3201901017640',
     'rJeHak5zRg.Spotify': '3201606009684', 'GHI3a0zMSx.XboxGamePass': '3202203026799', 'IkWsFHtOY9.Stremio': '3202306031311',
-    'OGLLvqej7u.CrunchyrollWebApp': '3202302030097'
+    'OGLLvqej7u.CrunchyrollWebApp': '3202302030097', '5b8c3eb16b.BeamCTVDev': '3202301029760'
   };
 
   function stopWatch() {
