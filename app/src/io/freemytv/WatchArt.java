@@ -34,7 +34,7 @@ import java.util.concurrent.Executors;
  */
 final class WatchArt {
     /** The card in the 1920×1080 layout; the pictures are made at this times the UI's scale (setScale). */
-    static final int W = 520, H = 292;
+    static final int W = 680, H = 382;
     private static final int MAX_BYTES = 8 << 20;
     /** At most this many pixels decoded (~8 MB): a 60000×300 picture is sampled down before it's decoded. */
     private static final long MAX_PIXELS = 2_000_000;

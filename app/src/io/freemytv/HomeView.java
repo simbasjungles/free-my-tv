@@ -2425,8 +2425,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         }
         heroChanged |= aim(watchFocus, !sheetOpen && zone == Z_WATCH ? watchIndex : -1, snap);
         updateTint();
-        // The row scrolls so the focused card is at most the third one on screen.
-        float watchTo = Math.max(0, Math.min(watchIndex - 2, watching.size() - 3));
+        // The row scrolls so the focused card stays fully on screen, in the last slot.
+        float watchTo = Math.max(0, Math.min(watchIndex - (watchVisible() - 1), watching.size() - watchVisible()));
         if (watchScroll.target != watchTo || snap) {
             heroChanged = true;
             if (snap) watchScroll.snap(watchTo); else watchScroll.target = watchTo;
@@ -2993,6 +2993,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         return still && Math.max(0, hit - 2) != cardScroll.target ? -1 : hit;
     }
 
+    /** How many Continue Watching cards fit fully on screen (2 at the current 680×382 card, 3 at 520×292). */
+    private int watchVisible() {
+        return Math.max(1, (int) ((CONTENT_R - MARGIN) / (WatchArt.W + WATCH_GAP)));
+    }
+
     /** The Continue Watching card under a point, if any (only the ones on screen; `still` as in cardAt). */
     private int watchAt(float x, float y, boolean still) {
         if (!continueMode()) return -1;
@@ -3000,7 +3005,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             watchRect(i, hitBox);
             if (hitBox.left > w || hitBox.right <= watchLeftEdge()) continue;
             if (!hitBox.contains(x, y)) continue;
-            return still && Math.max(0, Math.min(i - 2, watching.size() - 3)) != watchScroll.target ? -1 : i;
+            return still && Math.max(0, Math.min(i - (watchVisible() - 1), watching.size() - watchVisible())) != watchScroll.target ? -1 : i;
         }
         return -1;
     }
