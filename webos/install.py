@@ -32,12 +32,27 @@ IPK = os.path.join(ROOT, 'FreeMyTV-webos.ipk')
 with open(os.path.join(ROOT, 'webos', 'appinfo.json'), encoding='utf-8') as f:
     APP_ID = json.load(f)['id']
 TEMP = '/media/developer/temp/freemytv.ipk'
-SSH_OPTS = ['-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=' + os.devnull, '-o', 'LogLevel=ERROR',
+# The TV's SSH host key, kept the first time and checked from then on, in a file of our own. (With os.devnull, "nul",
+# Windows' OpenSSH wrote a file named nul into the current folder at every run, which OneDrive can't sync.) A TV whose
+# Developer Mode was set up again has a new key and is refused until its line, or this file, is deleted.
+KNOWN_HOSTS = os.path.join(os.path.expanduser('~'), '.ssh', 'freemytv_known_hosts')
+SSH_OPTS = ['-o', 'StrictHostKeyChecking=accept-new', '-o', 'UserKnownHostsFile=' + KNOWN_HOSTS, '-o', 'LogLevel=ERROR',
             '-o', 'HostKeyAlgorithms=+ssh-rsa', '-o', 'PubkeyAcceptedKeyTypes=+ssh-rsa', '-p', '9922']
 
 
 def key_path(ip):
     return os.path.join(os.path.expanduser('~'), '.ssh', 'freemytv_webos_' + ip.replace('.', '_'))
+
+
+def saved_key(ip):
+    """The key saved for this address or, if none, the newest one saved: Developer Mode's key belongs to the TV, and a
+    TV's address can change (a new DHCP lease after a power cut). The path for this address when nothing is saved."""
+    path = key_path(ip)
+    folder = os.path.dirname(path)
+    if os.path.exists(path) or not os.path.isdir(folder):
+        return path
+    saved = [os.path.join(folder, n) for n in os.listdir(folder) if n.startswith('freemytv_webos_') and '.' not in n]
+    return max(saved, key=os.path.getmtime) if saved else path
 
 
 def lock(path):
@@ -64,6 +79,11 @@ def fetch_key(ip):
         with urllib.request.urlopen(url, timeout=6) as r:
             data = r.read()
     except Exception as e:
+        # Key Server off (as it should be when not needed) and the TV at a new address: the key saved for it before.
+        saved = saved_key(ip)
+        if saved != path:
+            print('Using the key saved for this TV at its earlier address (%s).' % os.path.basename(saved))
+            return saved
         sys.exit('Couldn\'t reach the Key Server (%s). In the TV\'s Developer Mode app, turn on Key Server.' % e)
     passphrase = getpass.getpass('Passphrase shown in Developer Mode on the TV: ').strip()
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -127,6 +147,9 @@ def main():
     copy = ssh(ip, key, 'mkdir -p /media/developer/temp && cat > ' + TEMP, data=package)
     if copy.returncode != 0:
         err = copy.stderr.decode('utf-8', 'replace') if isinstance(copy.stderr, bytes) else copy.stderr
+        if 'host key' in err.lower() or 'IDENTIFICATION HAS CHANGED' in err:
+            sys.exit('The TV answered with another SSH identity than the one saved for %s. If Developer Mode was set up '
+                     'again on the TV, delete %s and try again.' % (ip, KNOWN_HOSTS))
         sys.exit('Couldn\'t copy it: %s\nIs Developer Mode still on? If the key changed, delete %s and try again.' % (err.strip(), key))
     print('Installing ...')
     out = luna(ip, key, 'luna://com.webos.appInstallService/dev/install', {'id': APP_ID, 'ipkUrl': TEMP, 'subscribe': True},

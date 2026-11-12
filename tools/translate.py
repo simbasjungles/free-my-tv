@@ -178,7 +178,8 @@ def load(lang):
 
 
 def save(lang, data):
-    with open(os.path.join(I18N, lang + ".json"), "w", encoding="utf-8") as f:
+    # LF on every system: written in text mode on Windows, every line would change (\r\n).
+    with open(os.path.join(I18N, lang + ".json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(dict(sorted(data.items())), f, ensure_ascii=False, indent=1)
         f.write("\n")
 
@@ -246,6 +247,9 @@ def check(en):
         if not isinstance(cat, dict):
             errors.append(f"{lang}: catalogue must be a JSON object")
             continue
+        with open(os.path.join(I18N, lang + ".json"), "rb") as f:
+            if b"\r" in f.read():
+                errors.append(f"{lang}: CRLF line endings (the catalogues use LF: python3 tools/translate.py writes them so)")
         missing, obsolete, _ = problems(en, cat)
         for label, keys in (("missing key", missing), ("obsolete key", obsolete)):
             for key in keys:
@@ -372,7 +376,7 @@ def main():
         for k in (missing + broken)[:8]:
             print(f"         {k!r}")
     if cache:
-        with open(CACHE, "w", encoding="utf-8") as f:
+        with open(CACHE, "w", encoding="utf-8", newline="\n") as f:
             json.dump(cache, f, ensure_ascii=False, indent=1, sort_keys=True)
     return 1 if incomplete else 0
 
