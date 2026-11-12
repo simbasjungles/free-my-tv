@@ -112,6 +112,8 @@ var Prefs = (function () {
     /** The Live TV tile in the drawer's inputs (Home Settings > Live TV), on until turned off on a TV with no
      * antenna; the first top button still opens it. */
     liveInput: function () { return pick('liveInput', true) !== false; },
+    /** Samsung: Home pressed in an app opened from here brings Free My TV back (off by default: Smart Hub's Home). */
+    homeReturns: function () { return pick('homeReturns', false) === true; },
     /** Home Settings > Clock: '24' or '12', or 'auto' for the language's own; config.properties' clock_format until
      * it's picked on the TV. */
     clockFormat: function () {

@@ -216,6 +216,17 @@ Developer Mode; Samsung's home screen stays. Two ways:
    with their own account (Samsung decides who gets that level): the release and TizenBrew's builds can't carry it,
    a build with another author certificate means uninstalling first (Home Settings and the TMDB key go with it), and
    certificates, their passwords and the DUID never go in the chat.
+   *Home button* (Home Settings, `Prefs.homeReturns`, off by default; `TV.canReturnHome`, not Tizen 2) brings Free My TV
+   back when Home is pressed in an app opened from it: no app may take Samsung's Home key, so `watchBack` asks the TV's
+   own server (`GET 127.0.0.1:8001/api/v2/applications/<id>`, `visible`) every 0.4 s while that app is in front, and
+   once it isn't, `comeBack` opens Free My TV as an app control. Tested on a 2023 QN55Q60C (Tizen 9.0). What it needs:
+   `background-support="enable"` (without it the page freezes once hidden, and nothing is asked), the manifest's
+   `<tizen:app-control>` with `reload="disable"` (without it the page loads again: 2 to 5 s instead of 0.8), and the
+   app's Smart Hub number (`HUB_IDS`; `0 vd_applist` over SDB lists each `app_id`): by its Tizen id the server doesn't
+   know the built-in apps, and says YouTube (`9Ur5IzDKqV.TizenYouTube`, which runs as `com.samsung.tv.cobalt-yt`) is
+   never visible. The app's own status listener (`addAppStatusChangeListener`) says nothing there, and a POST to that
+   server from the app is refused (from a computer it works). A Tizen Web Service could watch without the page, but it
+   needs a Partner certificate (see `on-boot` above).
 
 ## Releases
 
