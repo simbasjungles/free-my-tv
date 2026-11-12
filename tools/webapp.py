@@ -76,6 +76,8 @@ def read_config(path):
         'openPicksIn': 'nuvio' if values.get('open_picks_in', '').strip().lower() == 'nuvio' else 'apps',
         # 24 or 12 forces the clock; auto follows the language's catalogue.
         'clockFormat': values.get('clock_format', '').strip() if values.get('clock_format', '').strip() in ('24', '12') else 'auto',
+        # Trakt (Home Settings > Trakt): only the Client ID of the person's own API app; no secret (device code with PKCE).
+        'traktClientId': values.get('trakt_client_id', '').strip(),
     }
 
 
