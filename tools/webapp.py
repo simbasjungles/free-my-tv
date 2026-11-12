@@ -15,7 +15,7 @@ import translate  # noqa: E402  (the catalogues and the keys the web app uses)
 
 GENERIC = {'tmdbKey': '', 'tmdbRegion': '', 'latitude': '', 'longitude': '', 'city': '', 'language': 'auto',
            'currency': '', 'temperature': 'auto', 'theme': 'auto', 'showCrypto': True, 'hideAnimation': False, 'hideApps': [],
-           'shelfApps': [], 'drawerFirst': False, 'openPicksIn': 'apps', 'clockFormat': 'auto'}
+           'shelfApps': [], 'drawerFirst': False, 'openPicksIn': 'apps', 'clockFormat': 'auto', 'look': ''}
 
 
 def config_from_args(args):
@@ -69,7 +69,24 @@ def read_config(path):
         'openPicksIn': 'nuvio' if values.get('open_picks_in', '').strip().lower() == 'nuvio' else 'apps',
         # 24 or 12 forces the clock; auto follows the language's catalogue.
         'clockFormat': values.get('clock_format', '').strip() if values.get('clock_format', '').strip() in ('24', '12') else 'auto',
+        # wall: always dark, a still wallpaper and large app icons under the picks (home.css). Default: the usual look.
+        'look': 'wall' if values.get('look', '').strip().lower() == 'wall' else '',
+        # A JPG on this computer for the wall look, packed as wallpaper.jpg; its path never goes into the app.
+        'wallpaperFile': wallpaper_file(values.get('wallpaper', '').strip()),
+        # icons.local/<app id>.png (or .svg, .jpg): your own logos, in place of the TV's. Never in --generic builds.
+        'iconsDir': os.path.join(ROOT, 'icons.local'),
     }
+
+
+def wallpaper_file(path):
+    if not path:
+        return ''
+    path = os.path.join(ROOT, os.path.expanduser(path))
+    if not os.path.isfile(path):
+        sys.exit('config.properties: wallpaper %s not found' % path)
+    if not path.lower().endswith(('.jpg', '.jpeg')):
+        sys.exit('config.properties: wallpaper must be a .jpg (got %s)' % path)
+    return path
 
 
 def coins():
@@ -90,6 +107,23 @@ def catalogues():
 def files(config, made_by):
     """The web app's files, {path inside the app: bytes}: web/, the settings, the catalogues, the app's symbols and font."""
     out = {}
+    config = dict(config)
+    wallpaper = config.pop('wallpaperFile', '')
+    if wallpaper:
+        with open(wallpaper, 'rb') as f:
+            out['wallpaper.jpg'] = f.read()
+        config['wallpaper'] = 'wallpaper.jpg'
+    icons_dir = config.pop('iconsDir', '')
+    if icons_dir and os.path.isdir(icons_dir):
+        local = {}
+        for name in sorted(os.listdir(icons_dir)):
+            app_id, ext = os.path.splitext(name)
+            if ext.lower() in ('.png', '.svg', '.jpg', '.jpeg'):
+                with open(os.path.join(icons_dir, name), 'rb') as f:
+                    out['icons-local/' + name] = f.read()
+                local[app_id] = 'icons-local/' + name
+        if local:
+            config['localIcons'] = local
     web = os.path.join(ROOT, 'web')
     for name in sorted(os.listdir(web)):
         if os.path.isdir(os.path.join(web, name)):

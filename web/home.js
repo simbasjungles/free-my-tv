@@ -74,6 +74,7 @@
     ['youtube', /youtube/, /^youtube$/i, ['#1C1C1E', '#09090A']],
     ['prime', /^amazon$/, /prime video|amazon/i, ['#2AA8FF', '#0A68D4']],
     ['disney', /disney/, /disney/i, ['#173584', '#08143F']],
+    ['tvplus', /tvplus/i, /tv plus/i, ['#1C5CFF', '#0A2E9E']],
     ['max', /hbo|wbd/, /^(hbo )?max$|hbo max/i, ['#5C30E8', '#221684']],
     ['appletv', /appletv|apple\.tv/, /apple tv/i, ['#1C1C1E', '#000000']],
     ['hulu', /^hulu/, /hulu/i, ['#1CE783', '#0B8F4E']],
@@ -82,11 +83,23 @@
     ['nfl', /nfl/, /^nfl/i, ['#013369', '#00163D']],
     ['globoplay', /globoplay/, /globoplay/i, ['#FF8A1F', '#FF2D5A']],
     ['jellyfin', /jellyfin/i, /jellyfin/i, ['#AA5CC3', '#00A4DC']],
+    ['hotstar', /hotstar/i, /hotstar/i, ['#141A3C', '#05070F']],
+    ['sonyliv', /sonyliv/i, /sony ?liv/i, ['#2A2A2E', '#000000']],
+    ['crunchyroll', /crunchyroll/i, /crunchyroll/i, ['#F47521', '#C2410C']],
     ['spotify', /spotify/, /spotify/i, ['#1DB954', '#0F7A36']]
   ];
   // Apps shown at once, as on Android: 8 (today's smallest tiles, 178 wide); the shelf scrolls for the rest. The
   // built-in list keeps 8 too.
   var SHELF_VISIBLE = 8, FEW_APPS = 8;
+
+  // look=wall (config.properties): always dark, a still wallpaper, and 6 large rounded app icons at once, with no glass.
+  var WALL = CONFIG.look === 'wall';
+  if (WALL) {
+    SHELF_VISIBLE = 6;
+    FEW_APPS = 12;   // a slider has room for more than one screen of apps
+    setClass(document.body, 'wall', true);
+    if (CONFIG.wallpaper) $('wall').style.backgroundImage = 'url(' + CONFIG.wallpaper + ')';
+  }
 
   function shelfKey(app) {
     for (var i = 0; i < SHELF.length; i++) if (SHELF[i][1].test(app.id) || SHELF[i][2].test(app.title)) return SHELF[i];
@@ -401,6 +414,7 @@
     list = $('tiles').children;
     for (i = 0; i < list.length; i++) setClass(list[i], 'focus', st.zone === Z.SHELF && st.shelf === i);
     revealShelf();
+    if (WALL) showAppName();
     list = document.querySelectorAll('#drawer .key');
     for (i = 0; i < list.length; i++) setClass(list[i], 'focus', st.zone === Z.DRAWER && st.drawer === i);
     list = document.querySelectorAll('#apps .cell');
@@ -533,7 +547,7 @@
 
   /** The focused pick's photo as the background: drawn tiny and stretched, it's already as soft as a heavy blur. */
   function backdrop(url) {
-    if (url === bgUrl) return;
+    if (WALL || url === bgUrl) return;   // the wallpaper stays still
     bgUrl = url;
     var next = bgFront === 'bgA' ? 'bgB' : 'bgA';
     if (!url) {
@@ -580,29 +594,35 @@
 
   var shelfFirst = 0, tileStep = 0, tileLeft = 0;
 
+  /** The shelf's tiles: its apps, and in the wall look a last one that opens the shelf editor. */
+  function shelfSize() { return shelf.length + (WALL ? 1 : 0); }
+
   function renderShelf() {
-    var n = Math.min(shelf.length, SHELF_VISIBLE), gap = 48, pad = 40;
-    // 16:9 tiles, as on Android: never taller than 126, and the glass keeps its bottom edge.
-    var tw = Math.min(126 * 16 / 9, (1760 - Math.max(0, n - 1) * gap) / Math.max(1, n)), th = tw * 9 / 16;
-    var width = n * tw + Math.max(0, n - 1) * gap, left = (1920 - width) / 2;
+    var n = Math.min(shelfSize(), SHELF_VISIBLE), gap = WALL ? 40 : 48, pad = 40;
+    // 16:9 tiles, as on Android: never taller than 126, and the glass keeps its bottom edge. The wall look's are a slider:
+    // 5:3 icons from the left margin, the next one peeking in at the right edge, a track below.
+    var tw = WALL ? 250 : Math.min(126 * 16 / 9, (1760 - Math.max(0, n - 1) * gap) / Math.max(1, n));
+    var th = WALL ? tw * 3 / 5 : tw * 9 / 16, bottom = WALL ? 960 : 980;
+    var width = n * tw + Math.max(0, n - 1) * gap, left = WALL ? 80 : (1920 - width) / 2;
     var platter = $('platter');
     platter.style.display = n ? '' : 'none';
     platter.style.left = (left - pad) + 'px';
     platter.style.width = (width + 2 * pad) + 'px';
     platter.style.top = (814 + 126 - th) + 'px';
     platter.style.height = (th + 2 * pad) + 'px';
-    $('quotes').style.right = (1920 - left - width) + 'px';
+    $('quotes').style.right = (WALL ? 80 : 1920 - left - width) + 'px';
     var tiles = $('tiles');
     tiles.innerHTML = '';
     tileStep = tw + gap;
     tileLeft = left;
-    shelfFirst = Math.max(0, Math.min(shelfFirst, shelf.length - n));
-    for (var i = 0; i < shelf.length; i++) {
-      var t = el('div', 'tile', tiles);
-      t.style.top = (854 + 126 - th) + 'px';
+    shelfFirst = Math.max(0, Math.min(shelfFirst, shelfSize() - n));
+    for (var i = 0; i < shelfSize(); i++) {
+      var t = el('div', i < shelf.length ? 'tile' : 'tile add', tiles);
+      t.style.top = (bottom - th) + 'px';
       t.style.width = tw + 'px';
       t.style.height = th + 'px';
-      face(shelf[i], t, wordFit(shelf[i].title, tw, 30));
+      if (i < shelf.length) face(shelf[i], t, wordFit(shelf[i].title, tw, WALL ? 34 : 30));
+      else { el('span', 'plus h', t); el('span', 'plus v', t); }
       hover(t, Z.SHELF, i);
     }
     // More apps than fit: a small arrow inside the glass's edge on each side that has more, where no tile reaches
@@ -614,32 +634,51 @@
       arrow.style.left = (a ? width + 2 * pad - 14 : 14) - 8.5 + 'px';
       arrow.style.top = (pad + th / 2 - 8.5) + 'px';
     }
-    st.shelf = Math.min(st.shelf, Math.max(0, shelf.length - 1));
+    st.shelf = Math.min(st.shelf, Math.max(0, shelfSize() - 1));
     placeTiles();
   }
 
   /** The row slides (a transform on #tiles, which old TVs animate), and the apps it takes past the glass fade out. */
   function placeTiles() {
-    var row = $('tiles'), tiles = row.children, n = Math.min(shelf.length, SHELF_VISIBLE);
-    for (var i = 0; i < shelf.length; i++) {
+    var row = $('tiles'), tiles = row.children, n = Math.min(shelfSize(), SHELF_VISIBLE);
+    for (var i = 0; i < shelfSize(); i++) {
       var shown = i >= shelfFirst && i < shelfFirst + n;
       tiles[i].style.left = (tileLeft + i * tileStep) + 'px';
-      tiles[i].style.opacity = shown ? '' : '0';
+      tiles[i].style.opacity = shown || WALL ? '' : '0';   // the slider lets its neighbours peek in at the edges
       tiles[i].style.pointerEvents = shown ? '' : 'none';
     }
     row.style.webkitTransform = row.style.transform = 'translateX(' + (-shelfFirst * tileStep) + 'px)';
     var arrows = $('platter').children;
     arrows[0].style.visibility = shelfFirst > 0 ? '' : 'hidden';
-    arrows[1].style.visibility = shelfFirst + n < shelf.length ? '' : 'hidden';
+    arrows[1].style.visibility = shelfFirst + n < shelfSize() ? '' : 'hidden';
+    if (WALL) {
+      // The slider's track: the thumb is the part of the row on screen.
+      var track = $('slider'), more = shelfSize() > n;
+      setClass(track, 'on', more);
+      if (more) {
+        track.firstChild.style.width = (100 * n / shelfSize()) + '%';
+        track.firstChild.style.left = (100 * shelfFirst / shelfSize()) + '%';
+      }
+    }
   }
 
   /** Scrolls the shelf, one app at a time, so the focused app is shown. */
   function revealShelf() {
-    var n = Math.min(shelf.length, SHELF_VISIBLE);
-    var first = Math.max(0, Math.min(Math.max(shelfFirst, st.shelf - n + 1), Math.min(st.shelf, shelf.length - n)));
-    if (first === shelfFirst || !shelf.length) return;
+    var n = Math.min(shelfSize(), SHELF_VISIBLE);
+    var first = Math.max(0, Math.min(Math.max(shelfFirst, st.shelf - n + 1), Math.min(st.shelf, shelfSize() - n)));
+    if (first === shelfFirst || !shelfSize()) return;
     shelfFirst = first;
     placeTiles();
+  }
+
+  /** The wall look: the focused app's name under its icon, as on Apple TV. */
+  function showAppName() {
+    var name = $('appname'), on = (st.zone === Z.SHELF || st.zone === Z.DRAWER) && st.shelf < shelfSize();
+    setClass(name, 'on', on && st.zone === Z.SHELF);
+    if (!on) return;
+    name.textContent = shelf[st.shelf] ? shelf[st.shelf].title : tr('Shelf');
+    name.style.left = (tileLeft + (st.shelf - shelfFirst) * tileStep - 20) + 'px';
+    name.style.width = (tileStep - 4) + 'px';
   }
 
   // MARK: - Drawer
@@ -883,6 +922,7 @@
       {label: tr('Quotes widget'), toggle: Prefs.quotes(),
         step: function () { Prefs.set('quotes', !Prefs.quotes()); Data.settingsChanged(); }}
     ];
+    if (WALL) rows.splice(2, 1);   // the wall look is always dark: no Theme row
     var names = ['Bitcoin', 'Ethereum', 'Solana', tr('Dollar')];
     var count = Data.currency === 'BRL' ? 4 : 3;
     for (var i = 0; i < count; i++) {
@@ -1326,7 +1366,10 @@
     updateFocus();
   }
 
-  function openShelfEdit() {
+  var editFromHome = false;   // opened from the shelf's own tile: Back goes back there, not to Home Settings
+
+  function openShelfEdit(fromHome) {
+    editFromHome = fromHome === true;
     setClass($('settings'), 'open', false);
     st.zone = Z.EDIT;
     st.edit = 0;
@@ -1421,6 +1464,7 @@
         return;
       case Z.SHELF:
         if (shelf[st.shelf]) launcher(shelf[st.shelf].id, shelf[st.shelf].title)();
+        else if (WALL && st.shelf === shelf.length) openShelfEdit(true);
         return;
       case Z.DRAWER:
         if (drawerItems[st.drawer]) drawerItems[st.drawer].run();
@@ -1466,7 +1510,7 @@
     var tiles = $('tiles').children, cardNodes = $('cards').children;
     switch (st.zone) {
       case Z.SHELF:
-        if (dx) st.shelf = Math.max(0, Math.min(shelf.length - 1, st.shelf + dx));
+        if (dx) st.shelf = Math.max(0, Math.min(shelfSize() - 1, st.shelf + dx));
         else if (dy > 0) { openDrawer(); return; }
         else if (dy < 0) {
           if (cards.length) { st.zone = Z.CARDS; st.card = nearest(cardNodes, centerX(tiles[st.shelf])); }
@@ -1476,7 +1520,7 @@
       case Z.CARDS:
         if (dx) st.card = Math.max(0, Math.min(cards.length - 1, st.card + dx));
         else if (dy < 0) { st.zone = Z.TOP; st.top = st.tab; }
-        else if (shelf.length) { st.zone = Z.SHELF; st.shelf = nearest(tiles, centerX(cardNodes[st.card])); }
+        else if (shelfSize()) { st.zone = Z.SHELF; st.shelf = nearest(tiles, centerX(cardNodes[st.card])); }
         break;
       case Z.TOP:
         if (dx) {
@@ -1520,6 +1564,12 @@
   }
 
   function back() {
+    if (st.zone === Z.EDIT && editFromHome) {
+      closeSheets();
+      st.shelf = shelf.length;   // back on the shelf's edit tile
+      updateFocus();
+      return;
+    }
     if (st.zone === Z.EDIT) {
       setClass($('shelfedit'), 'open', false);
       openSettings();
@@ -1533,7 +1583,7 @@
     if (st.zone === Z.ABOUT) { closeAbout(); return; }
     if (sheetOpen()) { closeSheets(); return; }
     if (st.zone === Z.DRAWER) { closeDrawer(); return; }
-    if (st.zone !== Z.SHELF && shelf.length) { st.zone = Z.SHELF; updateFocus(); return; }
+    if (st.zone !== Z.SHELF && shelfSize()) { st.zone = Z.SHELF; updateFocus(); return; }
     TV.back();
   }
 
@@ -1577,7 +1627,7 @@
   var lastNight = null;
 
   function checkNight() {
-    var night = Data.isNight(Date.now());
+    var night = WALL || Data.isNight(Date.now());
     setClass(body, 'night', night);
     if (night === lastNight) return;
     lastNight = night;

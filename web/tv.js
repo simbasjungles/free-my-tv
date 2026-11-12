@@ -216,8 +216,9 @@ var TV = (function () {
 
   var SAMPLE = [
     ['netflix', 'Netflix', '#E50914'], ['youtube.leanback.v4', 'YouTube', '#FF0033'], ['amazon', 'Prime Video', '#1A98FF'],
-    ['com.disney.disneyplus-prod', 'Disney+', '#1838C8'], ['com.hbo.hbomax', 'Max', '#6C3BE0'],
-    ['com.apple.appletv', 'Apple TV', '#B8BCC6'], ['globoplaywebos', 'Globoplay', '#FF5A1F'], ['spotify-beehive', 'Spotify', '#1DB954'],
+    ['com.disney.disneyplus-prod', 'Disney+', '#1838C8'], ['com.samsung.tv.tvplus', 'Samsung TV Plus', '#1C5CFF'],
+    ['fiZNCxMH9Y.Hotstar', 'JioHotstar', '#1F3BFF'], ['EUKHUxrGQA.SonyLIV', 'SonyLIV', '#2A2A2E'],
+    ['com.hbo.hbomax', 'Max', '#6C3BE0'], ['com.apple.appletv', 'Apple TV', '#B8BCC6'], ['globoplaywebos', 'Globoplay', '#FF5A1F'], ['spotify-beehive', 'Spotify', '#1DB954'],
     ['cdp-30', 'Plex', '#E5A00D'], ['com.crunchyroll.webapp', 'Crunchyroll', '#F47521'], ['com.webos.app.browser', 'Web Browser', '#3A7BD5'],
     ['com.palm.app.settings', 'Settings', '#8E8E93']
   ];
@@ -298,6 +299,9 @@ var TV = (function () {
     var key = String(title).toLowerCase().replace(/[^a-z0-9]/g, '');
     var byName = Object.prototype.hasOwnProperty.call(SAMSUNG_ICON_NAMES, key) ? SAMSUNG_ICON_NAMES[key] : '';
     if (SAMSUNG_ICONS[a.id] || byName) icon = SAMSUNG_ICONS[a.id] || byName;
+    // icons.local/<app id>.png in your own build: your logo wins (an app whose own icon is out of date, as JioHotstar's).
+    var local = (window.CONFIG || {}).localIcons || {};
+    if (Object.prototype.hasOwnProperty.call(local, a.id)) icon = local[a.id];
     var dial = key === 'netflix' ? 'Netflix' : key === 'youtube' ? 'YouTube' : /^(amazon)?primevideo$/.test(key) ? 'Amazon' : '';
     if (dial) samsungDial[a.id] = dial;
     return {id: a.id, title: title, icon: icon, color: ''};
@@ -522,7 +526,10 @@ var TV = (function () {
     apps: function (done) {
       if (samsung) { samsungApps(done); return; }
       if (!webos) {
-        done(SAMPLE.map(function (s) { return {id: s[0], title: s[1], icon: '', color: s[2]}; }));
+        var local = (window.CONFIG || {}).localIcons || {};
+        done(SAMPLE.map(function (s) {
+          return {id: s[0], title: s[1], icon: Object.prototype.hasOwnProperty.call(local, s[0]) ? local[s[0]] : '', color: s[2]};
+        }));
         return;
       }
       function list(res) {

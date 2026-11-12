@@ -5,6 +5,10 @@ config.properties
 # An LG TV's app list and icons (webos/apps.py)
 webos-apps.local.json
 webos-icons.local/
+# Your wallpaper for look=wall
+wallpaper.local.jpg
+# Your own app icons, named by app id (icons.local/<app id>.png): only your build packs them
+icons.local/
 
 # Build output
 out/

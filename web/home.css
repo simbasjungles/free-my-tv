@@ -396,6 +396,82 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .more.back { -webkit-transform: scaleX(-1); transform: scaleX(-1); }
 .night .more { color: rgba(255, 255, 255, 0.8); }
 
+/* MARK: - look=wall (config.properties): always dark, a still wallpaper, and large rounded app icons with no glass bar.
+   Nothing here moves but the focus: no blur, no crossfading photos, so a 1.5 GB TV keeps up. */
+
+#wall, #appname, #slider { display: none; }
+.wall #wall {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #0B0B12;
+  background-image: -webkit-radial-gradient(18% 12%, circle, rgba(64, 76, 170, 0.55), rgba(64, 76, 170, 0) 46%),
+    -webkit-radial-gradient(86% 92%, circle, rgba(126, 52, 132, 0.45), rgba(126, 52, 132, 0) 50%);
+  background-image: radial-gradient(circle at 18% 12%, rgba(64, 76, 170, 0.55), rgba(64, 76, 170, 0) 46%),
+    radial-gradient(circle at 86% 92%, rgba(126, 52, 132, 0.45), rgba(126, 52, 132, 0) 50%);
+  background-size: cover;
+  background-position: center;
+}
+/* A photo stays readable under white text: darker at the top (title, tabs) and the bottom (the apps). */
+.wall #wall::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: -webkit-linear-gradient(top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.12) 32%, rgba(0, 0, 0, 0.18) 60%, rgba(0, 0, 0, 0.7));
+  background: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.12) 32%, rgba(0, 0, 0, 0.18) 60%, rgba(0, 0, 0, 0.7));
+}
+.wall #sky .grad, .wall #sky canvas, .wall #sky .veil { display: none; }
+.wall #platter { visibility: hidden; }
+.wall .tile { border-radius: 30px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
+.wall .tile.focus { -webkit-transform: scale(1.12); transform: scale(1.12); box-shadow: 0 22px 44px rgba(0, 0, 0, 0.6); }
+/* The focus ring is a border, not a shadow: it shows on the lite TVs too, where shadows are off. */
+.wall .tile::after {
+  bottom: 0;
+  height: auto;
+  border-radius: 30px;
+  border: 4px solid rgba(255, 255, 255, 0.92);
+  background: -webkit-linear-gradient(top, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%);
+  background: linear-gradient(rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 55%);
+}
+.wall #appname.on {
+  display: block;
+  position: absolute;
+  top: 976px;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 600;
+  color: #F5F5F7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wall .more { color: rgba(255, 255, 255, 0.8); }
+/* The shelf's last tile: + opens the shelf editor (add, remove and order the apps) from the home screen. */
+.wall .tile.add { background: rgba(255, 255, 255, 0.12); }
+.wall .tile.add .plus { position: absolute; left: 50%; top: 50%; background: rgba(255, 255, 255, 0.9); border-radius: 3px; }
+.wall .tile.add .plus.h { width: 56px; height: 6px; margin: -3px 0 0 -28px; }
+.wall .tile.add .plus.v { width: 6px; height: 56px; margin: -28px 0 0 -3px; }
+/* The slider's track under the apps, shown when there are more than fit. */
+.wall #slider.on {
+  display: block;
+  position: absolute;
+  left: 80px;
+  top: 1030px;
+  width: 1760px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.18);
+}
+#slider .thumb { position: absolute; top: 0; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.85); }
+
 /* MARK: - Drawer: inputs and shortcuts, weather, prices */
 
 .row-title { position: absolute; top: 494px; font-size: 25px; font-weight: 600; color: #6E6E73; white-space: nowrap; }
