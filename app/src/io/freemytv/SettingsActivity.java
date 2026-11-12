@@ -1019,6 +1019,7 @@ public class SettingsActivity extends Activity {
             l.add("Ethereum");
             l.add("Solana");
             if (dollar()) l.add(Ui.tr("Dollar"));
+            l.add(Ui.tr("Live TV button"));
             l.add(Ui.tr("TMDB key"));
             l.add(Ui.tr("Watchmode key"));
             l.add(Ui.tr("Updates"));
@@ -1126,6 +1127,7 @@ public class SettingsActivity extends Activity {
             v[QUOTES_ROW] = onOff(Prefs.quotes());
             // No quotes widget, nowhere to show prices: the coins read as off (and stay locked) until it is back on.
             for (int i = COIN_ROWS; i < v.length - 3; i++) v[i] = onOff(Prefs.quotes() && Prefs.coin(i - COIN_ROWS));
+            v[v.length - 5] = onOff(Prefs.liveTvButton());
             v[v.length - 3] = keyValue(Recs.key());
             v[v.length - 2] = keyValue(Recs.watchmodeKey());
             v[v.length - 1] = updatesValue();
@@ -1439,6 +1441,10 @@ public class SettingsActivity extends Activity {
                 return;
             }
             int row = pickScroll + focus;
+            if (row == settingLabels().length - 5) {   // Live TV button: before the TMDB and Watchmode keys
+                Prefs.setLiveTvButton(!Prefs.liveTvButton());
+                return;
+            }
             switch (row) {
                 case 0: break;   // OK opens the language picker.
                 case 1: {

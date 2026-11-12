@@ -325,7 +325,7 @@ final class HomeApps {
     /** Live TV, the HDMI inputs with a device sending a signal, and All Apps. */
     static List<Item> shortcuts(Context c) {
         List<Item> items = new ArrayList<>();
-        if (liveTv(c) != null) {
+        if (Prefs.liveTvButton() && liveTv(c) != null) {
             items.add(shortcut(LIVE_TV, "live", Ui.tr("Live TV"), "tv"));
         }
         items.addAll(inputs(c));
@@ -428,7 +428,7 @@ final class HomeApps {
     /** For the bottom drawer: live TV and every HDMI input (the ones with no device are shown dimmed). */
     static List<Item> allInputs(Context c) {
         List<Item> items = new ArrayList<>();
-        if (liveTv(c) != null) items.add(shortcut(LIVE_TV, "live", Ui.tr("Live TV"), "tv"));
+        if (Prefs.liveTvButton() && liveTv(c) != null) items.add(shortcut(LIVE_TV, "live", Ui.tr("Live TV"), "tv"));
         items.addAll(inputs(c, true));
         return items;
     }

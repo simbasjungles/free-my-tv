@@ -293,6 +293,9 @@ final class Prefs {
     /** Wi-Fi/Ethernet, Bluetooth and USB icons at the top-left of the home screen. */
     static boolean statusIcons() { return sp().getBoolean("statusicons", false); }
     static void setStatusIcons(boolean on) { put("statusicons", on); }
+    /** The Live TV button in the inputs row (streaming-only homes may want it gone). */
+    static boolean liveTvButton() { return sp().getBoolean("livetvbutton", true); }
+    static void setLiveTvButton(boolean on) { put("livetvbutton", on); }
 
     // MARK: - City
 
