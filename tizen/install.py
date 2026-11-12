@@ -204,6 +204,13 @@ def main():
                     '--uninstall\n(That also clears what Free My TV keeps on the TV, such as a TMDB key typed there.) '
                     'Still failed[118] after that? Some models refuse developer installs altogether (a 2016 Full HD '
                     'K5670 did, #349): a Google TV streamer on HDMI runs Free My TV there.' % ip)
+        elif 'failed[116]' in out:
+            # "download failed[116]" comes within milliseconds, before any certificate check, and for any package: a
+            # 2020 UE55TU7020 answered it even to a minimal app (#490). Elsewhere it was a TV out of storage for apps,
+            # and freeing some fixed it (jellyfin-tizen issue 10: a UE55NU7305 and a UE32N5300).
+            hint = ('\nThe TV stopped before installing anything. That usually means it has too little free storage '
+                    'left for apps: delete some you don\'t use (Settings, Support, Device Care, Manage Storage on 2020 '
+                    'and newer TVs; Apps, Settings on older ones), then run this again.')
         sys.exit('The TV didn\'t finish installing. It said:\n' + out.strip() + hint)
     sdb.shell('0 was_execute ' + app_id, r'launched|spend time', 20)
     print('Installed and open on the TV.')

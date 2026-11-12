@@ -5,9 +5,9 @@
 'use strict';
 var fs = require('fs'), path = require('path'), vm = require('vm');
 
-function prefs(stored) {
+function prefs(stored, config) {
   var sandbox = {
-    window: {},
+    window: {CONFIG: config || {}},
     navigator: {language: 'en-US'},
     localStorage: {
       getItem: function () { return stored === undefined ? null : JSON.stringify(stored); },
@@ -37,6 +37,16 @@ expect(prefs({boxInput: 'hdmi0'}).boxInput(), 'live', 'no port 0');
 expect(prefs({boxInput: 'hdmi5'}).boxInput(), 'live', 'no port 5');
 expect(prefs({boxInput: 'apple'}).boxInput(), 'live', 'not an input');
 expect(prefs({boxInput: 2}).boxInput(), 'live', 'not a string');
+
+expect(prefs({}).liveInput(), true, 'Live TV in the inputs until hidden');
+expect(prefs({liveInput: false}).liveInput(), false, 'Live TV hidden');
+expect(prefs({liveInput: 'off'}).liveInput(), true, 'not a boolean');
+
+expect(prefs({}).clockFormat(), 'auto', 'the clock of the language until picked');
+expect(prefs({}, {clockFormat: '24'}).clockFormat(), '24', 'clock_format from the build');
+expect(prefs({clockFormat: '12'}, {clockFormat: '24'}).clockFormat(), '12', 'the choice on the TV wins');
+expect(prefs({clockFormat: 'auto'}, {clockFormat: '24'}).clockFormat(), 'auto', 'Automatic picked on the TV');
+expect(prefs({clockFormat: 'noon'}).clockFormat(), 'auto', 'not a clock');
 
 if (failures) process.exit(1);
 console.log('WebPrefsTest: all checks passed.');

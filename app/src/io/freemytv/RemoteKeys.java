@@ -27,6 +27,9 @@ import android.view.KeyEvent;
  * On Hisense TVs, the Prime Video, YouTube, Disney+, All Apps, Settings (gear) and profile buttons go to Google TV's
  * home app, which Free My TV mode turns off: without the filter they do nothing. Netflix stays with the system.
  * On Google TV Streamer, YouTube and the custom star button go to that home app too; Netflix goes to Google's service.
+ * On onn streamers (Walmart; the 4K Pro, Amlogic, Google TV 14 tested), YouTube goes to Google TV's home app, which Free
+ * My TV mode turns off, and so does Free TV; Netflix, Disney+ and Paramount+ go to the box's own receivers (droidlogic,
+ * gretzky), which stay on.
  * On the JVC G24 (Skyworth Android 11), the input shortcut's vendor receiver crashes without Google TV's content
  * provider, and Quick Settings targets its disabled notification panel. Open the native TV menus directly.
  */
@@ -35,6 +38,8 @@ final class RemoteKeys {
 
     /** Some TCL remotes (BT_RC833) send TCL's own YouTube key instead of BUTTON_3: the same button. */
     private static final int KEY_YOUTUBE_TCL = 4065;
+    /** KeyEvent.KEYCODE_VIDEO_APP_1 to _8 (API 28): numbers here, since minSdk is 26. */
+    private static final int KEYCODE_VIDEO_APP_1 = 289, KEYCODE_VIDEO_APP_8 = 296;
 
     /**
      * The key codes are the brand's own: on other brands they can be other buttons, so nothing here runs there.
@@ -42,7 +47,15 @@ final class RemoteKeys {
      */
     static final boolean TCL = is("TCL"), VESTEL = is("Vestel"), KTC = is("KTC"), SONY = is("Sony"), FORMOVIE = is("Formovie"),
             HISENSE = is("Hisense");
+    static final boolean CHROMECAST_SABRINA = SabrinaRemote.supported(Build.DEVICE, Build.MODEL);
     static final boolean GOOGLE_STREAMER = is("Google") && Build.MODEL.equals("Google TV Streamer");
+    /**
+     * onn streamers (Walmart's Google TV boxes). Only the remote whose buttons were read (the 4K Pro's,
+     * Vendor_0957_Product_0031.kl) is ours: onKey checks it, as for Sabrina, so another onn remote, a gamepad's or a
+     * keyboard's BUTTON_3 to _10 go on as before.
+     */
+    static final boolean ONN = is("onn");
+    private static final int ONN_REMOTE_VENDOR = 0x0957, ONN_REMOTE_PRODUCT = 0x0031;
     static final boolean JVC_SKYWORTH = SkyworthRemote.supported(Build.MANUFACTURER, Build.BRAND,
             Build.MODEL, Build.VERSION.SDK_INT);
     /**
@@ -85,12 +98,17 @@ final class RemoteKeys {
     private static long lastDown;
 
     static boolean supported() {
-        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || XIAOMI_AFKR0 || HISENSE || GOOGLE_STREAMER || JVC_SKYWORTH || PHILIPS_GTV;
+        return TCL || STEM_NETFLIX || KTC || SONY || XIAOMI || XIAOMI_AFKR0 || HISENSE || CHROMECAST_SABRINA
+                || GOOGLE_STREAMER || ONN || JVC_SKYWORTH || PHILIPS_GTV;
     }
 
-    /** The key service is on only where the filter is safe, and while a button opens something (else it has no work). */
+    /**
+     * The key service is on only where the filter is safe, and while a button opens something (else it has no work); on
+     * Hisense always, for the Input key.
+     */
     static boolean serviceWanted() {
         if (!supported() || !FILTER_SAFE) return false;
+        if (HISENSE) return true;   // the Input key: our drawer while the stock inputs panel is off (#494)
         for (int key : Prefs.KEYS) if (!Prefs.keyApp(key).isEmpty()) return true;
         return false;
     }
@@ -106,6 +124,23 @@ final class RemoteKeys {
         int source = e.getSource();
         if ((source & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
                 || (source & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) return false;
+        if (CHROMECAST_SABRINA) {
+            InputDevice device = InputDevice.getDevice(e.getDeviceId());
+            if (device == null || !SabrinaRemote.isRemote(device.getVendorId(), device.getProductId())) return false;
+        }
+        if (HISENSE && e.getKeyCode() == KeyEvent.KEYCODE_TV_INPUT && inputsUnanswered(c)) {
+            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
+                AppLog.w("remote key " + e.getKeyCode() + " -> inputs");
+                Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                        .putExtra(HomeActivity.EXTRA_INPUTS, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                try {
+                    c.startActivity(intent);
+                } catch (android.content.ActivityNotFoundException | SecurityException ex) {
+                    AppLog.w("remote target unavailable: inputs");
+                }
+            }
+            return true;   // its key-up too, as for the app keys
+        }
         int keyCode = TCL && e.getKeyCode() == KEY_YOUTUBE_TCL ? Prefs.KEY_YOUTUBE : e.getKeyCode();
         if (JVC_SKYWORTH) {
             if (SkyworthRemote.settings(keyCode)) keyCode = Prefs.KEY_JVC_SETTINGS;
@@ -113,15 +148,18 @@ final class RemoteKeys {
             else return false;
         }
         // Sony sends BUTTON_9 for five app buttons (BUTTON_4 for Netflix, BUTTON_8 for Google Play): only the scan code
-        // tells them apart. The BRAVIA VU31's remote sends BUTTON_2 and BUTTON_15 too (Prefs.sonyKey).
+        // tells them apart. The BRAVIA VU31's remote sends BUTTON_2 and BUTTON_15 too (Prefs.sonyKey). The BRAVIA 8 II
+        // (BRAVIA_AE2, Google TV 14) sends VIDEO_APP_1 to _8 with the same scan codes (583 Netflix, 485 YouTube).
         if (SONY && (keyCode == KeyEvent.KEYCODE_BUTTON_4 || keyCode == KeyEvent.KEYCODE_BUTTON_8
                 || keyCode == KeyEvent.KEYCODE_BUTTON_9 || keyCode == KeyEvent.KEYCODE_BUTTON_2
-                || keyCode == KeyEvent.KEYCODE_BUTTON_15)) {
+                || keyCode == KeyEvent.KEYCODE_BUTTON_15
+                || keyCode >= KEYCODE_VIDEO_APP_1 && keyCode <= KEYCODE_VIDEO_APP_8)) {
             keyCode = Prefs.sonyKey(e.getScanCode());
         }
         boolean ours = false;
         for (int key : Prefs.KEYS) ours |= key == keyCode;
         if (!ours) return false;
+        if (ONN && !onnRemote(e)) return false;
         String pkg = Prefs.keyApp(keyCode);
         if (pkg.isEmpty()) return false;   // "Nothing": the key goes on as if we weren't here
         if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
@@ -141,7 +179,7 @@ final class RemoteKeys {
                             "com.smartdevice.dailyshortcut.ui.MainActivity")
                     : (TCL || PHILIPS_GTV) && pkg.equals(Prefs.QUICK_PANEL)
                     ? new Intent(c, QuickPanelActivity.class)
-                    : (JVC_SKYWORTH || TCL || PHILIPS_GTV) && pkg.equals("com.android.tv.settings")
+                    : (JVC_SKYWORTH || TCL || PHILIPS_GTV || SONY) && pkg.equals("com.android.tv.settings")
                     ? new Intent(android.provider.Settings.ACTION_SETTINGS).setPackage(pkg)
                     : launchIntent(c.getPackageManager(), pkg);
             if (pkg.equals(Prefs.ALL_APPS)) intent.putExtra(HomeActivity.EXTRA_ALL_APPS, true);
@@ -156,6 +194,24 @@ final class RemoteKeys {
             }
         }
         return true;
+    }
+
+    /**
+     * Hisense's firmware turns the Input key into VIEW_INPUTS (HisensePhoneWindowHelper), which only the stock home
+     * screen's inputs panel answers (#494). With that home screen off nothing does and the key is lost, so our drawer
+     * takes it. In Original mode the stock panel answers again and the key is left alone. Only on Hisense: another
+     * firmware may open its own panel some other way, and then both would come up (TCL's own panel answers VIEW_INPUTS).
+     */
+    private static boolean inputsUnanswered(Context c) {
+        return c.getPackageManager().resolveActivity(new Intent(VIEW_INPUTS), 0) == null;
+    }
+
+    private static final String VIEW_INPUTS = "com.android.tv.action.VIEW_INPUTS";
+
+    /** The key comes from the onn remote that was read (only for our keys: the others never look it up). */
+    private static boolean onnRemote(KeyEvent e) {
+        InputDevice device = InputDevice.getDevice(e.getDeviceId());
+        return device != null && device.getVendorId() == ONN_REMOTE_VENDOR && device.getProductId() == ONN_REMOTE_PRODUCT;
     }
 
     /** The app's TV launcher, or its plain one (kept here, not in HomeApps, so the key process stays small). */
