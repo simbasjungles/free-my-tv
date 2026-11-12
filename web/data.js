@@ -873,6 +873,17 @@ var Data = (function () {
     picks: now,
     showcase: all,
     image: function (path, size) { return path ? 'https://image.tmdb.org/t/p/' + (size || 'w1280') + path : ''; },
+    /**
+     * A pick's poster: with an rpdb_key, RPDB's (ratingposterdb.com), the same poster with its scores in a strip along
+     * its bottom, asked by the TMDB id it already has; else TMDB's, as before ('' without one).
+     */
+    poster: function (p, size) {
+      var key = String(CONFIG.rpdbKey || '').trim();
+      if (key && p.id > 0 && (p.kind === 'movie' || p.kind === 'tv')) {
+        return 'https://api.ratingposterdb.com/' + encodeURIComponent(key) + '/tmdb/poster-default/' + (p.kind === 'tv' ? 'series-' : 'movie-') + p.id + '.jpg';
+      }
+      return p.poster ? 'https://image.tmdb.org/t/p/' + (size || 'w342') + p.poster : '';
+    },
 
     /** Night at the location: from sunset to sunrise (the last forecast; without one, 6:00 and 18:00). */
     isNight: function (at) {

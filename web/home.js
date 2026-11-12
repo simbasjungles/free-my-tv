@@ -532,7 +532,9 @@
       var img = el('div', 'img', card);
       // Narrow: the poster (the backdrop cropped without one); the wide card fades its backdrop in over it, loaded then.
       var poster = el('div', 'layer', img);
-      poster.style.backgroundImage = 'url(' + (p.poster ? Data.image(p.poster, 'w342') : Data.image(p.backdrop, 'w780')) + ')';
+      var art = Data.poster(p, 'w342');
+      poster.style.backgroundImage = 'url(' + (art || Data.image(p.backdrop, 'w780')) + ')';
+      if (CONFIG.rpdbKey && art) poster.style.backgroundPosition = '50% 100%';   // RPDB's scores along the bottom: never cropped
       el('div', 'layer back', img);
       el('div', 'name', card, I18N.name(p.title));
       if (p.meta) el('div', 'meta', card, p.meta);
