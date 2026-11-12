@@ -95,10 +95,10 @@ var Prefs = (function () {
     /** True when the key in use was typed on the TV (Remove takes it back to config.properties'). */
     tmdbKeyOnTV: function () { return v.tmdbKey !== undefined; },
     setCity: function (name, lat, lon) { v.city = name; v.latitude = lat; v.longitude = lon; save(); this.version++; },
-    /** Streaming services (keys like "netflix") whose titles are left out of the picks. */
-    serviceOff: function (key) { return pick('servicesOff', []).indexOf(key) >= 0; },
+    /** Streaming services (keys like "netflix") whose titles are left out of the picks: hide_services until switched on the TV. */
+    serviceOff: function (key) { return pick('servicesOff', CONFIG.hideServices || []).indexOf(key) >= 0; },
     setServiceOff: function (key, off) {
-      var list = pick('servicesOff', []).filter(function (k) { return k !== key; });
+      var list = pick('servicesOff', CONFIG.hideServices || []).filter(function (k) { return k !== key; });
       if (off) list.push(key);
       this.set('servicesOff', list);
     },
