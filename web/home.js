@@ -1826,6 +1826,7 @@
     hideAmbient();
     if (document.hidden) return;
     idleAt = Date.now();
+    TV.noteChannel();   // back from the viewer: the antenna channel it played, for Live TV
     loadApps(function () { renderShelf(); renderDrawer(); updateFocus(); Data.refresh(); });
   });
 
