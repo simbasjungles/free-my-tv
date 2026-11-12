@@ -494,6 +494,59 @@ var Data = (function () {
     get(url, bearer ? {Authorization: 'Bearer ' + key, Accept: 'application/json'} : {Accept: 'application/json'}, done);
   }
 
+  // MARK: - Watchmode: the title's own page in its app (watchmode_key), as on Android (Recs.findLink)
+
+  var WATCHMODE = 'https://api.watchmode.com/v1', wmRefused = false, wmRetryAt = 0;
+
+  /**
+   * The pick's page in its app: done(web address or ''), within 4 s. Looked up when a pick is opened, not as it's shown:
+   * the web app has no background job, and this keeps the free plan's 2,500 requests a month for what's watched (2
+   * requests a title, then remembered, '' too). Without a key, after a refused key or a failed lookup (10 min), ''.
+   */
+  function titleLink(p, done) {
+    var key = String(CONFIG.watchmodeKey || '').trim();
+    if (!key || wmRefused || !p || !p.app || !(p.id > 0) || Date.now() < wmRetryAt) { done(''); return; }
+    var links = stored('wm') || {}, id = p.kind + ':' + p.id + ':' + p.app;
+    if (typeof links[id] === 'string') { done(links[id]); return; }
+    var answered = false;
+    function answer(link) { if (!answered) { answered = true; done(link); } }
+    setTimeout(function () { answer(''); }, 4000);   // a slow answer opens the app at home; what comes later is kept
+    function keep(link) { links = stored('wm') || {}; links[id] = link; store('wm', links); answer(link); }
+    function failed(e) {
+      if (e && /rejected/.test(e.message)) wmRefused = true;   // get() calls any 401 "rejected the key"
+      else wmRetryAt = Date.now() + 10 * 60000;   // quota or network: not again right away
+      answer('');
+    }
+    var k = '&apiKey=' + encodeURIComponent(key);
+    get(WATCHMODE + '/search/?search_field=tmdb_' + p.kind + '_id&search_value=' + p.id + k, {}, function (e, r) {
+      if (e) { failed(e); return; }
+      var found = r && r.title_results && r.title_results[0];
+      if (!found) { keep(''); return; }
+      get(WATCHMODE + '/title/' + found.id + '/sources/?regions=' + REGION + k, {}, function (e2, sources) {
+        if (e2) { failed(e2); return; }
+        keep(sourceLink(sources || [], p.app));
+      });
+    });
+  }
+
+  /** The subscription's https page among Watchmode's sources for the service with this key ("netflix"), or ''. */
+  function sourceLink(sources, app) {
+    var want = '';
+    for (var s = 0; s < SERVICES.length; s++) if (SERVICES[s][1] === app) want = SERVICES[s][0].replace(/ /g, '');
+    if (!want) return '';
+    for (var i = 0; i < sources.length; i++) {
+      var words = String(sources[i].name || '').toLowerCase(), name = words.replace(/ /g, '');
+      // Not a channel sold inside another app ("AppleTV+ Amazon Channel", "Paramount+ (Via Amazon Prime)"): that page
+      // opens Amazon's or Apple's app, not the one the pick is for.
+      var resold = name.indexOf('channel') >= 0 || name.indexOf('(via') >= 0;
+      // Max as a word, as for TMDB's providers: Watchmode calls it "HBO Max" again, and Cinemax isn't it.
+      var same = !resold && (want === 'max' ? /\bmax\b/.test(words) : name.indexOf(want) >= 0);
+      var url = String(sources[i].web_url || '');
+      if (same && sources[i].type === 'sub' && url.indexOf('https://') === 0) return url;
+    }
+    return '';
+  }
+
   /** Asks TMDB whether a key works before it's saved: done(error), with error.rejected when TMDB said no. */
   function checkKey(key, done) {
     tmdb('/configuration', function (err) {
@@ -763,6 +816,7 @@ var Data = (function () {
     onChange: function (fn) { listeners.push(fn); },
     setApps: function (apps) { installed = apps; },
     appFor: appFor,
+    titleLink: titleLink,
     usable: usable,
     services: services,
     refresh: function () { refreshWeather(); refreshAir(); refreshPrices(); refreshRecs(); },

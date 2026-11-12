@@ -1375,6 +1375,18 @@
     return {app: app, params: via ? {contentTarget: 'nuvio://tmdb/' + (p.kind === 'tv' ? 'series' : 'movie') + '/' + p.id} : null};
   }
 
+  /**
+   * Opens a pick's target: in Nuvio as picked, else its app, on its title where this TV's app takes one and Watchmode
+   * knows it (watchmode_key; on Samsung, Prime Video: TV.takesTitle). LG opens the app as before.
+   */
+  function openTarget(p, target) {
+    if (!target) return;
+    if (target.params || !p || !TV.takesTitle(p.app)) { launcher(target.app.id, target.app.title, target.params)(); return; }
+    Data.titleLink(p, function (link) {
+      launcher(target.app.id, target.app.title, link ? {link: link, service: p.app} : null)();
+    });
+  }
+
   function launcher(id, name, params) {
     return function () {
       TV.launch(id, params || null, function (ok) {
@@ -1416,8 +1428,7 @@
         else openSettings();
         return;
       case Z.CARDS:
-        var target = pickTarget(cards[st.card]);
-        if (target) launcher(target.app.id, target.app.title, target.params)();
+        openTarget(cards[st.card], pickTarget(cards[st.card]));
         return;
       case Z.SHELF:
         if (shelf[st.shelf]) launcher(shelf[st.shelf].id, shelf[st.shelf].title)();
@@ -1710,9 +1721,9 @@
     idleAt = Date.now();
     if (ambientOn) { hideAmbient(); return true; }
     if (!saverOn) return false;
-    var target = ok && Prefs.saverWatch() ? pickTarget(saverPick) : null;
+    var target = ok && Prefs.saverWatch() ? pickTarget(saverPick) : null, watched = saverPick;
     hideSaver();
-    if (target) launcher(target.app.id, target.app.title, target.params)();
+    openTarget(watched, target);
     return true;
   }
 
