@@ -679,6 +679,11 @@ final class HomeMode {
                 }
             }
             wakeWatch(adb, true);
+            Prefs.reload();   // Original took Continue Watching's permission back: still picked, it comes back with the mode
+            if (Prefs.topContent().equals(Prefs.TOP_CONTINUE) && !WatchNext.allowed(c)) {
+                adb.shell("pm grant " + PKG + " " + WatchNext.PERMISSION);
+                AppLog.w("continue watching permission " + (WatchNext.allowed(c) ? "granted" : "not granted"));
+            }
             notice(c, Capabilities.screensaver(c)
                     ? Ui.trf("Free My TV is on: new home screen and screensaver, {n} apps turned off.", "n", disabled.size())
                     : Ui.trf("Free My TV is on: new home screen, {n} apps turned off.", "n", disabled.size()));

@@ -340,8 +340,8 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   `/status/`), on Google TV and Android TV only.
   On LG and Samsung it's typed in Home Settings (no QR: a web app can't serve a page): `Prefs.tmdbKey()` (localStorage)
   wins over `CONFIG.tmdbKey`, and `Data.keyChanged()` fetches the picks again.
-- Continue Watching gets `READ_TV_LISTINGS` with `pm grant` through the TV's own ADB only when picked in Home Settings;
-  *Original* revokes it with `pm revoke`. Watch Next pictures load from the TV (`content://`, `android.resource://`) and
+- Continue Watching gets `READ_TV_LISTINGS` with `pm grant` through the TV's own ADB only when picked in Home Settings,
+  and again at the switch to Free My TV mode while it's still picked; *Original* revokes it with `pm revoke`. Watch Next pictures load from the TV (`content://`, `android.resource://`) and
   from the https addresses the apps themselves left there (Netflix and JioHotstar do, #174), only through `NetPicture`:
   https, no host on the TV or the home network (redirects checked hop by hop), `image/*`, 4 MB, 10 s, and errors that
   never carry the address. Nothing else may be fetched from an address another app wrote. Besides those, the app talks only to TMDB, Open-Meteo, Binance, Watchmode (with a `watchmode_key`), your Plex
