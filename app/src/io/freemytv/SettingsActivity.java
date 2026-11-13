@@ -976,13 +976,13 @@ public class SettingsActivity extends Activity {
         private static final String[] UNITS = {"auto", "C", "F"}, THEMES = {"auto", "light", "dark"},
                 CLOCKS = {"auto", "24", "12"};
         /** Home Settings: language, temperature, theme, clock, my photos, sounds, top of the screen, picks, Continue
-         *  Watching's apps, watch from the screensaver, Android apps, status icons, Recent Apps, weather, city, forecast,
+         *  Watching's apps, watch from the screensaver, Android apps, status icons, Recent Apps, at power-on, Live TV button, weather, city, forecast,
          *  now playing, Home Assistant (only on builds with its address), quotes, one row per coin, then the TMDB and Watchmode keys and
          *  updates (the last row). */
         private static final int CLOCK_ROW = 3, PHOTOS_ROW = 4, TOP_ROW = 6, PICKS_ROW = 7, WATCH_ROW = 8,
                 SAVER_ROW = 9, ANDROID_APPS_ROW = 10, STATUS_ICONS_ROW = 11, RECENTS_ROW = 12, POWER_ON_ROW = 13,
-                WEATHER_ROW = 14, CITY_ROW = 15, FORECAST_ROW = 16, PLAYING_ROW = 17, HOME_ROW = Config.HOME_ASSISTANT ? 18 : -1,
-                QUOTES_ROW = Config.HOME_ASSISTANT ? 19 : 18, COIN_ROWS = QUOTES_ROW + 1;
+                LIVE_BUTTON_ROW = 14, WEATHER_ROW = 15, CITY_ROW = 16, FORECAST_ROW = 17, PLAYING_ROW = 18,
+                HOME_ROW = Config.HOME_ASSISTANT ? 19 : -1, QUOTES_ROW = Config.HOME_ASSISTANT ? 20 : 19, COIN_ROWS = QUOTES_ROW + 1;
         /** No "home" on Xiaomi TVs: their remote sends one Home press as a burst of presses (HomeView.BURST_MS). */
         private static final String[] RECENTS = RemoteKeys.XIAOMI ? new String[] {"off", "drawer"}
                 : new String[] {"off", "drawer", "home"};
@@ -1009,6 +1009,7 @@ public class SettingsActivity extends Activity {
             l.add(Ui.tr("Status icons"));   // before the weather widget: City and Forecast are the widget's
             l.add(Ui.tr("Recent Apps"));
             l.add(Ui.tr("At power-on"));
+            l.add(Ui.tr("Live TV button"));
             l.add(Ui.tr("Weather widget"));
             l.add(Ui.tr("City"));
             l.add(Ui.tr("Forecast"));
@@ -1116,6 +1117,8 @@ public class SettingsActivity extends Activity {
             v[RECENTS_ROW] = rec.equals("home") ? Ui.tr("recents|Drawer and Home twice") : rec.equals("drawer") ? Ui.tr("recents|In the drawer") : Ui.tr("Off");
             String power = Prefs.powerOn();
             v[POWER_ON_ROW] = power.equals("home") ? Ui.tr("power|Home screen") : power.equals("live") ? Ui.tr("Live TV") : Ui.tr("TV's choice");
+            HomeApps.Item box = HomeApps.liveButtonInput(getContext());
+            v[LIVE_BUTTON_ROW] = box != null ? box.label : Ui.tr("Live TV");
             v[ANDROID_APPS_ROW] = onOff(Prefs.androidApps());
             v[STATUS_ICONS_ROW] = onOff(Prefs.statusIcons());
             v[WEATHER_ROW] = onOff(Prefs.weather());
@@ -1484,6 +1487,14 @@ public class SettingsActivity extends Activity {
                     int at = java.util.Arrays.asList(Prefs.POWER_ON).indexOf(Prefs.powerOn());
                     Prefs.setPowerOn(Prefs.POWER_ON[(at + dir + Prefs.POWER_ON.length) % Prefs.POWER_ON.length]);
                     return;
+                }
+                case LIVE_BUTTON_ROW: {   // Live TV, then every HDMI input the TV lists (the drawer's, dimmed ones too)
+                    List<String> ids = new ArrayList<>();
+                    ids.add("");
+                    for (HomeApps.Item it : HomeApps.allInputs(getContext())) if (it.inputId != null) ids.add(it.inputId);
+                    int at = Math.max(0, ids.indexOf(Prefs.liveButton()));
+                    Prefs.setLiveButton(ids.get((at + dir + ids.size()) % ids.size()));
+                    break;
                 }
                 case ANDROID_APPS_ROW: Prefs.setAndroidApps(!Prefs.androidApps()); break;
                 case STATUS_ICONS_ROW: {
