@@ -450,7 +450,8 @@ var Data = (function () {
   /** Service name on TMDB (part of it, lowercase) → our key, how to find its app on the TV (id, name), its name. */
   var SERVICES = [
     ['netflix', 'netflix', /^netflix$/, /netflix/i, 'Netflix'],
-    ['prime video', 'prime', /^amazon$/, /prime video|amazon/i, 'Prime Video'],
+    // By name, Prime Video only: "amazon" alone also matched Amazon Alexa, which then opened Prime's picks.
+    ['prime video', 'prime', /^amazon$/, /prime video|^amazon( instant)? video$/i, 'Prime Video'],
     ['disney', 'disney', /disney/, /disney/i, 'Disney+'],
     ['hulu', 'hulu', /^hulu/, /hulu/i, 'Hulu'],
     ['paramount', 'paramount', /paramount|cbs/, /paramount/i, 'Paramount+'],

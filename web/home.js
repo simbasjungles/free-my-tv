@@ -109,7 +109,7 @@
   var SHELF = [
     ['netflix', /^netflix$/, /netflix/i, ['#0A0A0A', '#000000']],
     ['youtube', /youtube/, /^youtube$/i, ['#1C1C1E', '#09090A']],
-    ['prime', /^amazon$/, /prime video|amazon/i, ['#2AA8FF', '#0A68D4']],
+    ['prime', /^amazon$/, /prime video|^amazon( instant)? video$/i, ['#2AA8FF', '#0A68D4']],   // not Amazon Alexa
     ['disney', /disney/, /disney/i, ['#173584', '#08143F']],
     ['max', /hbo|wbd/, /^(hbo )?max$|hbo max/i, ['#5C30E8', '#221684']],
     ['appletv', /appletv|apple\.tv/, /apple tv/i, ['#1C1C1E', '#000000']],
