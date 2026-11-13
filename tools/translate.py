@@ -172,12 +172,20 @@ def extract():
 
 # MARK: - Catalogues
 
+def check_lang(lang):
+    """A catalogue name becomes a file name: only a language code gets through (no paths)."""
+    if not re.fullmatch(r"[A-Za-z]{2,3}(-[A-Za-z]{2,4})?(_[A-Za-z]{2,4})?", lang or ""):
+        raise SystemExit(f"Not a language code: {lang!r}")
+
+
 def load(lang):
+    check_lang(lang)
     with open(os.path.join(I18N, lang + ".json"), encoding="utf-8") as f:
         return json.load(f)
 
 
 def save(lang, data):
+    check_lang(lang)
     # LF on every system: written in text mode on Windows, every line would change (\r\n).
     with open(os.path.join(I18N, lang + ".json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(dict(sorted(data.items())), f, ensure_ascii=False, indent=1)
