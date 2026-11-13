@@ -191,13 +191,16 @@ var TV = (function () {
 
   // The same logos by name (lowercase letters and digits only), for app ids the list above doesn't know: older TVs
   // (a 2016 KU6300, Tizen 2.4) can carry other ids for the same apps.
+  // On a 2025 LS03F (Tizen 9), BBC iPlayer's iconPath is Tizen's pinwheel and Channel 4's a build-stamped
+  // placeholder: both logos from Wikipedia, public domain in the US as text and simple shapes (PD-textlogo).
   var SAMSUNG_ICON_NAMES = {
     youtube: 'icons/youtube.png', primevideo: 'icons/prime.png', amazonprimevideo: 'icons/prime.png',
     netflix: 'icons/netflix.svg', max: 'icons/max.svg', spotify: 'icons/spotify.svg',
     deezer: 'icons/deezer.svg', youtubekids: 'icons/youtubekids.svg', redbulltv: 'icons/redbull.svg', ted: 'icons/ted.svg',
     steamlink: 'icons/steam.svg', jellyfin: 'icons/jellyfin.svg', paramount: 'icons/paramountplus.svg',
     paramountplus: 'icons/paramountplus.svg', crunchyroll: 'icons/crunchyroll.svg', twitch: 'icons/twitch.svg',
-    plex: 'icons/plex.svg', appletv: 'icons/appletv.svg'
+    plex: 'icons/plex.svg', appletv: 'icons/appletv.svg',
+    bbciplayer: 'icons/bbciplayer.svg', channel4: 'icons/channel4.svg'
   };
 
   // Names Smart Hub gets wrong: HBO's app has none (so it never reached the shelf), others are long or old.
