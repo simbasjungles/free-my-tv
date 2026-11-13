@@ -650,9 +650,9 @@
     var d = $('drawer');
     d.innerHTML = '';
     drawerItems = [];
-    for (var i = 0; i < inputs.length; i++) {
-      var x = inputs[i];
-      if (x.key === 'live' && !Prefs.liveInput()) continue;
+    var shown = orderedInputs();
+    for (var i = 0; i < shown.length; i++) {
+      var x = shown[i];
       drawerItems.push({label: x.label || tr('Live TV'), symbol: x.symbol, off: !x.connected, run: launcher(x.id, x.label)});
     }
     drawerInputs = drawerItems.length;
@@ -913,8 +913,7 @@
     }
     rows.push({label: tr('Live TV button'), value: boxLabel(),
       step: function (d) { cycle('boxInput', ['live', 'hdmi1', 'hdmi2', 'hdmi3', 'hdmi4'], Prefs.boxInput(), d); renderTop(); }});
-    rows.push({label: tr('Live TV'), toggle: Prefs.liveInput(),
-      step: function () { Prefs.set('liveInput', !Prefs.liveInput()); renderDrawer(); }});
+    rows.push({label: tr('Inputs'), value: '›', inputs: true, step: function (d) { if (d >= 0) openInputsEdit(); }});
     rows.push({label: tr('Shelf'), value: '›', shelf: true, step: function (d) { if (d >= 0) openShelfEdit(); }});
     rows.push({label: tr('About this TV'), value: '›', about: true, step: function (d) { if (d >= 0) openAbout(); }});
     if (TV.canOpenSettings) rows.push({label: tr('TV Settings'), value: '›', step: function (d) { if (d >= 0) tvSettings(); }});
@@ -1297,7 +1296,9 @@
     updateFocus();
   }
 
-  // MARK: - Shelf editor: which apps, in what order
+  // MARK: - Shelf and inputs editors: which ones, in what order
+
+  var editKind = 'shelf';   // which editor the sheet shows: 'shelf' (apps) or 'inputs'
 
   function editList() {
     var ids = shelf.map(function (a) { return a.id; });
@@ -1308,31 +1309,50 @@
     })};
   }
 
-  function renderShelfEdit() {
-    var box = $('shelfedit').firstChild, e = editList();
+  /** The inputs editor's rows: the shown ones in their order, then the hidden ones as the TV lists them. */
+  function inputsEditList() {
+    var shown = orderedInputs(), hidden = Prefs.inputsHidden(), rows = shown.slice();
+    for (var i = 0; i < inputs.length; i++) if (hidden.indexOf(inputs[i].key) >= 0) rows.push(inputs[i]);
+    return {keys: shown.map(function (x) { return x.key; }), rows: rows};
+  }
+
+  function renderEdit() {
+    var forInputs = editKind === 'inputs';
+    var box = $('shelfedit').firstChild, e = forInputs ? inputsEditList() : editList();
     box.innerHTML = '';
     var title = el('div', 'title', box);
-    sym('apps', title);
-    title.appendChild(document.createTextNode(tr('Shelf')));
+    sym(forInputs ? 'hdmi' : 'apps', title);
+    title.appendChild(document.createTextNode(forInputs ? tr('Inputs') : tr('Shelf')));
     var list = el('div', 'list', box), holder = el('div', 'rows', list);
     list.style.height = Math.min(e.rows.length, 7) * 78 + 'px';
     for (var i = 0; i < e.rows.length; i++) {
-      var a = e.rows[i], at = e.ids.indexOf(a.id), row = el('div', 'row', holder, a.title);
+      var item = e.rows[i], at = (forInputs ? e.keys : e.ids).indexOf(forInputs ? item.key : item.id);
+      var row = el('div', 'row', holder, forInputs ? item.label || tr('Live TV') : item.title);
       var place = el('span', 'value', row, at >= 0 ? '#' + (at + 1) : tr('shelf|Off'));
-      if (at >= 0) sym('check', place).style.marginLeft = '16px';   // on the shelf: a check, as in the pickers
+      if (at >= 0) sym('check', place).style.marginLeft = '16px';   // shown: a check, as in the pickers
       hover(row, Z.EDIT, i);
     }
-    el('div', 'hint', box, tr('OK adds or removes an app. ← → change the order.'));
+    if (forInputs) el('div', 'hint', box, tr('OK shows or hides an input. ← → change the order.'));
+    else el('div', 'hint', box, tr('OK adds or removes an app. ← → change the order.'));
+    updateFocus();
+  }
+
+  function openEdit(kind) {
+    setClass($('settings'), 'open', false);
+    st.zone = Z.EDIT;
+    st.edit = 0;
+    editKind = kind;
+    renderEdit();
+    setClass($('shelfedit'), 'open', true);
     updateFocus();
   }
 
   function openShelfEdit() {
-    setClass($('settings'), 'open', false);
-    st.zone = Z.EDIT;
-    st.edit = 0;
-    renderShelfEdit();
-    setClass($('shelfedit'), 'open', true);
-    updateFocus();
+    openEdit('shelf');
+  }
+
+  function openInputsEdit() {
+    openEdit('inputs');
   }
 
   function editShelf(dx) {
@@ -1353,7 +1373,41 @@
     renderShelf();
     var again = editList();
     for (var i = 0; i < again.rows.length; i++) if (again.rows[i].id === app.id) st.edit = i;
-    renderShelfEdit();
+    renderEdit();
+  }
+
+  function editInputs(dx) {
+    var e = inputsEditList(), x = e.rows[st.edit];
+    if (!x) return;
+    // The first change writes today's setup down, the Live TV switch's choice with it.
+    var order = Prefs.inputsOrder(), hidden = Prefs.inputsHidden().slice();
+    order = order ? order.slice() : e.keys.slice();
+    if (dx === 0) {
+      var at = order.indexOf(x.key);
+      if (at >= 0) { order.splice(at, 1); hidden.push(x.key); }
+      else {
+        order.push(x.key);
+        var h = hidden.indexOf(x.key);
+        if (h >= 0) hidden.splice(h, 1);
+      }
+    } else {
+      var at2 = e.keys.indexOf(x.key);
+      if (at2 < 0) return;   // hidden inputs don't move
+      var to = Math.max(0, Math.min(e.keys.length - 1, at2 + dx));
+      if (to === at2) return;
+      var at3 = order.indexOf(x.key);
+      if (at3 >= 0) order.splice(at3, 1);
+      var ni = order.indexOf(e.keys[to]);
+      // An input the order doesn't know yet joins at the end, as the drawer shows it.
+      if (ni < 0) order.push(x.key);
+      else order.splice(dx > 0 ? ni + 1 : ni, 0, x.key);
+    }
+    Prefs.set('inputsOrder', order);
+    Prefs.set('inputsHidden', hidden);
+    renderDrawer();
+    var again = inputsEditList();
+    for (var i = 0; i < again.rows.length; i++) if (again.rows[i].key === x.key) st.edit = i;
+    renderEdit();
   }
 
   // MARK: - Opening things
@@ -1389,9 +1443,30 @@
     });
   }
 
-  function liveTV() {
-    for (var i = 0; i < inputs.length; i++) if (inputs[i].key === 'live') return inputs[i];
+  function inputByKey(key) {
+    for (var i = 0; i < inputs.length; i++) if (inputs[i].key === key) return inputs[i];
     return null;
+  }
+
+  function liveTV() {
+    return inputByKey('live');
+  }
+
+  /** The drawer's inputs: the person's order (Home Settings > Inputs), one the order doesn't know yet at the end,
+   *  the hidden ones out. An input the TV no longer lists keeps its place in the saved order and is skipped here. */
+  function orderedInputs() {
+    var order = Prefs.inputsOrder(), hidden = Prefs.inputsHidden(), out = [], placed = {}, i, x;
+    if (order) {
+      for (i = 0; i < order.length; i++) {
+        x = inputByKey(order[i]);
+        if (x && !placed[x.key] && hidden.indexOf(x.key) < 0) { out.push(x); placed[x.key] = true; }
+      }
+    }
+    for (i = 0; i < inputs.length; i++) {
+      x = inputs[i];
+      if (!placed[x.key] && hidden.indexOf(x.key) < 0) { out.push(x); placed[x.key] = true; }
+    }
+    return out;
   }
 
   /** The input the first top button opens, picked in Home Settings > Live TV button: Live TV or an HDMI port. */
@@ -1432,7 +1507,8 @@
         if (rowsNow[st.row]) { rowsNow[st.row].step(1); if (st.zone === Z.SETTINGS) renderSettings(); }
         return;
       case Z.EDIT:
-        editShelf(0);
+        if (editKind === 'inputs') editInputs(0);
+        else editShelf(0);
         return;
       case Z.LANG:
         closeLanguages(true);
@@ -1503,8 +1579,9 @@
         }
         break;
       case Z.EDIT:
-        if (dy) st.edit = Math.max(0, Math.min(apps.length - 1, st.edit + dy));
-        else if (dx) editShelf(dx);
+        var editRows = editKind === 'inputs' ? inputsEditList().rows : editList().rows;
+        if (dy) st.edit = Math.max(0, Math.min(editRows.length - 1, st.edit + dy));
+        else if (dx) { if (editKind === 'inputs') editInputs(dx); else editShelf(dx); }
         break;
       case Z.LANG:
         if (dy) st.lang = Math.max(0, Math.min(languageChoices().length - 1, st.lang + dy));
@@ -1523,7 +1600,8 @@
     if (st.zone === Z.EDIT) {
       setClass($('shelfedit'), 'open', false);
       openSettings();
-      for (var i = 0; i < rowsNow.length; i++) if (rowsNow[i].shelf) st.row = i;   // back on the Shelf row, whatever follows it
+      // Back lands on the row that opened the editor, whatever follows it.
+      for (var i = 0; i < rowsNow.length; i++) if (editKind === 'inputs' ? rowsNow[i].inputs : rowsNow[i].shelf) st.row = i;
       updateFocus();
       return;
     }

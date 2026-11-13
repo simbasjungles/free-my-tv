@@ -2031,7 +2031,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     // MARK: - Bottom drawer
 
     private static List<HomeApps.Item> drawerList(Context c) {
-        List<HomeApps.Item> list = HomeApps.allInputs(c);
+        List<HomeApps.Item> list = HomeApps.orderedInputs(c);
         list.addAll(HomeApps.drawerShortcuts(c));
         list.addAll(HomeAssistant.items(c));   // empty unless configured and on in Home Settings
         return list;

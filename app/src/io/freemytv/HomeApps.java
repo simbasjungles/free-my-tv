@@ -447,6 +447,28 @@ final class HomeApps {
         return items;
     }
 
+    /** The drawer's inputs in the person's order (Settings > Inputs): the saved order first, an input the TV no
+     *  longer lists keeping its place, then the ones never ordered in the TV's order; the hidden ones stay out. */
+    static List<Item> orderedInputs(Context c) {
+        List<Item> inputs = allInputs(c);
+        List<String> order = Prefs.inputsOrder(), hidden = Prefs.inputsHidden();
+        if (order == null && hidden.isEmpty()) return inputs;
+        List<String> keys = new ArrayList<>();
+        for (Item it : inputs) keys.add(it.key);
+        List<Item> out = new ArrayList<>();
+        for (String key : VisibleOrder.arrange(order, hidden, keys)) {
+            for (Item it : inputs) if (it.key.equals(key)) { out.add(it); break; }
+        }
+        return out;
+    }
+
+    /** Every input the TV lists, for the editor, shown or not. */
+    static List<String[]> inputCandidates(Context c) {
+        List<String[]> out = new ArrayList<>();
+        for (Item it : allInputs(c)) out.add(new String[] {it.key, it.label});
+        return out;
+    }
+
     private static List<Item> inputs(Context c) {
         return inputs(c, false);
     }
