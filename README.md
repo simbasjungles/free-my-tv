@@ -158,7 +158,7 @@ The first values come from `config.properties`, created by the first build (Goog
 |---|---|---|
 | `tmdb_key` | Your free TMDB key, for the picks | empty |
 | `tmdb_region` | Your country (two letters): which titles are on which app | `US` |
-| `watchmode_key` | Optional, free [Watchmode](https://api.watchmode.com/) key: a pick opens the title's page in its app; you can also send it from your phone. Google TV only | empty |
+| `watchmode_key` | Optional, free [Watchmode](https://api.watchmode.com/) key: a pick opens the title's page in its app. On Google TV and Android TV you can also send it from your phone. On Samsung, Prime Video only; not on LG | empty |
 | `plex_url` and `plex_token` | Optional, your Plex server's `plex.direct` address and token: its newest titles join the picks and open on their page. Google TV only | empty |
 | `trakt_client_id` | Optional: the Client ID of your own free [Trakt](https://trakt.tv/oauth/applications) API app. Home Settings > Picks then gets a Trakt row to sign in with a code, and the picks start with what you're in the middle of, bring in your watchlist and leave out what you've watched. Google TV only | empty |
 | `home_assistant_url`, `home_assistant_entities` | Optional: buttons for your own [Home Assistant](#home-assistant-buttons-optional) in the bottom drawer (Google TV only; the token goes from the computer, not in here) | empty |
@@ -199,6 +199,8 @@ On LG and Samsung you can also type it on the TV, in *Home Settings* → *TMDB k
 ### Opening a title, not just its app (optional)
 
 With a free [Watchmode](https://api.watchmode.com/) key (*Home Settings* → *Watchmode key* on Google TV and Android TV: a QR code for your phone, or typed, as for the TMDB key; or `watchmode_key=` in `config.properties`, and the TV's wins), a pick opens its own page in the streaming app instead of the app's home. The free plan (2,500 credits a month) is enough: each title costs two requests the first time and is remembered after that. It works where the app takes the title's web address (tested: Prime Video, JioHotstar, Netflix and Disney+); where it doesn't, the pick just opens the app, as without a key.
+
+On Samsung, `watchmode_key=` in `config.properties` opens Prime Video's picks on their title (tested on a 2023 Tizen 9 TV). Disney+, Netflix and HBO Max open at home there whatever they're sent, so they aren't looked up, and a title is looked up only when you open it: nothing is spent on picks you don't watch. On LG, a pick still opens its app.
 
 ### Home Assistant buttons (optional)
 

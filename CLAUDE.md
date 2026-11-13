@@ -659,7 +659,11 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   `tizen.tvchannel`, the `tv.channel` privilege): the last antenna channel seen when the home screen comes back
   (`noteChannel`, `fmtv.channel`), else the first one (a 2023 QN55Q60C, Tizen 9.0, went to TV Plus before; the one TV
   it was tried on). Samsung took `tizen.tvchannel` out of its API reference in 2019 (it was public, since Tizen 2.3):
-  where it's missing, refuses, or a list or the tuner doesn't answer in 2.5 s, the viewer opens as before. Samsung's own
+  where it's missing, refuses, or a list or the tuner doesn't answer in 2.5 s, the viewer opens as before. With a
+  `watchmode_key`, a Prime Video pick opens its title (`TV.takesTitle`, `samsungDeepLink`: the `eden_resume` operation
+  with `{"values": "<GTI>"}` under PAYLOAD, the GTI from Watchmode's web address, #483). Disney+ (Tizen 9: the entity
+  id, the address, eden_resume or view, running or not), Netflix and HBO Max open at home, so only Prime is looked up,
+  and only when a pick is opened (`Data.titleLink`). Samsung's own
   data is unreliable: on Tizen 3 no app's `iconPath` loads (on Tizen 4 and 5, YouTube's and Prime Video's are a
   placeholder), so logos are bundled in `web/icons/` and keyed by app id in `SAMSUNG_ICONS` (SVGs need a width and
   height for old WebKit); some names are empty or long (`SAMSUNG_TITLES`); and Tizen 3 answers no "settings" app

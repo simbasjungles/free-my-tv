@@ -66,6 +66,8 @@ def read_config(path):
         'hideApps': [s.strip() for s in values.get('hide_apps', '').split(',') if s.strip()],
         # Where Home Settings' Picks from switches start, as on Android (Prefs.offServices): netflix, prime, disney...
         'hideServices': [s.strip().lower() for s in values.get('hide_services', '').split(',') if s.strip()],
+        # Samsung: a pick opens its title's page in its app (Watchmode's free plan: 2,500 requests a month).
+        'watchmodeKey': values.get('watchmode_key', '').strip(),
         'shelfApps': [s.strip() for s in values.get('shelf_apps', '').split(',') if s.strip()],
         'drawerFirst': values.get('drawer_first', 'false').lower() == 'true',
         'openPicksIn': 'nuvio' if values.get('open_picks_in', '').strip().lower() == 'nuvio' else 'apps',

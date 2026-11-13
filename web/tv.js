@@ -345,6 +345,28 @@ var TV = (function () {
     x.send('');
   }
 
+  /**
+   * A pick opened on its title (Watchmode's web address of it). Only Prime Video takes one on Samsung: Smart Hub's own
+   * shortcuts open its titles with the eden_resume operation and {"values": "<GTI>"} under PAYLOAD (#483; Tizen 3 and
+   * 9). Disney+, Netflix and HBO Max take the request and open at home whatever the address, the id or the operation
+   * (tried on Tizen 9, the app running or not), so the rest are opened plainly, and not looked up.
+   */
+  var TITLE_LINKS = {prime: function (link) { var m = /gti=(amzn1\.dv\.gti\.[0-9a-f-]+)/.exec(link); return m ? m[1] : ''; }};
+
+  function samsungDeepLink(id, service, link, done) {
+    var value = TITLE_LINKS[service] ? TITLE_LINKS[service](link) : '';
+    if (!value) { samsungLaunch(id, done); return; }
+    try {
+      var control = new window.tizen.ApplicationControl('http://samsung.com/appcontrol/operation/eden_resume', null, null, null,
+          [new window.tizen.ApplicationControlData('PAYLOAD', [JSON.stringify({values: value})])]);
+      window.tizen.application.launchAppControl(control, id, function () { if (done) done(true); },
+          function () { samsungLaunch(id, done); });
+    } catch (e) {
+      samsungLaunch(id, done);
+    }
+  }
+
+
   function samsungLaunch(id, done) {
     var dial = samsungDial[id];
     function launch(otherwise) {
@@ -595,6 +617,9 @@ var TV = (function () {
      */
     canOpenSettings: !tizen2 && !tizen34,
 
+    /** Whether a pick of this service ("prime") can open on its title here: Watchmode is asked only then. */
+    takesTitle: function (service) { return samsung && !!TITLE_LINKS[service]; },
+
     /** Installed apps, as the TV's launcher lists them: [{id, title, icon, color}]. */
     apps: function (done) {
       if (samsung) { samsungApps(done); return; }
@@ -644,6 +669,7 @@ var TV = (function () {
     launch: function (id, params, done) {
       if (samsung) {
         if (id.indexOf('source:') === 0) samsungSource(id, done);
+        else if (params && params.link) samsungDeepLink(id, params.service, params.link, done);
         else samsungLaunch(id, done);
         return;
       }
