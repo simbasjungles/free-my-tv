@@ -571,7 +571,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   sides, `VisibleOrder` on Android). Never by signal; until it's used, everything shows in the TV's order; a port
   that turns up later joins at the end, and one that's gone keeps its place. The quick panel follows it, and with no
   input at all the row is Unavailable. *Home Settings* → *Live TV button* (`Prefs.liveButton`, #422, #503) is separate:
-  what the first top button opens, Live TV or an HDMI input, even one hidden from the drawer.
+  what the first top button opens, Live TV or an HDMI input, even one hidden from the drawer. On Samsung it also offers
+  Samsung TV Plus where the TV has `HEPsqFNie0.tvplusstandalone` (`TV.tvPlus`; the deeplinker Smart Hub starts answers
+  launch with success and shows nothing, and `com.samsung.tv.tvplus` refuses it, Tizen 9.0), and since #499 Live TV tunes the antenna instead, which shows "no signal" on a set with channels scanned and no aerial.
 - *At power-on* (Home Settings, `Prefs.powerOn()`: `tv`, the default, `home` or `live`; #396, #346) acts only after a
   full start, never on a wake from standby. `HomeActivity` keeps the uptime of the first time the home screen came up
   in this start (`HomeMode.noteHomeShown`, the file `home-shown` with `Settings.Global.BOOT_COUNT`). `live`: 10 s later,

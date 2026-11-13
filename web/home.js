@@ -949,7 +949,12 @@
         step: function (d) { cycle('openPicks', ['apps', 'nuvio'], open, d); }});
     }
     rows.push({label: tr('Live TV button'), value: boxLabel(),
-      step: function (d) { cycle('boxInput', ['live', 'hdmi1', 'hdmi2', 'hdmi3', 'hdmi4'], Prefs.boxInput(), d); renderTop(); }});
+      step: function (d) {
+        var boxes = ['live', 'hdmi1', 'hdmi2', 'hdmi3', 'hdmi4'];
+        if (TV.tvPlus()) boxes.push('tvplus');
+        cycle('boxInput', boxes, Prefs.boxInput(), d);
+        renderTop();
+      }});
     rows.push({label: tr('Inputs'), value: '›', inputs: true, step: function (d) { if (d >= 0) openInputsEdit(); }});
     if (TV.canReturnHome) {
       rows.push({label: tr('Home button'), value: Prefs.homeReturns() ? 'Free My TV' : tr('home|TV home screen'),
@@ -1542,6 +1547,7 @@
   /** The input the first top button opens, picked in Home Settings > Live TV button: Live TV or an HDMI port. */
   function boxTV() {
     var want = Prefs.boxInput();
+    if (want === 'tvplus' && TV.tvPlus()) return {id: TV.tvPlus(), key: 'tvplus', label: 'Samsung TV Plus'};
     for (var i = 0; i < inputs.length; i++) if (inputs[i].key === want) return inputs[i];
     return liveTV();
   }

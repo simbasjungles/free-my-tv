@@ -366,6 +366,20 @@ var TV = (function () {
     }
   }
 
+  // Samsung TV Plus, as an app: on a 2023 QN55Q60C (Tizen 9.0) only this one opens it from another app. Its
+  // deeplinker (com.samsung.tv.tvPlusDeeplinker, what Smart Hub starts) answers launch with success and shows nothing,
+  // and com.samsung.tv.tvplus refuses to launch.
+  var TV_PLUS = 'HEPsqFNie0.tvplusstandalone', tvPlusHere = null;
+
+  /** TV Plus's app when this TV has it, else ''. */
+  function samsungTvPlus() {
+    if (tvPlusHere === null) {
+      tvPlusHere = '';
+      try { if (samsung && window.tizen.application.getAppInfo(TV_PLUS)) tvPlusHere = TV_PLUS; } catch (e) {}
+    }
+    return tvPlusHere;
+  }
+
   function samsungLaunch(id, done) {
     var dial = samsungDial[id];
     function launch(otherwise) {
@@ -778,6 +792,9 @@ var TV = (function () {
         if (done) done(!!res);
       });
     },
+
+    /** Samsung TV Plus's app id where the Live TV button can open it (Samsung), else ''. */
+    tvPlus: samsungTvPlus,
 
     /** The antenna and HDMI inputs; `connected` when the TV says a device is on (when it tells). */
     inputs: function (done) {
