@@ -15,13 +15,17 @@ var I18N = (function () {
 
   /** The usual country for each language's dates and numbers, when the TV itself is in another language. */
   var REGIONS = {pt: 'BR', es: 'ES', de: 'DE', fr: 'FR', it: 'IT', nl: 'NL', pl: 'PL', sv: 'SE', da: 'DK', nb: 'NO',
-    fi: 'FI', cs: 'CZ', sk: 'SK', ro: 'RO', tr: 'TR', ru: 'RU', uk: 'UA', el: 'GR', ja: 'JP', ko: 'KR', hi: 'IN', id: 'ID', vi: 'VN', th: 'TH'};
+    fi: 'FI', cs: 'CZ', sk: 'SK', ro: 'RO', tr: 'TR', ru: 'RU', uk: 'UA', el: 'GR', ja: 'JP', ko: 'KR', hi: 'IN', id: 'ID', vi: 'VN', th: 'TH',
+    ar: 'SA'};
+
+  /** Languages written right to left: the home screen is mirrored for them (home.js). */
+  var RTL = {ar: true, he: true, fa: true, ur: true};
 
   /** Each language in its own name, for TVs without Intl.DisplayNames (Chromium before 81). */
   var NAMES = {en: 'English', pt: 'Português', es: 'Español', de: 'Deutsch', fr: 'Français', it: 'Italiano',
     nl: 'Nederlands', pl: 'Polski', sv: 'Svenska', da: 'Dansk', nb: 'Norsk bokmål', fi: 'Suomi', cs: 'Čeština', sk: 'Slovenčina',
     ro: 'Română', tr: 'Türkçe', ru: 'Русский', uk: 'Українська', el: 'Ελληνικά', ja: '日本語', ko: '한국어',
-    'zh-CN': '简体中文', 'zh-TW': '繁體中文', hi: 'हिन्दी', id: 'Indonesia', vi: 'Tiếng Việt', th: 'ไทย'};
+    'zh-CN': '简体中文', 'zh-TW': '繁體中文', hi: 'हिन्दी', id: 'Indonesia', vi: 'Tiếng Việt', th: 'ไทย', ar: 'العربية'};
 
   /**
    * The CLDR plural category of a whole number, for TVs without Intl.PluralRules (Chromium before 63). Only the
@@ -36,12 +40,24 @@ var I18N = (function () {
     },
     cs: function (n) { return n === 1 ? 'one' : n >= 2 && n <= 4 ? 'few' : 'other'; },
     sk: function (n) { return n === 1 ? 'one' : n >= 2 && n <= 4 ? 'few' : 'other'; },
-    ro: function (n) { var h = n % 100; return n === 1 ? 'one' : n === 0 || (h >= 1 && h <= 19) ? 'few' : 'other'; }
+    ro: function (n) { var h = n % 100; return n === 1 ? 'one' : n === 0 || (h >= 1 && h <= 19) ? 'few' : 'other'; },
+    ar: function (n) {
+      var h = n % 100;
+      return n === 0 ? 'zero' : n === 1 ? 'one' : n === 2 ? 'two' : h >= 3 && h <= 10 ? 'few' : h >= 11 ? 'many' : 'other';
+    }
   };
 
   function slavic(n) {
     var t = n % 10, h = n % 100;
     return t === 1 && h !== 11 ? 'one' : t >= 2 && t <= 4 && (h < 12 || h > 14) ? 'few' : 'many';
+  }
+
+  var ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+
+  /** Digits 0-9 written as the language writes them: ٠-٩ in Arabic, as they are elsewhere. */
+  function digits(s) {
+    if (base(lang) !== 'ar') return s;
+    return String(s).replace(/[0-9]/g, function (d) { return ARABIC_DIGITS.charAt(+d); });
   }
 
   /** The text for this English key in the current language (the English itself when there is none). */
@@ -56,7 +72,7 @@ var I18N = (function () {
   /** A pattern with named placeholders, filled from an object: trf('{n} min ago', {n: 12}). */
   function trf(english, values) {
     return tr(english).replace(/\{([a-zA-Z_][a-zA-Z_0-9]*)\}/g, function (all, name) {
-      return values && has.call(values, name) ? String(values[name]) : all;
+      return values && has.call(values, name) ? (typeof values[name] === 'number' ? digits(String(values[name])) : String(values[name])) : all;
     });
   }
 
@@ -97,6 +113,7 @@ var I18N = (function () {
     else if (clock === '12' && CLOCK12[key]) pattern = CLOCK12[key];
     var out = format(pattern, d, locale);
     if (out === null) out = format(key.substring(key.indexOf('|') + 1), d, 'en-US');
+    out = digits(out);
     formatted[key] = {minute: minute, lang: lang, text: out};
     return out;
   }
@@ -253,6 +270,8 @@ var I18N = (function () {
   function localeOf(code) {
     if (code === 'en') return 'en-US';
     if (code === 'pt') return 'pt-BR';
+    // Gregorian dates (ar-SA alone gives the Hijri calendar), with the Arabic digits ٠-٩.
+    if (code === 'ar') return 'ar-SA-u-ca-gregory-nu-arab';
     if (code.indexOf('-') > 0) return code;
     var tv = navigator.language || '';
     if (base(tv) === code && tv.indexOf('-') > 0) return code + tv.substring(tv.indexOf('-'));
@@ -270,12 +289,17 @@ var I18N = (function () {
     },
     /** The catalogue in use: "en", "pt", "zh-CN"… */
     get lang() { return lang; },
+    /** True for a language written right to left. */
+    get rtl() { return RTL[base(lang)] === true; },
     /** The language without its country, as TMDB names it ("zh" for "zh-CN"). */
     get base() { return base(lang); },
     /** BCP 47 tag for dates, numbers and TMDB. */
     locale: function () { return locale; },
     languages: languages,
     languageName: languageName,
+    digits: digits,
+    /** AM or PM for an instant, in the language: ص or م in Arabic. */
+    period: function (at) { return dayPeriod(new Date(at), locale); },
     tr: tr,
     trf: trf,
     plural: plural,

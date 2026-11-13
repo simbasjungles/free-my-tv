@@ -355,7 +355,7 @@ On Google TV, LG and Samsung, each language is one file, [`app/assets/i18n/<lang
 English text in the code. *Automatic* follows the TV's language and uses any language that has a file (English otherwise); *Home
 Settings* → *Language* lists them all. Today: English, Portuguese, Spanish, German, French, Italian, Dutch, Polish,
 Swedish, Danish, Norwegian, Finnish, Czech, Slovak, Romanian, Turkish, Russian, Ukrainian, Greek, Japanese, Korean, Simplified
-and Traditional Chinese, Hindi, Indonesian, Vietnamese and Thai. Portuguese, Spanish, German, Russian, Thai and Turkish were translated by hand and are the
+and Traditional Chinese, Hindi, Indonesian, Vietnamese, Thai and Arabic. Portuguese, Spanish, German, Russian, Thai and Turkish were translated by hand and are the
 reference (fix them by hand); the others were machine-made, and corrections from native speakers are welcome.
 
 - **Add a language:** `python3 tools/translate.py --new ca`, then fill `app/assets/i18n/ca.json` by hand, or with
@@ -369,8 +369,10 @@ reference (fix them by hand); the others were machine-made, and corrections from
 - Counts have plural forms: `"plural|one:{n} season|other:{n} seasons"` is translated with one form per plural
   category the language uses (Russian `"one:{n} сезон|few:{n} сезона|many:{n} сезонов|other:{n} сезона"`, Japanese
   just `"other:{n}シーズン"`), and Android's plural rules pick the one for each number.
-- **Limits:** right-to-left languages (Arabic, Hebrew, Persian) would need the layout mirrored, so they aren't there
-  yet. Chinese, Japanese, Korean and Hindi are drawn with the TV's system font (Inter has no such letters).
+- **Right to left:** in Arabic the LG and Samsung home screen is mirrored (the shelf, the drawer and the arrows run
+  from the right) and numbers are written ٠١٢٣. The Google TV app shows the Arabic text in its usual left-to-right
+  layout for now. Hebrew and Persian aren't there yet.
+- **Limits:** Chinese, Japanese, Korean, Hindi and Arabic are drawn with the TV's system font (Inter has no such letters).
 
 ## Privacy
 

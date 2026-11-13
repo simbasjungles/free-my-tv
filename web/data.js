@@ -889,7 +889,7 @@ var Data = (function () {
       if (v === undefined || v === null || isNaN(v)) return '—';
       var unit = Prefs.temperature();
       var f = unit === 'F' || (unit === 'auto' && Place.fahrenheit);
-      return Math.round(f ? v * 9 / 5 + 32 : v) + '°';
+      return I18N.digits(Math.round(f ? v * 9 / 5 + 32 : v)) + '°';
     },
     /** "3 PM", "15:00", "15 Uhr": the hourly forecast. */
     hour: function (at) { return formatDate('format|h a', at); },

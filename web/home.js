@@ -66,6 +66,36 @@
     stage.style.webkitTransform = stage.style.transform = s === 1 ? '' : 'scale(' + s + ')';
   }
 
+  // MARK: - Right to left
+
+  // In a right-to-left language (Arabic) the screen is mirrored: x is the distance from the start edge, which is the
+  // left one in English and the right one in Arabic. The arrows follow it (move), and the stylesheet's .rtl rules
+  // mirror what isn't placed here.
+  var rtl = false;
+
+  function direction() {
+    rtl = I18N.rtl;
+    setClass(body, 'rtl', rtl);
+    document.documentElement.dir = rtl ? 'rtl' : 'ltr';
+  }
+
+  /** x pixels in from the start edge. */
+  function startAt(node, x) {
+    node.style.left = rtl ? 'auto' : x + 'px';
+    node.style.right = rtl ? x + 'px' : 'auto';
+  }
+
+  /** x pixels in from the end edge. */
+  function endAt(node, x) {
+    node.style.left = rtl ? x + 'px' : 'auto';
+    node.style.right = rtl ? 'auto' : x + 'px';
+  }
+
+  /** A slide of x pixels toward the end edge, as a transform. */
+  function slide(node, x) {
+    node.style.webkitTransform = node.style.transform = 'translateX(' + (rtl ? -x : x) + 'px)';
+  }
+
   // MARK: - Apps on the shelf
 
   /** Shelf apps in this order when installed, like the Android app: key, LG app id, name on the TV, brand gradient. */
@@ -460,7 +490,7 @@
     var defs = [[own ? 'tv' : 'live_tv', own ? boxLabel() : tr('light|Live TV')], ['hdmi', tr('HDMI Inputs')], ['settings', tr('light|Settings')]];
     for (var b = 0; b < 3; b++) {
       var r = el('button', 'round' + (b === 2 ? ' last' : ''), buttons);
-      r.style.left = (1596 + 88 * b) + 'px';
+      startAt(r, 1596 + 88 * b);   // the buttons sit at the end edge of the screen: the right, or the left when mirrored
       sym(defs[b][0], r);
       el('div', 'tip', r, defs[b][1]);
       hover(r, Z.TOP, 3 + b);
@@ -516,7 +546,7 @@
     var holder = $('cards'), nodes = holder.children, left = 80, scroll = Math.max(0, st.card - 2) * 360;
     for (var i = 0; i < nodes.length; i++) {
       var wide = i === st.card, w = wide ? 1040 : 320, n = nodes[i], at = left - scroll;
-      n.style.left = left + 'px';
+      startAt(n, left);
       n.style.width = w + 'px';
       setClass(n, 'wide', wide);
       setClass(n, 'edge', at < 0 || at > 1740);
@@ -526,7 +556,7 @@
       }
       left += w + 40;
     }
-    holder.style.webkitTransform = holder.style.transform = 'translateX(' + (-scroll) + 'px)';
+    slide(holder, -scroll);
   }
 
   var bgUrl = null, bgFront = 'bgA';
@@ -591,7 +621,7 @@
     platter.style.width = (width + 2 * pad) + 'px';
     platter.style.top = (814 + 126 - th) + 'px';
     platter.style.height = (th + 2 * pad) + 'px';
-    $('quotes').style.right = (1920 - left - width) + 'px';
+    endAt($('quotes'), 1920 - left - width);
     var tiles = $('tiles');
     tiles.innerHTML = '';
     tileStep = tw + gap;
@@ -610,8 +640,8 @@
     platter.innerHTML = '';
     for (var a = 0; a < 2; a++) {
       var arrow = sym('chevron_right', platter);
-      arrow.className += a ? ' more' : ' more back';
-      arrow.style.left = (a ? width + 2 * pad - 14 : 14) - 8.5 + 'px';
+      arrow.className += (a === 1) === rtl ? ' more back' : ' more';   // the arrow at the start edge points out, toward it
+      startAt(arrow, (a ? width + 2 * pad - 14 : 14) - 8.5);
       arrow.style.top = (pad + th / 2 - 8.5) + 'px';
     }
     st.shelf = Math.min(st.shelf, Math.max(0, shelf.length - 1));
@@ -623,11 +653,11 @@
     var row = $('tiles'), tiles = row.children, n = Math.min(shelf.length, SHELF_VISIBLE);
     for (var i = 0; i < shelf.length; i++) {
       var shown = i >= shelfFirst && i < shelfFirst + n;
-      tiles[i].style.left = (tileLeft + i * tileStep) + 'px';
+      startAt(tiles[i], tileLeft + i * tileStep);
       tiles[i].style.opacity = shown ? '' : '0';
       tiles[i].style.pointerEvents = shown ? '' : 'none';
     }
-    row.style.webkitTransform = row.style.transform = 'translateX(' + (-shelfFirst * tileStep) + 'px)';
+    slide(row, -shelfFirst * tileStep);
     var arrows = $('platter').children;
     arrows[0].style.visibility = shelfFirst > 0 ? '' : 'hidden';
     arrows[1].style.visibility = shelfFirst + n < shelf.length ? '' : 'hidden';
@@ -665,11 +695,11 @@
     for (var k = 0; k < n; k++) {
       if (k === drawerInputs && k > 0) {
         xPos += groupGap - gap;
-        el('div', 'row-title', d, tr('Shortcuts')).style.left = (xPos + 4) + 'px';
+        startAt(el('div', 'row-title', d, tr('Shortcuts')), xPos + 4);
       }
-      if (k === 0 && drawerInputs) el('div', 'row-title', d, tr('Inputs')).style.left = '84px';
+      if (k === 0 && drawerInputs) startAt(el('div', 'row-title', d, tr('Inputs')), 84);
       var item = drawerItems[k], key = el('div', 'key glass' + (item.off ? ' off' : ''), d);
-      key.style.left = xPos + 'px';
+      startAt(key, xPos);
       key.style.width = tw + 'px';
       sym(item.symbol, key);
       el('div', 'label', key, item.label);
@@ -689,7 +719,7 @@
     if (wx) {
       var w = el('div', 'panel glass', d);
       w.id = 'weather';
-      w.style.left = '80px';
+      startAt(w, 80);
       w.style.width = ((qt ? split - 16 : 1840) - 80) + 'px';
       renderWeather(w);
     }
@@ -697,7 +727,7 @@
       var q = el('div', 'panel glass', d);
       q.id = 'prices';
       var left = wx ? split + 16 : 80;
-      q.style.left = left + 'px';
+      startAt(q, left);
       q.style.width = (1840 - left) + 'px';
       renderPrices(q, coins);
     }
@@ -726,7 +756,7 @@
     var hours = el('div', 'hours', card), width = parseFloat(card.style.width) - 30 - 422, hw = width / n;
     for (var i = 0; list && i < list.length && i < n; i++) {
       var h = el('div', 'hour', hours), x = list[i];
-      h.style.left = (hw * i) + 'px';
+      startAt(h, hw * i);
       h.style.width = hw + 'px';
       el('div', 't', h, days ? Data.weekday(x.at) : Data.hour(x.at));
       sym(Data.symbol(x.code, days || x.day), h);
@@ -813,7 +843,7 @@
     grid.innerHTML = '';
     for (var i = 0; i < others.length; i++) {
       var r = Math.floor(i / 5), c = i % 5, cell = el('div', 'cell', grid);
-      cell.style.left = (130 + c * 340) + 'px';
+      startAt(cell, 130 + c * 340);
       cell.style.top = (196 + r * 239) + 'px';
       face(others[i], el('div', 'face', cell), wordFit(others[i].title, 300, 34));
       el('div', 'label', cell, others[i].title);
@@ -1008,6 +1038,7 @@
     if (pick && code !== pickedLanguage()) {
       Prefs.set('language', code);
       I18N.set(Prefs.language());
+      direction();
       renderAll();
       Data.refresh();   // the picks' titles and genres come in the new language
     }
@@ -1333,7 +1364,7 @@
       var item = e.rows[i], at = (forInputs ? e.keys : e.ids).indexOf(forInputs ? item.key : item.id);
       var row = el('div', 'row', holder, forInputs ? item.label || tr('Live TV') : item.title);
       var place = el('span', 'value', row, at >= 0 ? '#' + (at + 1) : tr('shelf|Off'));
-      if (at >= 0) sym('check', place).style.marginLeft = '16px';   // shown: a check, as in the pickers
+      if (at >= 0) sym('check', place).style[rtl ? 'marginRight' : 'marginLeft'] = '16px';   // shown: a check, as in the pickers
       hover(row, Z.EDIT, i);
     }
     if (forInputs) el('div', 'hint', box, tr('OK shows or hides an input. ← → change the order.'));
@@ -1571,6 +1602,8 @@
 
   function move(dx, dy) {
     var tiles = $('tiles').children, cardNodes = $('cards').children;
+    // Mirrored, the screen's left is the way forward: ← goes to the next one. (Settings' values keep their arrows.)
+    if (rtl && (st.zone === Z.SHELF || st.zone === Z.CARDS || st.zone === Z.TOP || st.zone === Z.DRAWER || st.zone === Z.APPS)) dx = -dx;
     switch (st.zone) {
       case Z.SHELF:
         if (dx) st.shelf = Math.max(0, Math.min(shelf.length - 1, st.shelf + dx));
@@ -1948,6 +1981,7 @@
   });
 
   I18N.set(Prefs.language());
+  direction();
   I18N.setClock(Prefs.clockFormat());
   checkNight();   // now, from the last forecast: not after the TV lists its apps, with the day look until then
   // LG's screensaver waits only when ours will show: not under a sheet (ours waits there), and not without photos.
