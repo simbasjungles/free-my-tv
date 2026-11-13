@@ -154,9 +154,9 @@ public class SettingsActivity extends Activity {
         private static final float LIST_ROW_H = 68, LIST_ROW_GAP = 6;
         private static final int PICK_VISIBLE = 9;
         private static final float LIST_X = 1000, LIST_R = 1824, LIST_TOP = 186, ROW_GAP = 8, CHOICE_H = 104;
-        // The main menu: eight rows, then the comparison, the picks (with the Watchmode credit) and two notices, all on
+        // The main menu: nine rows, then the comparison, the picks (with the Watchmode credit) and two notices, all on
         // one 1080 px screen: the rows share the 462 px that seven took.
-        private static final float MAIN_TOP = 140, ROW_H = 53.75f, MAIN_GAP = 4;
+        private static final float MAIN_TOP = 140, ROW_H = 47.33f, MAIN_GAP = 4;
         private static final int AMBER = 0xFFFFC266, INK = 0xFF1C1C1E;
 
         private final SettingsActivity activity;
@@ -1158,6 +1158,7 @@ public class SettingsActivity extends Activity {
             switch (screen) {
                 case MAIN:
                     return i == 0 ? Capabilities.NEED_SWITCH : i == 1 ? Capabilities.NEED_SCREENSAVER
+                            : i == 5 ? Capabilities.NEED_INPUTS
                             : i == 6 ? Capabilities.NEED_REMOTE_BUTTONS
                             : i == 7 ? Capabilities.NEED_ADB : null;
                 case HOME_SETTINGS:
@@ -2212,6 +2213,7 @@ public class SettingsActivity extends Activity {
 
         /** OK: puts the app on the shelf (at the end) or takes it off. */
         private void toggleShelfApp() {
+            if (pickScroll + focus >= shelfRows.size()) return;   // an empty list has no row under OK
             String pkg = shelfRows.get(pickScroll + focus)[0];
             if (pkg.equals(ORDER_ROW)) {
                 switchShelfOrder();
@@ -2225,6 +2227,7 @@ public class SettingsActivity extends Activity {
 
         /** ← → : moves a shelf app one place earlier or later. */
         private void moveShelfApp(int dir) {
+            if (pickScroll + focus >= shelfRows.size()) return;
             String pkg = shelfRows.get(pickScroll + focus)[0];
             if (pkg.equals(ORDER_ROW)) {   // two values: either arrow switches
                 switchShelfOrder();

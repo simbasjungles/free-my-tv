@@ -23,7 +23,8 @@ final class Capabilities {
     /** An option's needs. */
     static final String NEED_ADB = "adb", NEED_REMOTE_BUTTONS = "remote-buttons", NEED_OVERLAY = OVERLAY,
             NEED_LIVE_TV = "live-tv", NEED_LISTENER = LISTENER, NEED_SWITCH = "switch",
-            NEED_HOME_ASSISTANT = "home-assistant", NEED_APP_STORE = "app-store", NEED_SCREENSAVER = "screensaver";
+            NEED_HOME_ASSISTANT = "home-assistant", NEED_APP_STORE = "app-store", NEED_SCREENSAVER = "screensaver",
+            NEED_INPUTS = "inputs";
 
     /** null where this TV has what `need` names; else why not, and what would change it, for the person to read. */
     static String missing(Context c, String need) {
@@ -43,6 +44,8 @@ final class Capabilities {
                         : !HomeAssistant.hasToken(c) ? Ui.tr("Send Home Assistant's token from a computer (see the README).") : null;
             case NEED_LIVE_TV:
                 return HomeApps.liveTv(c) != null ? null : Ui.tr("This TV has no live TV (antenna or cable) to open.");
+            case NEED_INPUTS:   // a streaming stick or box: no Live TV and no HDMI port, so Settings > Inputs has no rows
+                return HomeApps.allInputs(c).isEmpty() ? Ui.tr("No inputs") : null;
             case NEED_APP_STORE:
                 return HomeApps.storePackage(c) != null ? null : Ui.tr("This TV has no supported app store to open.");
             case NEED_SCREENSAVER:
