@@ -382,6 +382,66 @@ var TV = (function () {
     }
   }
 
+  // MARK: - The antenna
+
+  // The last antenna channel seen on screen (the viewer keeps Samsung TV Plus's too, and goes back to it).
+  var CHANNEL_KEY = 'fmtv.channel';
+
+  function sameChannel(a, b) {
+    return a && b && a.major === b.major && a.minor === b.minor && a.ptc === b.ptc;
+  }
+
+  /** The broadcast channels the TV has tuned in (the antenna's, not TV Plus's), or [] where it won't tell. */
+  function broadcastChannels(done) {
+    function list(mode, next) {
+      try {
+        window.tizen.tvchannel.getChannelList(function (l) { if (l && l.length) done(l); else next(); }, next, mode, 0, 2000);
+      } catch (e) {
+        next();
+      }
+    }
+    if (!window.tizen || !window.tizen.tvchannel) { done([]); return; }
+    list('DIGITAL', function () { list('ALL', function () { done([]); }); });
+  }
+
+  /** Called when the home screen comes back: what the viewer last played, kept if it's one of the antenna's. */
+  function noteChannel() {
+    if (!samsung || !window.tizen || !window.tizen.tvchannel) return;
+    var now;
+    try { now = window.tizen.tvchannel.getCurrentChannel(); } catch (e) { return; }
+    if (!now) return;
+    broadcastChannels(function (l) {
+      for (var i = 0; i < l.length; i++) {
+        if (sameChannel(l[i], now)) {
+          try { localStorage.setItem(CHANNEL_KEY, JSON.stringify({major: now.major, minor: now.minor, ptc: now.ptc})); } catch (e) {}
+          return;
+        }
+      }
+    });
+  }
+
+  /** Tunes the antenna (its last channel, else the first), then done(); done() alone where the TV won't. */
+  function tuneAntenna(done) {
+    var sent = false;
+    function finish() { if (!sent) { sent = true; done(); } }
+    broadcastChannels(function (l) {
+      if (!l.length) { finish(); return; }
+      var last = null, pick = l[0];
+      try { last = JSON.parse(localStorage.getItem(CHANNEL_KEY) || 'null'); } catch (e) {}
+      for (var i = 0; last && i < l.length; i++) if (sameChannel(l[i], last)) pick = l[i];
+      var option = {major: pick.major, minor: pick.minor};
+      if (pick.ptc) option.ptc = pick.ptc;
+      if (pick.sourceID) option.sourceID = pick.sourceID;
+      if (pick.programNumber) option.programNumber = pick.programNumber;
+      setTimeout(finish, 2500);   // a tuner that never answers doesn't hold the viewer
+      try {
+        window.tizen.tvchannel.tune(option, {onsuccess: finish, onnosignal: finish, onprograminforeceived: function () {}}, finish);
+      } catch (e) {
+        finish();
+      }
+    });
+  }
+
   /** Puts the TV on a source ("source:HDMI:2"), then brings the TV's viewer up to show it. */
   function samsungSource(spec, done) {
     var parts = spec.split(':'), type = parts[1], number = +parts[2];
@@ -399,9 +459,12 @@ var TV = (function () {
       for (var i = 0; sources && i < sources.length; i++) {
         if (sources[i].type === type && sources[i].number === number) source = sources[i];
       }
-      if (!source) { show(type === 'TV'); return; }   // the antenna: the viewer alone brings it up
+      // The antenna: its channel tuned first, or the viewer goes back to whatever it played last (Samsung TV Plus too).
+      var tv = type === 'TV';
+      if (!source) { if (tv) tuneAntenna(function () { show(true); }); else show(false); return; }
       try {
-        window.tizen.tvwindow.setSource(source, function () { show(true); }, function () { show(false); });
+        window.tizen.tvwindow.setSource(source, function () { if (tv) tuneAntenna(function () { show(true); }); else show(true); },
+          function () { if (tv) tuneAntenna(function () { show(true); }); else show(false); });
       } catch (e) {
         show(false);
       }
@@ -565,6 +628,9 @@ var TV = (function () {
         if (!refused) ssap('com.webos.applicationManager/listLaunchPoints', function () {});
       });
     },
+
+    /** Samsung: keeps the antenna channel on screen, which Live TV goes back to. */
+    noteChannel: noteChannel,
 
     /** Opens an app (or an input); done(ok). */
     launch: function (id, params, done) {

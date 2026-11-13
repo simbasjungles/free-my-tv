@@ -654,7 +654,10 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   service in the package whose handshake says `file://`; webOS 22 with 2026 firmware tested), and until then from
   `getAppLoadStatus` over a list of known app ids, which shows the logo bundled in `web/icons/` where there is one, otherwise the name on the brand's color);
   on Samsung, `tizen.application` (`getAppsInfo`, `launch`), the `VIDEOSOURCE` property and
-  `tizen.tvwindow.setSource` for the inputs, then Samsung's viewer (`org.tizen.tv-viewer`) to show them. Samsung's own
+  `tizen.tvwindow.setSource` for the inputs, then Samsung's viewer (`org.tizen.tv-viewer`) to show them. The viewer
+  plays whatever it played last, Samsung TV Plus's channels too, so Live TV tunes the antenna first (`tuneAntenna`,
+  `tizen.tvchannel`, the `tv.channel` privilege): the last antenna channel seen when the home screen comes back
+  (`noteChannel`, `fmtv.channel`), else the first one (a 2023 QN55Q60C, Tizen 9.0, went to TV Plus before). Samsung's own
   data is unreliable: on Tizen 3 no app's `iconPath` loads (on Tizen 4 and 5, YouTube's and Prime Video's are a
   placeholder), so logos are bundled in `web/icons/` and keyed by app id in `SAMSUNG_ICONS` (SVGs need a width and
   height for old WebKit); some names are empty or long (`SAMSUNG_TITLES`); and Tizen 3 answers no "settings" app
