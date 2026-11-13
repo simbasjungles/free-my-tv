@@ -540,6 +540,13 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   It unbinds itself as soon as it connects (the permission is all it's for), and the home screen and the screensaver
   watch the sessions only while they show. The line is cut to fit when the title changes, never while drawing; the
   home screen's bars bounce again only for a new title (`Watch.title`), and TalkBack announces it then.
+- The drawer's inputs are the person's to choose (#488, #497): *Inputs* (Settings on Google TV and Android TV, Home
+  Settings on LG and Samsung, where it took the place of the *Live TV* switch and carries it over) is the Shelf's
+  editor over Live TV and the HDMI ports: OK shows or hides one, ← → move it (`Prefs.inputsOrder`/`inputsHidden` on both
+  sides, `VisibleOrder` on Android). Never by signal; until it's used, everything shows in the TV's order; a port
+  that turns up later joins at the end, and one that's gone keeps its place. The quick panel follows it, and with no
+  input at all the row is Unavailable. *Home Settings* → *Live TV button* (`Prefs.liveButton`, #422, #503) is separate:
+  what the first top button opens, Live TV or an HDMI input, even one hidden from the drawer.
 - *At power-on* (Home Settings, `Prefs.powerOn()`: `tv`, the default, `home` or `live`; #396, #346) acts only after a
   full start, never on a wake from standby. `HomeActivity` keeps the uptime of the first time the home screen came up
   in this start (`HomeMode.noteHomeShown`, the file `home-shown` with `Settings.Global.BOOT_COUNT`). `live`: 10 s later,
