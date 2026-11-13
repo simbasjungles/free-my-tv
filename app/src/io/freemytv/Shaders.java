@@ -18,8 +18,11 @@ final class Shaders {
         "uniform half3 c0;\n" +              // palette: background, middle and highlight
         "uniform half3 c1;\n" +
         "uniform half3 c2;\n" +
+        // At a lattice corner (an integer) only the fractional part of the scale counts: .34 and .21 rounded to
+        // 1/128 make the product exact, so neighbouring cells hash a shared corner bit for bit the same however the
+        // GPU's compiler orders the math (with 123.34 a corner rounded differently from cell to cell: block seams).
         "float hash(float2 p) {\n" +
-        "  p = fract(p * float2(123.34, 456.21));\n" +
+        "  p = fract(p * float2(0.3359375, 0.2109375));\n" +
         "  p += dot(p, p + 45.32);\n" +
         "  return fract(p.x * p.y);\n" +
         "}\n" +
