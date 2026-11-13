@@ -120,6 +120,21 @@ final class HomeData {
         return i == 3 ? Ui.tr("Dollar") : COIN_NAMES[i];
     }
 
+    /** 0 = raining now, > 0 = hours until the next rain, -1 = none in the next hours. */
+    static int rainInHours(Weather w, long now) {
+        if (isRain(w.code)) return 0;
+        for (int i = 0; i < w.hourCode.size() && i < w.hours.size(); i++) {
+            if (!isRain(w.hourCode.get(i))) continue;
+            return Math.max(1, Math.round((w.hours.get(i) - now) / 3_600_000f));
+        }
+        return -1;
+    }
+
+    /** WMO drizzle, rain, showers and thunderstorms (snow is not rain). */
+    private static boolean isRain(int code) {
+        return (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95;
+    }
+
     /**
      * Binance.com refuses the US (HTTP 451); Binance.US answers the same call in dollars. data-api.binance.vision is
      * Binance's own address for public market data, with Binance.com's pairs on another domain and certificate chain: it
