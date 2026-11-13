@@ -366,7 +366,6 @@ var TV = (function () {
     }
   }
 
-
   function samsungLaunch(id, done) {
     var dial = samsungDial[id];
     function launch(otherwise) {

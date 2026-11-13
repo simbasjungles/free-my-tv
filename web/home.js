@@ -1437,13 +1437,20 @@
   function openTarget(p, target) {
     if (!target) return;
     if (target.params || !p || !TV.takesTitle(p.app)) { launcher(target.app.id, target.app.title, target.params)(); return; }
+    var mine = p.kind + ':' + p.id;
+    if (lookingUp === mine) return;   // OK again while Watchmode answers (up to 4 s): one lookup, one launch
+    lookingUp = mine;
     Data.titleLink(p, function (link) {
+      if (lookingUp !== mine) return;   // something else was opened meanwhile: that one stays in front
       launcher(target.app.id, target.app.title, link ? {link: link, service: p.app} : null)();
     });
   }
 
+  var lookingUp = '';   // the pick whose title Watchmode is being asked for, until something is opened
+
   function launcher(id, name, params) {
     return function () {
+      lookingUp = '';
       TV.launch(id, params || null, function (ok) {
         if (!ok) toast(trf("Couldn't open {app}.", {app: name || id}));
       });

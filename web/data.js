@@ -505,6 +505,7 @@ var Data = (function () {
   // MARK: - Watchmode: the title's own page in its app (watchmode_key), as on Android (Recs.findLink)
 
   var WATCHMODE = 'https://api.watchmode.com/v1', wmRefused = false, wmRetryAt = 0;
+  var WM_KEPT = 400;   // links remembered (about 60 KB of the storage the settings and the picks share), the newest ones
 
   /**
    * The pick's page in its app: done(web address or ''), within 4 s. Looked up when a pick is opened, not as it's shown:
@@ -519,7 +520,14 @@ var Data = (function () {
     var answered = false;
     function answer(link) { if (!answered) { answered = true; done(link); } }
     setTimeout(function () { answer(''); }, 4000);   // a slow answer opens the app at home; what comes later is kept
-    function keep(link) { links = stored('wm') || {}; links[id] = link; store('wm', links); answer(link); }
+    function keep(link) {
+      links = stored('wm') || {};
+      links[id] = link;
+      var ids = Object.keys(links);   // in the order they were looked up: the oldest go
+      for (var d = 0; d < ids.length - WM_KEPT; d++) delete links[ids[d]];
+      store('wm', links);
+      answer(link);
+    }
     function failed(e) {
       if (e && /rejected/.test(e.message)) wmRefused = true;   // get() calls any 401 "rejected the key"
       else wmRetryAt = Date.now() + 10 * 60000;   // quota or network: not again right away
