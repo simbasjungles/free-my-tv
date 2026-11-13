@@ -1379,9 +1379,10 @@
   function editInputs(dx) {
     var e = inputsEditList(), x = e.rows[st.edit];
     if (!x) return;
-    // The first change writes today's setup down, the Live TV switch's choice with it.
-    var order = Prefs.inputsOrder(), hidden = Prefs.inputsHidden().slice();
-    order = order ? order.slice() : e.keys.slice();
+    // The first change writes today's setup down, the Live TV switch's choice with it. So does every later one, for
+    // an input the TV has started listing since: it's at the end, as the drawer shows it, and can then move or go.
+    var order = (Prefs.inputsOrder() || []).slice(), hidden = Prefs.inputsHidden().slice();
+    for (var k = 0; k < e.keys.length; k++) if (order.indexOf(e.keys[k]) < 0) order.push(e.keys[k]);
     if (dx === 0) {
       var at = order.indexOf(x.key);
       if (at >= 0) { order.splice(at, 1); hidden.push(x.key); }
@@ -1469,6 +1470,14 @@
     return out;
   }
 
+  /** Where the HDMI Inputs button lands in the drawer: the first HDMI port shown, wherever Home Settings > Inputs put
+   *  it; with none shown, the drawer's first tile. */
+  function firstPort() {
+    var shown = orderedInputs();
+    for (var i = 0; i < shown.length; i++) if (shown[i].key !== 'live') return i;
+    return 0;
+  }
+
   /** The input the first top button opens, picked in Home Settings > Live TV button: Live TV or an HDMI port. */
   function boxTV() {
     var want = Prefs.boxInput();
@@ -1487,7 +1496,7 @@
       case Z.TOP:
         if (st.top < 3) return;
         if (st.top === 3) { var box2 = boxTV(); if (box2) launcher(box2.id, boxLabel())(); }
-        else if (st.top === 4) { st.zone = Z.SHELF; openDrawer(); st.drawer = 1 < drawerInputs ? 1 : 0; updateFocus(); }
+        else if (st.top === 4) { st.zone = Z.SHELF; openDrawer(); st.drawer = firstPort(); updateFocus(); }
         else openSettings();
         return;
       case Z.CARDS:
