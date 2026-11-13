@@ -186,7 +186,9 @@ var TV = (function () {
     'QizQxC7CUf.PlayMovies': 'icons/googleplay.svg',
     'vIutycUzou.SteamLink': 'icons/steam.svg',
     'geUOM7qimf.FOXPlay': 'icons/fox.svg',
-    'AprZAARz4r.Jellyfin': 'icons/jellyfin.svg'
+    'AprZAARz4r.Jellyfin': 'icons/jellyfin.svg',
+    // ITVX's own background is in the SVG, so the tile takes ITVX's yellow-green (lift() and showLogo() in home.js).
+    'OEvCiupaFR.ITVHub': 'icons/itvx.svg'
   };
 
   // The same logos by name (lowercase letters and digits only), for app ids the list above doesn't know: older TVs
@@ -208,7 +210,8 @@ var TV = (function () {
     'NvZ26VG9Yw.HBOGOLAG': 'Max',
     'rJeHak5zRg.Spotify': 'Spotify',
     'evKhCgZelL.AmazonIgnitionLauncher2': 'Prime Video',
-    'org.tizen.globoplayapp': 'Globoplay'
+    'org.tizen.globoplayapp': 'Globoplay',
+    'OEvCiupaFR.ITVHub': 'ITVX'   // "ITVX - fresh, free streaming." on a 2025 LS03F (Tizen 9)
   };
 
   // Samsung's settings menu on Tizen 3, which answers no "settings" app control.
