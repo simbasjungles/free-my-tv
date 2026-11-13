@@ -171,8 +171,10 @@ final class Plex {
     // MARK: - Your server
 
     /**
-     * Your Plex Media Server (an owned one first) and the first of its https addresses that answers: local, then
-     * remote, then Plex's relay. Saved, so the next fetches go straight to it.
+     * Your Plex Media Server and the first of its https addresses that answers: local, then remote, then Plex's
+     * relay. Saved, so the next fetches go straight to it. A server someone shares with the account is used only
+     * when the account owns none (yours being off for a night must not move Continue Watching to a friend's), and
+     * only with the token Plex made for that server: the account's own token never goes to someone else's.
      */
     private static void findServer(Context c, String token) throws Exception {
         JSONArray list = new JSONArray(request(c, "GET", TV + "/resources?includeHttps=1&includeRelay=1", token, 8000));
@@ -183,15 +185,19 @@ final class Plex {
             if (r.optBoolean("owned")) servers.add(0, r); else servers.add(r);
         }
         if (servers.isEmpty()) throw new PlexError("no Plex Media Server on this account");
+        boolean own = servers.get(0).optBoolean("owned");
         for (JSONObject s : servers) {
-            String serverToken = s.optString("accessToken", token);
+            if (own && !s.optBoolean("owned")) break;
+            String serverToken = s.optString("accessToken", own ? token : "");
+            if (serverToken.isEmpty()) continue;
             JSONArray connections = s.optJSONArray("connections");
             List<String> uris = new ArrayList<>();
             for (int pass = 0; pass < 3 && connections != null; pass++) {
                 for (int i = 0; i < connections.length(); i++) {
                     JSONObject cn = connections.getJSONObject(i);
                     int rank = cn.optBoolean("relay") ? 2 : cn.optBoolean("local") ? 0 : 1;
-                    if (rank == pass && cn.optString("uri").startsWith("https://")) uris.add(cn.optString("uri"));
+                    String uri = rank == pass ? origin(cn.optString("uri")) : null;
+                    if (uri != null) uris.add(uri);
                 }
             }
             for (String uri : uris) {
@@ -210,6 +216,21 @@ final class Plex {
             }
         }
         throw new PlexError("couldn't reach your Plex server");
+    }
+
+    /**
+     * "https://host:port" of a server's address, or null when it isn't https or has more to it (a name before an @,
+     * a path, a query): the paths asked of it are added to exactly this.
+     */
+    private static String origin(String uri) {
+        try {
+            URL u = new URL(uri);
+            if (!"https".equals(u.getProtocol()) || u.getHost().isEmpty() || u.getUserInfo() != null) return null;
+            if (!u.getPath().isEmpty() && !u.getPath().equals("/") || u.getQuery() != null || u.getRef() != null) return null;
+            return "https://" + u.getHost() + (u.getPort() > 0 ? ":" + u.getPort() : "");
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
     }
 
     /** A GET on your server; if the saved address stopped answering, the server is found again (once). */
