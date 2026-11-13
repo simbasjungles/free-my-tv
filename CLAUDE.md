@@ -337,7 +337,7 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   Project Nayuki's MIT encoder, whose notice stays in the file), and checks a key with TMDB (`/configuration`) before
   saving it. Never log it. Nothing may escape KeyPage's threads: `:home`'s watchdog counts it as a home screen crash.
   The Watchmode key has the same screen and page (`Prefs.watchmodeKey`, read through `Recs.watchmodeKey()`, checked with
-  `/status/`), on Google TV and Android TV only.
+  `/status/`), on Google TV and Android TV; on Samsung it's typed, as the TMDB key there (below).
   On LG and Samsung it's typed in Home Settings (no QR: a web app can't serve a page): `Prefs.tmdbKey()` (localStorage)
   wins over `CONFIG.tmdbKey`, and `Data.keyChanged()` fetches the picks again.
 - Continue Watching gets `READ_TV_LISTINGS` with `pm grant` through the TV's own ADB only when picked in Home Settings;
@@ -696,7 +696,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   `watchmode_key`, a Prime Video pick opens its title (`TV.takesTitle`, `samsungDeepLink`: the `eden_resume` operation
   with `{"values": "<GTI>"}` under PAYLOAD, the GTI from Watchmode's web address, #483). Disney+ (Tizen 9: the entity
   id, the address, eden_resume or view, running or not), Netflix and HBO Max open at home, so only Prime is looked up,
-  and only when a pick is opened (`Data.titleLink`). Samsung's own
+  and only when a pick is opened (`Data.titleLink`). The key can be typed in Home Settings > Watchmode key (not on LG,
+  where no pick takes a title), the same sheet as the TMDB key's: `Prefs.watchmodeKey()` wins over `CONFIG.watchmodeKey`,
+  checked with `/status/` before it's kept. Samsung's own
   data is unreliable: on Tizen 3 no app's `iconPath` loads (on Tizen 4 and 5, YouTube's and Prime Video's are a
   placeholder), so logos are bundled in `web/icons/` and keyed by app id in `SAMSUNG_ICONS` (SVGs need a width and
   height for old WebKit); some names are empty or long (`SAMSUNG_TITLES`); and Tizen 3 answers no "settings" app
