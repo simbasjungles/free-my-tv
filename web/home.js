@@ -91,6 +91,13 @@
     node.style.right = rtl ? 'auto' : x + 'px';
   }
 
+  /** The arrow of a row that goes on (Search, Save): it points the way forward, which is left when mirrored. */
+  function forward(parent) {
+    var arrow = sym('chevron_right', parent);
+    if (rtl) arrow.style.webkitTransform = arrow.style.transform = 'scaleX(-1)';
+    return arrow;
+  }
+
   /** A slide of x pixels toward the end edge, as a transform. */
   function slide(node, x) {
     node.style.webkitTransform = node.style.transform = 'translateX(' + (rtl ? -x : x) + 'px)';
@@ -1093,7 +1100,7 @@
     list.style.height = Math.min(cityRows(), 7) * 78 + 'px';
     textField(holder, Z.CITY, typed, tr("Type the city's name"), tr('City'));
     var search = el('div', 'row', holder, tr('Search'));
-    sym('chevron_right', el('span', 'value', search));
+    forward(el('span', 'value', search));
     hover(search, Z.CITY, 1);
     for (var i = 0; i < cityFound.length; i++) {
       var row = el('div', 'row', holder, cityFound[i].label);
@@ -1197,7 +1204,7 @@
     keyField.setAttribute('autocapitalize', 'none');
     keyField.setAttribute('autocorrect', 'off');
     var save = el('div', 'row', holder, tr('Save'));
-    sym('chevron_right', el('span', 'value', save));
+    forward(el('span', 'value', save));
     hover(save, Z.KEY, 1);
     if (Prefs.tmdbKeyOnTV()) hover(el('div', 'row', holder, tr('Remove the key')), Z.KEY, 2);
     if (keyStatus) setClass(el('div', 'hint', box, keyStatus), 'warn', keyWarn);

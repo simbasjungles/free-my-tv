@@ -700,3 +700,6 @@ body.rtl { font-family: 'Inter', 'Noto Sans Arabic', 'SamsungOne', 'Segoe UI', T
 .rtl .toggle::after { left: auto; right: 4px; }
 .rtl .toggle.on::after { -webkit-transform: translateX(-34px); transform: translateX(-34px); }
 .rtl #saver .clock { left: auto; right: 80px; }
+.rtl #ambient .clock { left: auto; right: 96px; }
+.rtl #ambient .date { left: auto; right: 108px; }
+.rtl #ambient .side { right: auto; left: 108px; text-align: left; }
