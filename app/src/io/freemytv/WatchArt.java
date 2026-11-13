@@ -14,7 +14,6 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
@@ -27,10 +26,12 @@ import java.util.concurrent.Executors;
 
 /**
  * The "Continue watching" cards' pictures, decoded in the background once, at the card's size on screen (16:9,
- * centre-cropped), and kept in memory. Drawing only reuses them. Pictures already on the TV are read through the
- * provider (content:// and android.resource://); addresses written by the apps themselves (http, https) are fetched
- * from their own source, size-capped like every other read. The app still never opens files (file://). Anything
- * unsupported, or a picture that can't be read, shows the app's TV banner instead, and isn't tried again for a while.
+ * centre-cropped), and kept in memory. Drawing only reuses them. Pictures already on the TV are read through the apps'
+ * providers (content:// and android.resource://). Some apps (Netflix, JioHotstar) leave an https address instead: those
+ * are fetched from where the app said, through NetPicture's checks (https only, never the home network, pictures only,
+ * size and time limits), on a thread of their own so a slow server doesn't hold the others back. The app never opens
+ * files (file://) or plain http. Anything else, or a picture that can't be read, shows the app's TV banner instead, and
+ * isn't tried again for a while (sooner for the network, which may only be late after the TV starts).
  */
 final class WatchArt {
     /** The card in the 1920×1080 layout; the pictures are made at this times the UI's scale (setScale). */
@@ -44,9 +45,11 @@ final class WatchArt {
     private final Handler main = new Handler(Looper.getMainLooper());
     /** One thread for the whole process: a home screen started over (new settings) doesn't leave one behind. */
     private static final ExecutorService IO = Executors.newSingleThreadExecutor();
+    /** The pictures that come from the network wait on their own thread. */
+    private static final ExecutorService NET = Executors.newSingleThreadExecutor();
     private volatile boolean closed;
     private volatile int pw = W, ph = H;   // the pictures' size in pixels
-    private static final long RETRY_MS = 10 * 60_000L;
+    private static final long RETRY_MS = 10 * 60_000L, NET_RETRY_MS = 2 * 60_000L;
     private final Set<String> pending = new HashSet<>();
     private final Map<String, Long> failed = new HashMap<>();
     private final Map<String, Integer> colors = new HashMap<>();   // each picture's colour, for the background
@@ -101,7 +104,7 @@ final class WatchArt {
             if (key != null) {
                 Integer c = colors.get(key);
                 Long at = failed.get(key);
-                if (c != null || at == null || System.currentTimeMillis() - at >= RETRY_MS) return c;
+                if (c != null || at == null || System.currentTimeMillis() - at >= retryMs(key)) return c;
             }
             return colors.get(bannerKey);
         }
@@ -120,8 +123,17 @@ final class WatchArt {
     private boolean failedRecently(String uri) {
         synchronized (cache) {
             Long at = failed.get(uri);
-            return at != null && System.currentTimeMillis() - at < RETRY_MS;
+            return at != null && System.currentTimeMillis() - at < retryMs(uri);
         }
+    }
+
+    private static boolean fromNetwork(String key) {
+        return key != null && key.regionMatches(true, 0, "https:", 0, 6);
+    }
+
+    /** How long a picture that failed waits (the keys of the network's pictures are their addresses). */
+    private static long retryMs(String key) {
+        return fromNetwork(key) ? NET_RETRY_MS : RETRY_MS;
     }
 
     private Bitmap fetch(String key, Uri uri, String pkg) {
@@ -130,10 +142,10 @@ final class WatchArt {
             Bitmap b = cache.get(key);
             if (b != null || pending.contains(key)) return b;
             Long at = failed.get(key);
-            if (at != null && System.currentTimeMillis() - at < RETRY_MS) return null;
+            if (at != null && System.currentTimeMillis() - at < retryMs(key)) return null;
             pending.add(key);
         }
-        IO.execute(() -> {
+        (uri != null && "https".equalsIgnoreCase(uri.getScheme()) ? NET : IO).execute(() -> {
             if (closed) return;
             Bitmap b = null;
             try {
@@ -229,37 +241,12 @@ final class WatchArt {
         return out;
     }
 
-    /** content:// and android.resource:// come from the provider; https:// is fetched from the address the app wrote. */
+    /** content:// and android.resource:// come from the app's provider; https:// through NetPicture's checks. */
     private byte[] read(Uri uri) throws IOException {
-        String scheme = uri.getScheme();
-        if ("https".equalsIgnoreCase(scheme)) {
-            java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(uri.toString()).openConnection();
-            c.setConnectTimeout(8000);
-            c.setReadTimeout(8000);
-            c.setInstanceFollowRedirects(true);
-            c.setRequestProperty("User-Agent", "FreeMyTV");
-            try (InputStream in = c.getInputStream()) {
-                if (in == null) throw new IOException("no picture there");
-                return readAll(in, System.currentTimeMillis() + 12_000);
-            } finally {
-                c.disconnect();
-            }
-        }
+        if ("https".equalsIgnoreCase(uri.getScheme())) return NetPicture.get(uri.toString());
         try (InputStream in = app.getContentResolver().openInputStream(uri)) {
             if (in == null) throw new IOException("no picture there");
-            return readAll(in, System.currentTimeMillis() + 12_000);
+            return NetPicture.readAll(in, MAX_BYTES, System.currentTimeMillis() + 12_000);
         }
-    }
-
-    private static byte[] readAll(InputStream in, long deadline) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        byte[] buffer = new byte[16384];
-        int n;
-        while ((n = in.read(buffer)) > 0) {
-            out.write(buffer, 0, n);
-            if (out.size() > MAX_BYTES) throw new IOException("picture too large");
-            if (System.currentTimeMillis() > deadline) throw new IOException("picture took too long");
-        }
-        return out.toByteArray();
     }
 }
