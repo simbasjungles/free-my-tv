@@ -161,6 +161,13 @@ public class HomeActivity extends Activity {
         if (level >= TRIM_MEMORY_COMPLETE) Recs.get(this).trim();
     }
 
+    /** The key is one of Remote Buttons' rows on this TV. */
+    private static boolean remoteButton(int keyCode) {
+        if (!RemoteKeys.supported()) return false;
+        for (int key : Prefs.KEYS) if (key == keyCode) return true;
+        return false;
+    }
+
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
         if (liveWaits) {
             liveWaits = liveDark = false;
@@ -168,9 +175,10 @@ public class HomeActivity extends Activity {
                     + (event.getAction() == KeyEvent.ACTION_UP ? " up" : "") + "), no Live TV");
         }
         if (RemoteKeys.onKey(this, event)) return true;
-        // The Apps key, where no key service is on. With the service on, the button is Remote Buttons' (Hisense's All
-        // Apps row on Nothing leaves it to the TV), so it must not open the sheet here either.
-        if (event.getKeyCode() == KeyEvent.KEYCODE_ALL_APPS && !RemoteKeys.serviceWanted()) {
+        // The Apps key, unless it has a row in Remote Buttons on this TV (Hisense): there the row decides, and on
+        // Nothing the key is left to the TV, so it must not open the sheet here either. Not by whether the key service
+        // is on: a TCL's is on for its app buttons, and its Apps key then did nothing.
+        if (event.getKeyCode() == KeyEvent.KEYCODE_ALL_APPS && !remoteButton(KeyEvent.KEYCODE_ALL_APPS)) {
             if (event.getAction() == KeyEvent.ACTION_DOWN && home != null) home.showAllApps();
             return true;
         }

@@ -410,8 +410,11 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   in `remote-keys.txt` (`Prefs.keyApp`), never in SharedPreferences, and `onKeyEvent` does no heavy work.
   The Apps key reaches us two ways, and does the same on every brand: the system starts `HomeActivity` with
   `ACTION_ALL_APPS` (the manifest filter) where a stock home screen answered it, and `KEYCODE_ALL_APPS` is taken in
-  `HomeActivity.dispatchKeyEvent` where no key service is on. `HomeView.showAllApps` opens the sheet, or closes it on a
-  second press, ignoring the same press delivered twice within 400 ms.
+  `HomeActivity.dispatchKeyEvent` unless the key has a row in Remote Buttons on this TV (Hisense).
+  `HomeView.showAllApps` opens the sheet, or closes it on a second press, ignoring the same press delivered twice within
+  400 ms. Neither reaches us where the system aims `ACTION_ALL_APPS` at `com.android.tv.settings` and keeps the key (a
+  Mi Stick, #414; a TCL on Google TV 14: `START {act=android.intent.action.ALL_APPS pkg=com.android.tv.settings}`
+  fails with -91 and the window never sees 284).
   The service is also off while every button is *Nothing* (not on Hisense, for the Input key), and always on TCL's
   Android 11 (`RemoteKeys.FILTER_SAFE`): there any key filter makes the TV act on a volume key twice (one press moves
   2 steps and a held key gets stuck, #325; turning off only our service fixed it), so the buttons work only where they
