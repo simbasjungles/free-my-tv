@@ -604,6 +604,93 @@ var TV = (function () {
     finish();
   }
 
+  // MARK: - Home, back here (Samsung)
+
+  /*
+   * Samsung's Home button always opens Smart Hub, and no app may take it (registerKey refuses it). With Home Settings >
+   * Home button > Free My TV, while an app opened from here is in front, the TV's own server on port 8001 is asked every
+   * 0.4 s whether it still shows it (GET /api/v2/applications/<id> answers {running, visible}); once it doesn't (Home,
+   * or the app closed), Free My TV comes to the front again. Home pressed in Free My TV itself still opens Smart Hub,
+   * and nothing is asked while no app opened from here is in front.
+   */
+  var back = {timer: null, ids: [], seen: false, away: false, asks: 0, asking: false, on: false};
+
+  // The server answers by an app's Smart Hub number (YouTube's 111299001912), which the app's own APIs never tell. By its
+  // Tizen id it answers too, but for some apps (YouTube, which runs as com.samsung.tv.cobalt-yt) it says "not visible"
+  // even in front, and the built-in ones it doesn't know at all: the number goes first where it's known. `0 vd_applist`
+  // over SDB lists every app's (app_id).
+  var HUB_IDS = {
+    'org.tizen.netflix-app': '3201907018807', 'org.tizen.primevideo': '3201910019365', 'com.samsung.tv.aria-video': '3201807016597',
+    'org.tizen.globoplayapp': '3202007021424', '9Ur5IzDKqV.TizenYouTube': '111299001912', 'MCmYXNxgcu.DisneyPlus': '3201901017640',
+    'rJeHak5zRg.Spotify': '3201606009684', 'GHI3a0zMSx.XboxGamePass': '3202203026799', 'IkWsFHtOY9.Stremio': '3202306031311',
+    'OGLLvqej7u.CrunchyrollWebApp': '3202302030097', '5b8c3eb16b.BeamCTVDev': '3202301029760'
+  };
+
+  function stopWatch() {
+    if (back.timer) clearInterval(back.timer);
+    back.timer = null;
+  }
+
+  /** done(true | false) for the first of ids the server knows, done(null) if it knows none, done(undefined) if no answer. */
+  function visible(ids, done) {
+    var i = 0;
+    function next() {
+      if (i >= ids.length) { done(null); return; }
+      var x = new XMLHttpRequest(), over = false, id = ids[i++];
+      x.open('GET', 'http://127.0.0.1:8001/api/v2/applications/' + encodeURIComponent(id), true);
+      x.timeout = 1500;
+      x.onreadystatechange = function () {
+        if (x.readyState !== 4 || over) return;
+        over = true;
+        var r = null;
+        try { r = JSON.parse(x.responseText); } catch (e) {}
+        if (x.status === 200 && r && typeof r.visible === 'boolean') { ids.length = 0; ids.push(id); done(r.visible); }
+        else next();   // that id unknown there: the next one
+      };
+      x.ontimeout = x.onerror = function () { if (!over) { over = true; done(undefined); } };   // asked again next time
+      x.send();
+    }
+    next();
+  }
+
+  /** Brings Free My TV to the front. As an app control (the manifest's reload="disable"), the page isn't loaded again. */
+  function comeBack() {
+    var self = '';
+    try { self = window.tizen.application.getCurrentApplication().appInfo.id; } catch (e) {}
+    if (!self) return;
+    function launch() { try { window.tizen.application.launch(self); } catch (e) {} }
+    try {
+      var control = new window.tizen.ApplicationControl('http://tizen.org/appcontrol/operation/default', null, null, null, []);
+      window.tizen.application.launchAppControl(control, self, null, launch);
+    } catch (e) {
+      launch();
+    }
+  }
+
+  function watchBack(id) {
+    stopWatch();
+    if (!back.on || !id) return;
+    back.ids = HUB_IDS[id] ? [HUB_IDS[id]] : [id];
+    back.seen = false;
+    back.away = false;
+    back.asks = 0;
+    back.asking = false;
+    back.timer = setInterval(function () {
+      if (!document.hidden) { if (back.away) stopWatch(); return; }   // back here (the app may still be opening)
+      back.away = true;
+      if (back.asking) return;   // one question at a time: the TV is slow to answer while Smart Hub opens
+      if (++back.asks > 50 && !back.seen) { stopWatch(); return; }   // it never showed (20 s): nothing to watch
+      back.asking = true;
+      visible(back.ids, function (on) {
+        back.asking = false;
+        if (!back.timer) return;
+        if (on === null) { stopWatch(); return; }   // the server doesn't know it: left alone
+        if (on === true) { back.seen = true; return; }
+        if (on === false && back.seen && document.hidden) { stopWatch(); comeBack(); }
+      });
+    }, 400);
+  }
+
   // MARK: - The TV, whichever it is
 
   return {
@@ -618,6 +705,10 @@ var TV = (function () {
 
     /** Whether a pick of this service ("prime") can open on its title here: Watchmode is asked only then. */
     takesTitle: function (service) { return samsung && !!TITLE_LINKS[service]; },
+
+    /** Samsung: Home pressed in an app opened from here can bring Free My TV back (Home Settings > Home button). */
+    canReturnHome: samsung && !tizen2,
+    returnHome: function (on) { back.on = !!on; if (!on) stopWatch(); },
 
     /** Installed apps, as the TV's launcher lists them: [{id, title, icon, color}]. */
     apps: function (done) {
@@ -667,9 +758,13 @@ var TV = (function () {
     /** Opens an app (or an input); done(ok). */
     launch: function (id, params, done) {
       if (samsung) {
+        stopWatch();
         if (id.indexOf('source:') === 0) samsungSource(id, done);
-        else if (params && params.link) samsungDeepLink(id, params.service, params.link, done);
-        else samsungLaunch(id, done);
+        else {
+          var opened = function (ok) { if (ok) watchBack(id); if (done) done(ok); };
+          if (params && params.link) samsungDeepLink(id, params.service, params.link, opened);
+          else samsungLaunch(id, opened);
+        }
         return;
       }
       if (!webos) {
