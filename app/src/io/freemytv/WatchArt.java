@@ -27,10 +27,10 @@ import java.util.concurrent.Executors;
 
 /**
  * The "Continue watching" cards' pictures, decoded in the background once, at the card's size on screen (16:9,
- * centre-cropped), and kept in memory. Drawing only reuses them. Only pictures already on the TV are read (content:// and
- * android.resource://, from the apps themselves): the app never downloads an address another app wrote (http, https),
- * since it only talks to TMDB, Open-Meteo and Binance, and never opens files (file://). Anything else, or a picture that
- * can't be read, shows the app's TV banner instead, and isn't tried again for a while.
+ * centre-cropped), and kept in memory. Drawing only reuses them. Pictures already on the TV are read through the
+ * provider (content:// and android.resource://); addresses written by the apps themselves (http, https) are fetched
+ * from their own source, size-capped like every other read. The app still never opens files (file://). Anything
+ * unsupported, or a picture that can't be read, shows the app's TV banner instead, and isn't tried again for a while.
  */
 final class WatchArt {
     /** The card in the 1920×1080 layout; the pictures are made at this times the UI's scale (setScale). */
@@ -229,21 +229,36 @@ final class WatchArt {
         return out;
     }
 
-    /** Only content:// and android.resource:// get here (checked when the item is read). */
+    /** content:// and android.resource:// come from the provider; https:// is fetched from the address the app wrote. */
     private byte[] read(Uri uri) throws IOException {
+        String scheme = uri.getScheme();
+        if ("https".equalsIgnoreCase(scheme)) {
+            java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(uri.toString()).openConnection();
+            c.setConnectTimeout(8000);
+            c.setReadTimeout(8000);
+            c.setInstanceFollowRedirects(true);
+            c.setRequestProperty("User-Agent", "FreeMyTV");
+            try (InputStream in = c.getInputStream()) {
+                if (in == null) throw new IOException("no picture there");
+                return readAll(in, System.currentTimeMillis() + 12_000);
+            } finally {
+                c.disconnect();
+            }
+        }
         try (InputStream in = app.getContentResolver().openInputStream(uri)) {
             if (in == null) throw new IOException("no picture there");
-            return readAll(in);
+            return readAll(in, System.currentTimeMillis() + 12_000);
         }
     }
 
-    private static byte[] readAll(InputStream in) throws IOException {
+    private static byte[] readAll(InputStream in, long deadline) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buffer = new byte[16384];
         int n;
         while ((n = in.read(buffer)) > 0) {
             out.write(buffer, 0, n);
             if (out.size() > MAX_BYTES) throw new IOException("picture too large");
+            if (System.currentTimeMillis() > deadline) throw new IOException("picture took too long");
         }
         return out.toByteArray();
     }
