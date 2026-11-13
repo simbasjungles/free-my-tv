@@ -386,22 +386,31 @@ var TV = (function () {
 
   // The last antenna channel seen on screen (the viewer keeps Samsung TV Plus's too, and goes back to it).
   var CHANNEL_KEY = 'fmtv.channel';
+  // The antenna's channels as last listed, by channelKey: noteChannel runs at every return to the home screen, and a
+  // satellite list is up to 2,000 channels to read each time. Live TV reads it again, so a new scan is seen there.
+  var antenna = null;
 
-  function sameChannel(a, b) {
-    return a && b && a.major === b.major && a.minor === b.minor && a.ptc === b.ptc;
-  }
+  function channelKey(c) { return c.major + '.' + c.minor + '.' + c.ptc; }
 
   /** The broadcast channels the TV has tuned in (the antenna's, not TV Plus's), or [] where it won't tell. */
   function broadcastChannels(done) {
+    function got(l) {
+      antenna = null;
+      if (l.length) {
+        antenna = {};
+        for (var i = 0; i < l.length; i++) antenna[channelKey(l[i])] = true;
+      }
+      done(l);
+    }
     function list(mode, next) {
       try {
-        window.tizen.tvchannel.getChannelList(function (l) { if (l && l.length) done(l); else next(); }, next, mode, 0, 2000);
+        window.tizen.tvchannel.getChannelList(function (l) { if (l && l.length) got(l); else next(); }, next, mode, 0, 2000);
       } catch (e) {
         next();
       }
     }
     if (!window.tizen || !window.tizen.tvchannel) { done([]); return; }
-    list('DIGITAL', function () { list('ALL', function () { done([]); }); });
+    list('DIGITAL', function () { list('ALL', function () { got([]); }); });
   }
 
   /** Called when the home screen comes back: what the viewer last played, kept if it's one of the antenna's. */
@@ -410,30 +419,29 @@ var TV = (function () {
     var now;
     try { now = window.tizen.tvchannel.getCurrentChannel(); } catch (e) { return; }
     if (!now) return;
-    broadcastChannels(function (l) {
-      for (var i = 0; i < l.length; i++) {
-        if (sameChannel(l[i], now)) {
-          try { localStorage.setItem(CHANNEL_KEY, JSON.stringify({major: now.major, minor: now.minor, ptc: now.ptc})); } catch (e) {}
-          return;
-        }
-      }
-    });
+    function keep() {
+      if (!antenna || !antenna[channelKey(now)]) return;
+      try { localStorage.setItem(CHANNEL_KEY, JSON.stringify({major: now.major, minor: now.minor, ptc: now.ptc})); } catch (e) {}
+    }
+    if (antenna) keep(); else broadcastChannels(keep);
   }
 
   /** Tunes the antenna (its last channel, else the first), then done(); done() alone where the TV won't. */
   function tuneAntenna(done) {
     var sent = false;
     function finish() { if (!sent) { sent = true; done(); } }
+    // A list or a tuner that never answers doesn't hold the viewer: 2.5 s for both.
+    setTimeout(finish, 2500);
     broadcastChannels(function (l) {
+      if (sent) return;   // too late: the viewer is up, and tuning now would change the channel under it
       if (!l.length) { finish(); return; }
       var last = null, pick = l[0];
       try { last = JSON.parse(localStorage.getItem(CHANNEL_KEY) || 'null'); } catch (e) {}
-      for (var i = 0; last && i < l.length; i++) if (sameChannel(l[i], last)) pick = l[i];
+      for (var i = 0; last && i < l.length; i++) if (channelKey(l[i]) === channelKey(last)) pick = l[i];
       var option = {major: pick.major, minor: pick.minor};
       if (pick.ptc) option.ptc = pick.ptc;
       if (pick.sourceID) option.sourceID = pick.sourceID;
       if (pick.programNumber) option.programNumber = pick.programNumber;
-      setTimeout(finish, 2500);   // a tuner that never answers doesn't hold the viewer
       try {
         window.tizen.tvchannel.tune(option, {onsuccess: finish, onnosignal: finish, onprograminforeceived: function () {}}, finish);
       } catch (e) {
