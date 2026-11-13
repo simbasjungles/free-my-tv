@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -129,6 +130,12 @@ final class Ui {
         {"da", "DK"}, {"nb", "NO"}, {"fi", "FI"}, {"cs", "CZ"}, {"sk", "SK"}, {"ro", "RO"}, {"tr", "TR"}, {"ru", "RU"}, {"uk", "UA"},
         {"el", "GR"}, {"ja", "JP"}, {"ko", "KR"}, {"hi", "IN"}, {"id", "ID"}, {"vi", "VN"}, {"th", "TH"},
     };
+    /**
+     * Languages written right to left. The LG and Samsung app mirrors its screen for them (web/strings.js); HomeView
+     * and the settings aren't mirrored yet, so here their catalogues (Arabic's, shared with the web app) aren't
+     * offered: not in the settings' list, and "auto" on a TV in one of them stays in English, as before.
+     */
+    private static final List<String> RTL = Arrays.asList("ar", "he", "fa", "ur");
 
     /** The text for this English key in the current language (the English itself when there is none). */
     static String tr(String english) {
@@ -200,7 +207,7 @@ final class Ui {
         return locale;
     }
 
-    /** "en" and every language with a catalogue, sorted by code. */
+    /** "en" and every language with a catalogue that this app can lay out (not the right-to-left ones), sorted by code. */
     static String[] languages() {
         String[] l = languages;
         if (l != null) return l;
@@ -210,7 +217,10 @@ final class Ui {
         try {
             String[] files = c == null ? null : c.getAssets().list("i18n");
             for (String f : files == null ? new String[0] : files) {
-                if (f.endsWith(".json") && !f.equals("en.json")) found.add(f.substring(0, f.length() - 5));
+                if (!f.endsWith(".json") || f.equals("en.json")) continue;
+                String code = f.substring(0, f.length() - 5);
+                int dash = code.indexOf('-');
+                if (!RTL.contains(base(dash < 0 ? code : code.substring(0, dash)))) found.add(code);
             }
         } catch (IOException e) {
             AppLog.w("i18n: " + e.getMessage());

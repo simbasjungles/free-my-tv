@@ -353,7 +353,7 @@ The website ([freemytv.io](https://freemytv.io)) is in [`docs/`](docs): plain HT
 
 On Google TV, LG and Samsung, each language is one file, [`app/assets/i18n/<lang>.json`](app/assets/i18n), keyed by the
 English text in the code. *Automatic* follows the TV's language and uses any language that has a file (English otherwise); *Home
-Settings* → *Language* lists them all. Today: English, Portuguese, Spanish, German, French, Italian, Dutch, Polish,
+Settings* → *Language* lists them all (Arabic on LG and Samsung only, for now). Today: English, Portuguese, Spanish, German, French, Italian, Dutch, Polish,
 Swedish, Danish, Norwegian, Finnish, Czech, Slovak, Romanian, Turkish, Russian, Ukrainian, Greek, Japanese, Korean, Simplified
 and Traditional Chinese, Hindi, Indonesian, Vietnamese, Thai and Arabic. Portuguese, Spanish, German, Russian, Thai and Turkish were translated by hand and are the
 reference (fix them by hand); the others were machine-made, and corrections from native speakers are welcome.
@@ -370,8 +370,8 @@ reference (fix them by hand); the others were machine-made, and corrections from
   category the language uses (Russian `"one:{n} сезон|few:{n} сезона|many:{n} сезонов|other:{n} сезона"`, Japanese
   just `"other:{n}シーズン"`), and Android's plural rules pick the one for each number.
 - **Right to left:** in Arabic the LG and Samsung home screen is mirrored (the shelf, the drawer and the arrows run
-  from the right) and numbers are written ٠١٢٣. The Google TV app shows the Arabic text in its usual left-to-right
-  layout for now. Hebrew and Persian aren't there yet.
+  from the right) and numbers are written ٠١٢٣. The Google TV app's layout isn't mirrored yet, so it doesn't offer
+  Arabic for now (a TV in Arabic stays in English there). Hebrew and Persian aren't there yet.
 - **Limits:** Chinese, Japanese, Korean, Hindi and Arabic are drawn with the TV's system font (Inter has no such letters).
 
 ## Privacy

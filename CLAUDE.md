@@ -368,8 +368,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   are. Run `python3 tools/translate.py --check` to validate all catalogues without writing files.
   Right to left: the web app (LG, Samsung) mirrors for Arabic (`I18N.rtl`; home.js places things with `startAt`/`endAt`
   from the start edge and swaps ← → where the layout runs; home.css's `.rtl` rules mirror the rest), and `I18N.digits`
-  writes ٠-٩ in Arabic. The Android app draws Arabic in its left-to-right layout. CJK, Devanagari and Arabic use the
-  system font.
+  writes ٠-٩ in Arabic. The Android app isn't mirrored yet, so `Ui.languages()` leaves the right-to-left catalogues
+  out (`Ui.RTL`): Arabic isn't in its list, and "auto" on an Arabic TV stays in English; `ar.json` still ships for the
+  web app and is checked like the others. CJK, Devanagari and Arabic use the system font.
   Comments in English, short, only where the why isn't obvious.
 - Settings come from `config.properties` through the generated `out/gen/io/freemytv/Config.java` (never edit that).
   Built with `--generic`, the place values are empty and `Place` fills them from the TV's time zone
