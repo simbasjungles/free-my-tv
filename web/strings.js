@@ -88,7 +88,7 @@ var I18N = (function () {
       if (name === category) chosen = last;
       if (name === 'other') other = last;
     }
-    return (chosen !== null ? chosen : other !== null ? other : last).replace(/\{n\}/g, String(n));
+    return (chosen !== null ? chosen : other !== null ? other : last).replace(/\{n\}/g, digits(String(n)));
   }
 
   function pluralOf(n) {
@@ -214,6 +214,8 @@ var I18N = (function () {
       var parts = new Intl.DateTimeFormat(loc, {hour: 'numeric', hour12: true}).formatToParts(d);
       for (var i = 0; i < parts.length; i++) if (parts[i].type === 'dayPeriod') return parts[i].value;
     } catch (e) { /* older Chromium: no formatToParts */ }
+    // Chromium before 57 (webOS 3 and 4, Tizen 3 and 4) and Tizen 2: Arabic's own letters, not "PM" in an Arabic clock.
+    if (base(lang) === 'ar') return d.getHours() < 12 ? 'ص' : 'م';
     return d.getHours() < 12 ? 'AM' : 'PM';
   }
 
@@ -293,13 +295,11 @@ var I18N = (function () {
     get rtl() { return RTL[base(lang)] === true; },
     /** The language without its country, as TMDB names it ("zh" for "zh-CN"). */
     get base() { return base(lang); },
-    /** BCP 47 tag for dates, numbers and TMDB. */
+    /** BCP 47 tag for dates and numbers (Arabic's carries its calendar and digits: "-u-ca-gregory-nu-arab"). */
     locale: function () { return locale; },
     languages: languages,
     languageName: languageName,
     digits: digits,
-    /** AM or PM for an instant, in the language: ص or م in Arabic. */
-    period: function (at) { return dayPeriod(new Date(at), locale); },
     tr: tr,
     trf: trf,
     plural: plural,

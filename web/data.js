@@ -618,7 +618,7 @@ var Data = (function () {
   function lang() {
     if (I18N.lang === 'es') return /-ES\b/i.test(navigator.language || '') ? 'es-ES' : 'es-MX';
     if (I18N.lang === 'de') return 'de-DE';   // TMDB's de-AT and de-CH have few translations of their own
-    return I18N.locale();
+    return I18N.locale().replace(/-u-.*$/, '');   // language-COUNTRY, as TMDB takes it: not Arabic's calendar and digits
   }
 
   function day(offset) {
@@ -822,8 +822,8 @@ var Data = (function () {
   function fmt(v, digits) {
     // Old WebKit (Tizen 2) has no Intl: toLocaleString ignores its options and prints every digit, without failing.
     // English separators there; a per-language table if someone asks.
-    if (typeof Intl === 'undefined') return v.toFixed(digits).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    try { return v.toLocaleString(I18N.locale(), {minimumFractionDigits: digits, maximumFractionDigits: digits}); } catch (e) { return v.toFixed(digits); }
+    if (typeof Intl === 'undefined') return I18N.digits(v.toFixed(digits).replace(/\B(?=(\d{3})+(?!\d))/g, ','));
+    try { return v.toLocaleString(I18N.locale(), {minimumFractionDigits: digits, maximumFractionDigits: digits}); } catch (e) { return I18N.digits(v.toFixed(digits)); }
   }
 
   var SYMBOLS = {USD: '$', BRL: 'R$ ', EUR: '€', GBP: '£', JPY: '¥'};

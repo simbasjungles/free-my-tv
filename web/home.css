@@ -681,7 +681,7 @@ body.rtl { font-family: 'Inter', 'Noto Sans Arabic', 'SamsungOne', 'Segoe UI', T
 
 .rtl .panel .head { left: auto; right: 34px; }
 .rtl .panel .side { right: auto; left: 34px; }
-.rtl #weather .now, .rtl #weather .cond, .rtl #weather .range { left: auto; right: 34px; }
+.rtl #weather .now, .rtl #weather .cond, .rtl #weather .extra, .rtl #weather .range { left: auto; right: 34px; }
 .rtl #weather .now .sym { margin-right: 0; margin-left: 18px; }
 .rtl #weather .split { left: auto; right: 391px; }
 .rtl #weather .hours { left: 30px; right: 422px; }

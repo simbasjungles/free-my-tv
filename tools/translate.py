@@ -286,7 +286,8 @@ NAMES = {"pt": "Brazilian Portuguese", "es": "Spanish", "de": "German", "fr": "F
          "pl": "Polish", "sv": "Swedish", "da": "Danish", "nb": "Norwegian Bokmål", "fi": "Finnish", "cs": "Czech",
          "ro": "Romanian", "tr": "Turkish", "ru": "Russian", "uk": "Ukrainian", "el": "Greek", "ja": "Japanese",
          "ko": "Korean", "zh-CN": "Simplified Chinese", "zh-TW": "Traditional Chinese (Taiwan)", "hi": "Hindi", "id": "Indonesian", "vi": "Vietnamese",
-         "hu": "Hungarian", "bg": "Bulgarian", "hr": "Croatian", "sk": "Slovak", "th": "Thai", "ms": "Malay"}
+         "hu": "Hungarian", "bg": "Bulgarian", "hr": "Croatian", "sk": "Slovak", "th": "Thai", "ms": "Malay",
+         "ar": "Arabic"}
 
 PROMPT = """Translate the user interface strings of a TV home screen app ("Free My TV") from English into {name} ({lang}).
 Rules:

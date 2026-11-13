@@ -440,7 +440,7 @@
     focusRows($('settings'), st.row, st.zone === Z.SETTINGS);
     focusRows($('shelfedit'), st.edit, st.zone === Z.EDIT);
     focusRows($('langpick'), st.lang, st.zone === Z.LANG);
-    if (langHint) langHint.textContent = (st.lang + 1) + ' / ' + languageChoices().length + '  ·  ' + tr('OK picks, Back cancels.');
+    if (langHint) langHint.textContent = I18N.digits((st.lang + 1) + ' / ' + languageChoices().length) + '  ·  ' + tr('OK picks, Back cancels.');
     focusRows($('citypick'), st.city, st.zone === Z.CITY);
     focusRows($('keypick'), st.key, st.zone === Z.KEY);
     setClass(body, 'drawer-open', st.zone === Z.DRAWER);
@@ -898,7 +898,7 @@
         step: function (d) { cycle('dim', ['off', 'low', 'medium', 'high', 'auto'], Prefs.dim(), d); applyDim(); }},
       {label: tr('Screensaver'), value: saverMode() === 'clock' ? tr('Clock') : tr('Photos'),
         step: function (d) { cycle('saver', ['photos', 'clock'], saverMode(), d); }},
-      {label: tr('Picks per tab'), value: String(Prefs.cards()),
+      {label: tr('Picks per tab'), value: String(I18N.digits(Prefs.cards())),
         step: function (d) { Prefs.set('cards', 3 + (Prefs.cards() - 3 + (d || 1) + 4) % 4); renderCards(); }},
       {label: tr('Cartoons and anime'), toggle: !Prefs.hideAnimation(),
         step: function () { Prefs.set('hideAnimation', !Prefs.hideAnimation()); Data.refresh(); }},
@@ -1176,8 +1176,8 @@
 
   function keySteps() {
     return tr("The key brings the picks: what's trending on your streaming apps, with their photos on the screensaver.") + '\n'
-      + tr('Free, and it takes two minutes:') + '\n1. ' + tr('Create an account at themoviedb.org.')
-      + '\n2. ' + tr('Open Settings → API and request a developer key.');
+      + tr('Free, and it takes two minutes:') + '\n' + I18N.digits(1) + '. ' + tr('Create an account at themoviedb.org.')
+      + '\n' + I18N.digits(2) + '. ' + tr('Open Settings → API and request a developer key.');
   }
 
   function renderKey() {
@@ -1602,8 +1602,9 @@
 
   function move(dx, dy) {
     var tiles = $('tiles').children, cardNodes = $('cards').children;
-    // Mirrored, the screen's left is the way forward: ← goes to the next one. (Settings' values keep their arrows.)
-    if (rtl && (st.zone === Z.SHELF || st.zone === Z.CARDS || st.zone === Z.TOP || st.zone === Z.DRAWER || st.zone === Z.APPS)) dx = -dx;
+    // Mirrored, the screen's left is the way forward: ← goes to the next one, and in the shelf's and the inputs' editors
+    // to a later place (the rows they order run from the right). Settings' values keep their arrows.
+    if (rtl && (st.zone === Z.SHELF || st.zone === Z.CARDS || st.zone === Z.TOP || st.zone === Z.DRAWER || st.zone === Z.APPS || st.zone === Z.EDIT)) dx = -dx;
     switch (st.zone) {
       case Z.SHELF:
         if (dx) st.shelf = Math.max(0, Math.min(shelf.length - 1, st.shelf + dx));
@@ -1639,7 +1640,8 @@
         if (dy) st.row = Math.max(0, Math.min(rowsNow.length - 1, st.row + dy));
         else if (dx && rowsNow[st.row]) {
           var r = rowsNow[st.row];
-          if (r.value !== '›') { r.step(dx); if (st.zone === Z.SETTINGS) renderSettings(); }
+          // A row that opens a list opens toward its chevron, which points left when mirrored.
+          if (r.value !== '›') { r.step(rtl && r.opens ? -dx : dx); if (st.zone === Z.SETTINGS) renderSettings(); }
         }
         break;
       case Z.EDIT:
