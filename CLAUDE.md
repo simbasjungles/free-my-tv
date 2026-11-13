@@ -195,10 +195,10 @@ Developer Mode; Samsung's home screen stays. Two ways:
    ([`tizen/install-118.md`](tizen/install-118.md), #417; recent Tizen Studios sign with SHA-512, which 2.3 and 2.4 reject). The
    signer patch there changes their Tizen Studio, so ask first. If it still fails, the model refuses developer installs
    (a 2016 Full HD K5670, `16_HAWKM_FHD`, #349): suggest a Google TV streamer on HDMI.
-   `download failed[116]` comes within milliseconds, before any certificate check, for any package (a 2020
-   UE55TU7020, #490, even refused a minimal app; TizenBrew Installer said "Package installed" anyway). Where others
-   found the cause, the TV had too little storage left for apps, and freeing some fixed it (jellyfin-tizen issue 10);
-   `install.py` says so. Not yet confirmed on the TU7020.
+   `download failed[116]` comes within milliseconds, before any certificate check, for any package: the TV has too
+   little storage left for apps. A 2020 UE55TU7020 (#490) even refused a minimal app, while TizenBrew Installer said
+   "Package installed" anyway; with ~70 MB freed (Settings, Support, Device Care, Manage Storage) and a restart, the
+   install went through. `install.py` says so.
    On a 2015 UN55JU6800 (Tizen 2.3, `15_HAWKM_UHD_2D_SC`) every package asking for `tv.inputdevice`, `application.launch`, `tv.window` or the Samsung `network.public` privilege was refused with `install failed[PKGMGR_ERROR]` at the same point, while the same files without them installed; changing the manifest also has to go through `--uninstall` first, since the TV refuses a changed one as an update. Once that TV was signed into a Samsung account, the build carrying none of those privileges launched apps and switched to the TV source anyway, so try that before buying a certificate: the same set does not trust the `VD DEVELOPER Partner CA Class` that issues them now, and refused even a minimal package signed with one (the DUID from port 8001 published as `uuid:` was accepted by the certificate tool).
    With Samsung's tools instead: `sdb connect <IP>`, `tizen install -n FreeMyTV-tizen.wgt -t <serial from sdb
    devices>` and `tizen run -p FreeMyTVio.FreeMyTV -t <serial>`. Updates need the same certificate: the TV refuses

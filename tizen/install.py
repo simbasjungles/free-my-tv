@@ -167,8 +167,14 @@ def main():
         # A 2024 QA75Q60D (Tizen 9) closed the connection like this for a while, across restarts, with the right Host
         # PC IP, then took the same install without a change: what it waited for is unknown.
         dropped = isinstance(e, ConnectionResetError) or 'closed the connection' in str(e)
-        sys.exit('Couldn\'t reach the TV on port %d (%s). On the TV: Apps, 1 2 3 4 5, Developer mode on with Host PC '
-                 'IP %s, then restart the TV.%s' % (PORT, e, this_computer(ip),
+        mine = this_computer(ip)
+        # The Developer mode screen asks for the computer's IP, so that's the one that gets typed here too (#490).
+        own = (' %s is this computer\'s address: give the TV\'s (on the TV: Settings, General, Network, Network Status, '
+               'IP Settings).' % ip if ip == mine
+               else ' Check that %s is the TV\'s address, not this computer\'s.' % ip if isinstance(e, ConnectionRefusedError)
+               else '')
+        sys.exit('Couldn\'t reach the TV on port %d (%s).%s On the TV: Apps, 1 2 3 4 5, Developer mode on with Host PC '
+                 'IP %s, then restart the TV.%s' % (PORT, e, own, mine,
                  ' If it already is, wait a minute after the TV restarts and try again.' if dropped else ''))
     caps = sdb.capabilities()
     print('Connected: %s, Tizen %s.' % (sdb.banner.split(':')[2] if sdb.banner.count(':') >= 2 else sdb.banner,
@@ -206,11 +212,11 @@ def main():
                     'K5670 did, #349): a Google TV streamer on HDMI runs Free My TV there.' % ip)
         elif 'failed[116]' in out:
             # "download failed[116]" comes within milliseconds, before any certificate check, and for any package: a
-            # 2020 UE55TU7020 answered it even to a minimal app (#490). Elsewhere it was a TV out of storage for apps,
-            # and freeing some fixed it (jellyfin-tizen issue 10: a UE55NU7305 and a UE32N5300).
+            # 2020 UE55TU7020 answered it even to a minimal app, and installed once ~70 MB were free (#490). The same
+            # on a UE55NU7305 and a UE32N5300 (jellyfin-tizen issue 10).
             hint = ('\nThe TV stopped before installing anything. That usually means it has too little free storage '
                     'left for apps: delete some you don\'t use (Settings, Support, Device Care, Manage Storage on 2020 '
-                    'and newer TVs; Apps, Settings on older ones), then run this again.')
+                    'and newer TVs; Apps, Settings on older ones), restart the TV, then run this again.')
         sys.exit('The TV didn\'t finish installing. It said:\n' + out.strip() + hint)
     sdb.shell('0 was_execute ' + app_id, r'launched|spend time', 20)
     print('Installed and open on the TV.')
