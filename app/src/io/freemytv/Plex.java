@@ -475,28 +475,25 @@ final class Plex {
     // MARK: - Pictures
 
     /**
-     * A card's picture: Plex's artwork (an https address it gave) as it is, or your server's, made 1280×720 by the
-     * server. Off the UI thread (WatchArt's).
+     * A card's picture: your server's, made 1280×720 by the server (with its token, at the address Plex named for it),
+     * or Plex's artwork, an https address that isn't ours: fetched as any app's is, through NetPicture's checks and
+     * without a token. Off the UI thread (WatchArt's network thread).
      */
     static byte[] picture(Context c, String key) throws IOException {
         // The key is PICTURE + server + "|" + the picture (WatchNext.Item.plex).
         int bar = key.startsWith(PICTURE) ? key.indexOf('|') : -1;
         String image = bar > 0 ? key.substring(bar + 1) : "", serverId = bar > 0 ? key.substring(PICTURE.length(), bar) : "";
         if (!signedIn(c) || image.isEmpty()) throw new PlexError("no Plex picture");
+        if (image.startsWith("https://")) return NetPicture.get(image);
         HttpURLConnection conn;
-        boolean server = !image.startsWith("https://");
-        if (server && serverId.equals(picturesDown) && System.currentTimeMillis() < picturesDownUntil) {
+        if (serverId.equals(picturesDown) && System.currentTimeMillis() < picturesDownUntil) {
             throw new PlexError("Plex server down");
         }
         try {
-            if (!server) {
-                conn = (HttpURLConnection) new URL(image).openConnection();
-            } else {
-                String url = sp(c).getString("serverUri", "") + "/photo/:/transcode?width=1280&height=720&minSize=1&upscale=1&url="
-                        + URLEncoder.encode(image, "UTF-8");
-                conn = (HttpURLConnection) new URL(url).openConnection();
-                conn.setRequestProperty("X-Plex-Token", sp(c).getString("serverToken", ""));
-            }
+            String url = sp(c).getString("serverUri", "") + "/photo/:/transcode?width=1280&height=720&minSize=1&upscale=1&url="
+                    + URLEncoder.encode(image, "UTF-8");
+            conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setRequestProperty("X-Plex-Token", sp(c).getString("serverToken", ""));
         } catch (IOException | RuntimeException e) {
             throw new PlexError("no Plex picture (" + e.getClass().getSimpleName() + ")");
         }
@@ -508,10 +505,8 @@ final class Plex {
             try {
                 status = conn.getResponseCode();
             } catch (IOException e) {
-                if (server) {   // no answer: a minute's rest for this server's pictures
-                    picturesDown = serverId;
-                    picturesDownUntil = System.currentTimeMillis() + EVERY;
-                }
+                picturesDown = serverId;   // no answer: a minute's rest for this server's pictures
+                picturesDownUntil = System.currentTimeMillis() + EVERY;
                 // WatchArt logs this: without the address (the server's has the home's IP in it).
                 throw new PlexError("can't reach Plex (" + e.getClass().getSimpleName() + ")");
             }

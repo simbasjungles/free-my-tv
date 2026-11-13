@@ -336,8 +336,16 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   where to sign in (`plexHint`). The token stays in `:home`'s private `plex` preferences, only travels in the `X-Plex-Token` header,
   never follows a redirect and is never logged. Continue Watching then starts with the server's in-progress titles
   (Plex's order, beyond `PER_APP`) and ends with the Plex Watchlist; the TV's own Plex rows (Google TV) are dropped once that list has titles, not before, and
-  its pictures (`Plex.PICTURE` keys in `WatchArt`) are the one exception to "only from the TV": Plex gave them. Plex
+  its pictures (`Plex.PICTURE` keys in `WatchArt`, on its network thread) come from the server, with its token
+  (`Plex.picture`), or, for Plex's artwork (https addresses on Plex's and its partners' image hosts), through
+  `NetPicture` like any app's, without a token. Plex
   shares its own row only through Google TV's Engage, which Android TV models never get (a Sony BRAVIA VH1).
+  The server is one the account owns (one shared with it only when it owns none, and only with that server's own
+  token), at the https addresses plex.tv lists, with the usual certificate checks and never plain http. Every failure
+  it logs or shows is a `PlexError` or a class name (`Plex.why`): a JSONException's text holds the answer, which may
+  have tokens in it. Turned off in *Continue Watching apps*, nothing is asked of Plex; a server that doesn't answer
+  rests up to 8 minutes. Sign out forgets the token on the TV (the TV stays under the account's authorized devices
+  on plex.tv until removed there).
 - Trakt (`Trakt`, Google TV only) needs the person's own API app: `trakt_client_id` (the Client ID only: device code
   with PKCE, so no secret is built in). Until they sign in on the Picks screen, nothing talks to `api.trakt.tv`. The
   tokens stay in `:home`'s private `trakt` preferences, are never logged and never follow a redirect, and only `:home`

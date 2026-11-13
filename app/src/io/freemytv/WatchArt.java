@@ -135,10 +135,10 @@ final class WatchArt {
     }
 
     private static boolean fromNetwork(String key) {
-        return key != null && key.regionMatches(true, 0, "https:", 0, 6);
+        return key != null && (key.regionMatches(true, 0, "https:", 0, 6) || key.startsWith(Plex.PICTURE));
     }
 
-    /** How long a picture that failed waits (the keys of the network's pictures are their addresses). */
+    /** How long a picture that failed waits (the keys of the network's pictures are their addresses, or Plex's). */
     private static long retryMs(String key) {
         return fromNetwork(key) ? NET_RETRY_MS : RETRY_MS;
     }
@@ -152,7 +152,7 @@ final class WatchArt {
             if (at != null && System.currentTimeMillis() - at < retryMs(key)) return null;
             pending.add(key);
         }
-        (uri != null && "https".equalsIgnoreCase(uri.getScheme()) ? NET : IO).execute(() -> {
+        (fromNetwork(key) ? NET : IO).execute(() -> {
             if (closed) return;
             Bitmap b = null;
             try {
