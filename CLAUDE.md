@@ -403,9 +403,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
 - Settings rows that need something this TV lacks stay, dimmed as *Unavailable*: `SettingsActivity.need` names what a
   row needs, `Capabilities.missing` says why it's missing (once per screen), and OK on the row shows it in a toast.
 - The remote's app buttons (`RemoteKeys`, `RemoteKeyService`) use each brand's key codes: they run only on TCL,
-  Vestel, KTC (NextStar), Sony, Xiaomi, Hisense and Philips' Google TV TVs, the JVC G24, Formovie projectors,
-  Chromecast with Google TV (Sabrina, YouTube only), the Google TV Streamer and onn streamers; the service is on only
-  in Free My TV mode, and *Original* takes it out of the enabled accessibility
+  Vestel, KTC (NextStar), Sony, Xiaomi, Hisense, Kalley R10G and Philips' Google TV TVs, the JVC G24, Formovie
+  projectors, Chromecast with Google TV (Sabrina, YouTube only), the Google TV Streamer and onn streamers; the service
+  is on only in Free My TV mode, and *Original* takes it out of the enabled accessibility
   services. The system waits for the service on every key, so it lives alone in the `:keys` process: what it reads is
   in `remote-keys.txt` (`Prefs.keyApp`), never in SharedPreferences, and `onKeyEvent` does no heavy work.
   The Apps key reaches us two ways, and does the same on every brand: the system starts `HomeActivity` with
@@ -483,6 +483,16 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   Settings, 816 apps, `GUIDE`, 475 Netflix, 781 YouTube, 788 Prime Video. `org.droidtv.GlobalKey` hands Settings to
   launcherx's dashboard, off in our mode, so it opens TV Settings by default, and the apps button our All Apps; the
   app buttons keep working through that receiver until an app is picked (*Philips default*).
+  Kalley R10G (MOKA/Realtek RTD6748, Google TV 14 tested) sends `KEYCODE_BUTTON_4` for Netflix, `KEYCODE_BUTTON_3` for
+  YouTube and `KEYCODE_BUTTON_8` for Prime Video, global keys for `launcherx`; they are keyed as `Prefs.KALLEY_KEY` +
+  key code, like Sony's, since those codes are KTC's Tabii, Xiaomi's Mi and Hisense's YouTube elsewhere. `KALLEY` matches
+  the maker *and* the `R10G` model: Kalley sells TVs from several makers. Its Input (`KEYCODE_TV`/`TV_INPUT`), Settings
+  and Profile (`PROFILE_SWITCH`) buttons were answered by the disabled stock launcher; `RemoteKeys.onActionKey` opens the
+  input switcher, TV Settings and our settings, but only while `HomeActivity` is the window in front and only when the
+  target exists. Guide is left to the TV: it is not one of ours, here or elsewhere.
+  Its Apps button (`KEYCODE_BUTTON_6`, where Google's handler sends it to the key service) opens our All Apps sheet;
+  where the system starts `android.intent.action.ALL_APPS` in the home package instead, the intent filter comes with
+  the Apps key's own PR. Test the app buttons in Free My TV and again after switching to *Original*.
   TCL's Settings button sends `KEYCODE_NOTIFICATION`, which only Google TV's home app (launcherx, off in our mode)
   answers with its quick settings panel. It is a *Remote Buttons* row (`Prefs.KEY_TCL_SETTINGS`) whose default is TV
   Settings (`com.android.tv.settings`, as #289 does from the home screen); its choice `Prefs.QUICK_PANEL` makes

@@ -13,7 +13,12 @@ public class RemoteKeyService extends AccessibilityService {
         return RemoteKeys.onKey(this, event);
     }
 
-    @Override public void onAccessibilityEvent(AccessibilityEvent event) {}
+    /** The window in front: the R10G's Input, Settings and Profile work only over our home screen. */
+    @Override public void onAccessibilityEvent(AccessibilityEvent event) {
+        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && event.getClassName() != null) {
+            RemoteKeys.topWindow = event.getClassName().toString();
+        }
+    }
 
     @Override public void onInterrupt() {}
 }

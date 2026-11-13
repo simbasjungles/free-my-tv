@@ -102,6 +102,7 @@ public class HomeActivity extends Activity {
             recreate();   // a new language or city: draw everything again
             return;
         }
+        RemoteKeys.topWindow = HomeActivity.class.getName();   // the action keys belong to us while we're in front
         if (home != null) home.resume();
         if (liveDark && home != null) {   // the screen came on with the home screen in front
             liveDark = false;
@@ -118,6 +119,7 @@ public class HomeActivity extends Activity {
             liveDark = power != null && !power.isInteractive();
         }
         if (home != null) home.pause();
+        if (HomeActivity.class.getName().equals(RemoteKeys.topWindow)) RemoteKeys.topWindow = null;
         super.onPause();
     }
 
