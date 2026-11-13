@@ -41,8 +41,9 @@ final class Ui {
     private Ui() {}
 
     /**
-     * Android 8 to 11, and any Android short on memory: their GPUs need the cheaper drawing paths (Shadows, rounded
-     * images) and can't afford the off-screen layers (a 2 GB TCL on Android 12 spent 156 MB of GPU memory on them).
+     * Android 8 to 11, and any Android short on memory: their GPUs need the cheaper drawing paths (rounded images,
+     * the drawer cards kept as bitmaps) and can't afford the off-screen layers (a 2 GB TCL on Android 12 spent 156 MB
+     * of GPU memory on them). The shadows' cached masks are for every TV (Shadows).
      * Measured on a 1.9 GB Google TV on Android 14 (Mali-G52, 1080p UI on a 4K panel): with these paths the 90th
      * percentile frame went from 40 to 32 ms, as fast as the TV's own Settings app, and the look is the same.
      */

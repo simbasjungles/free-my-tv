@@ -2253,7 +2253,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             return;
         }
         if (!rainText.isEmpty()) {
-            rainPaint.setColor(tone(0xFF1E88E5, 0xFF64B5F6));
+            rainPaint.setColor(tone(L_FAINT, 0x99FFFFFF));   // the card's quiet tone, as the prices' note beside it
             c.drawText(rainText, r.right - 34 * k, r.top + 54 * k, rainPaint);
         }
         String symbol = Symbols.weather(wx.code, wx.isDay);
