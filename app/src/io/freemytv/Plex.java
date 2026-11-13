@@ -52,6 +52,9 @@ final class Plex {
     /** The token whose lists are being fetched now, or null: another account's slow fetch doesn't hold up a new one. */
     private static volatile String fetchingFor;
     private static volatile long fetchedAt;
+    /** The server didn't answer: it (and plex.tv, for where it is) rests until then, longer each time, 8 minutes at most. */
+    private static volatile long serverRestUntil;
+    private static volatile int serverFailures;
     /** A server's pictures failed to connect: until then, its others don't wait for it (WatchArt shows banners). */
     private static volatile long picturesDownUntil;
     private static volatile String picturesDown = "";   // that server's id
@@ -132,6 +135,8 @@ final class Plex {
                         AppLog.w("plex server: " + why(e));
                     }
                     fetchedAt = 0;
+                    serverRestUntil = 0;
+                    serverFailures = 0;
                     AppLog.w("plex: signed in");
                     return;
                 }
@@ -155,6 +160,8 @@ final class Plex {
         message = "";
         fetchedAt = 0;
         picturesDownUntil = 0;
+        serverRestUntil = 0;
+        serverFailures = 0;
         Runnable l = listener;
         if (l != null) l.run();
     }
@@ -253,7 +260,7 @@ final class Plex {
      */
     static Lists lists(Context c) {
         Lists out = new Lists();
-        if (!signedIn(c) || !installed(c)) return out;
+        if (!signedIn(c) || !installed(c) || off()) return out;
         String saved = sp(c).getString("lists", "");
         try {
             if (!saved.isEmpty()) {
@@ -268,9 +275,14 @@ final class Plex {
         return out;
     }
 
+    /** Turned off in Continue Watching apps (signed in or not): nothing is shown, so nothing is asked of Plex. */
+    private static boolean off() {
+        return Prefs.watchOff().contains(PKG);
+    }
+
     static void refreshIfStale(Context c) {
         long age = System.currentTimeMillis() - fetchedAt;
-        if (!signedIn(c) || age >= 0 && age < EVERY) return;
+        if (!signedIn(c) || age >= 0 && age < EVERY || off()) return;
         Context app = c.getApplicationContext();
         // The account this fetch is for: signed out (or into another one) meanwhile, its result is dropped.
         final String token = sp(app).getString("token", "");
@@ -286,13 +298,18 @@ final class Plex {
                 boolean got = false;
                 // Watchlist titles are looked up on your server only while it answers this refresh: a server that's
                 // down would otherwise be waited on again for every title.
-                boolean[] serverUp = {true};
-                try {
-                    watching = watching(app, token);
-                    got = true;
-                } catch (Exception e) {
-                    serverUp[0] = false;
-                    AppLog.w("plex continue watching: " + why(e));
+                boolean[] serverUp = {System.currentTimeMillis() >= serverRestUntil};
+                if (serverUp[0]) {
+                    try {
+                        watching = watching(app, token);
+                        got = true;
+                        serverFailures = 0;
+                    } catch (Exception e) {
+                        serverUp[0] = false;
+                        // Tried again at the next refresh, then every 2nd, 4th and 8th (half a minute short, to land on one).
+                        serverRestUntil = System.currentTimeMillis() + (EVERY << Math.min(serverFailures++, 3)) - EVERY / 2;
+                        AppLog.w("plex continue watching: " + why(e));
+                    }
                 }
                 try {
                     watchlist = watchlist(app, token, serverUp);
@@ -318,7 +335,7 @@ final class Plex {
                 }
                 Runnable l = listener;
                 if (l != null) l.run();
-            } catch (Exception e) {
+            } catch (Exception | OutOfMemoryError e) {   // nothing escapes: :home's watchdog counts a crash
                 AppLog.w("plex: " + why(e));
             } finally {
                 if (token.equals(fetchingFor)) fetchingFor = null;
