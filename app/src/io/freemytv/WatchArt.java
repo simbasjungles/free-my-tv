@@ -29,9 +29,10 @@ import java.util.concurrent.Executors;
  * centre-cropped), and kept in memory. Drawing only reuses them. Pictures already on the TV are read through the apps'
  * providers (content:// and android.resource://). Some apps (Netflix, JioHotstar) leave an https address instead: those
  * are fetched from where the app said, through NetPicture's checks (https only, never the home network, pictures only,
- * size and time limits), on a thread of their own so a slow server doesn't hold the others back. The app never opens
- * files (file://) or plain http. Anything else, or a picture that can't be read, shows the app's TV banner instead, and
- * isn't tried again for a while (sooner for the network, which may only be late after the TV starts).
+ * size and time limits), on a thread of their own so a slow server doesn't hold the others back. Plex's titles, once
+ * you sign in to it on the TV (Plex.java), bring their pictures from your own Plex server and Plex's artwork. The app
+ * never opens files (file://) or plain http. Anything else, or a picture that can't be read, shows the app's TV banner
+ * instead, and isn't tried again for a while (sooner for the network, which may only be late after the TV starts).
  */
 final class WatchArt {
     /** The card in the 1920×1080 layout; the pictures are made at this times the UI's scale (setScale). */
@@ -72,7 +73,7 @@ final class WatchArt {
      * onLoaded runs on the main thread when it's in).
      */
     Bitmap get(Uri uri, String key, String bannerKey, String pkg) {
-        if (uri != null) {
+        if (uri != null || key != null && key.startsWith(Plex.PICTURE)) {
             Bitmap b = fetch(key, uri, pkg);
             if (b != null || !failedRecently(key)) return b;
         }
@@ -120,6 +121,12 @@ final class WatchArt {
         }
     }
 
+    private boolean cached(String key) {
+        synchronized (cache) {
+            return cache.containsKey(key);
+        }
+    }
+
     private boolean failedRecently(String uri) {
         synchronized (cache) {
             Long at = failed.get(uri);
@@ -149,12 +156,26 @@ final class WatchArt {
             if (closed) return;
             Bitmap b = null;
             try {
-                b = uri == null ? banner(pkg) : load(uri);
+                b = uri != null ? load(read(uri)) : key.startsWith(Plex.PICTURE)
+                        ? load(Plex.picture(app, key)) : banner(pkg);
             } catch (IOException | RuntimeException | OutOfMemoryError e) {
                 AppLog.w("continue watching picture: " + e.getMessage());
             }
             Integer color = b == null ? null : colorOf(b);
             BitmapShader shader = b == null ? null : new BitmapShader(b, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+            // A Plex picture that failed: its banner in the same task, not queued behind the other cards' pictures.
+            String bannerKey = "banner:" + pkg;
+            Bitmap banner = null;
+            if (b == null && uri == null && key.startsWith(Plex.PICTURE) && !cached(bannerKey)) {
+                try {
+                    banner = banner(pkg);
+                } catch (IOException | RuntimeException | OutOfMemoryError e) {
+                    AppLog.w("continue watching banner: " + e.getMessage());
+                }
+            }
+            Integer bannerColor = banner == null ? null : colorOf(banner);
+            BitmapShader bannerShader = banner == null ? null
+                    : new BitmapShader(banner, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
             synchronized (cache) {
                 pending.remove(key);
                 if (closed) return;
@@ -165,14 +186,18 @@ final class WatchArt {
                 } else {
                     failed.put(key, System.currentTimeMillis());
                 }
+                if (banner != null && cache.get(bannerKey) == null) {
+                    shaders.put(banner, bannerShader);
+                    cache.put(bannerKey, banner);
+                    colors.put(bannerKey, bannerColor);
+                }
             }
             main.post(() -> { if (!closed) onLoaded.run(); });   // the picture, or the banner in its place
         });
         return null;
     }
 
-    private Bitmap load(Uri uri) throws IOException {
-        byte[] data = read(uri);
+    private Bitmap load(byte[] data) throws IOException {
         BitmapFactory.Options bounds = new BitmapFactory.Options();
         bounds.inJustDecodeBounds = true;
         BitmapFactory.decodeByteArray(data, 0, data.length, bounds);
