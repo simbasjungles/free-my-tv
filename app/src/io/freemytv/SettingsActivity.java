@@ -214,6 +214,8 @@ public class SettingsActivity extends Activity {
         private Toast whyToast;   // why the focused option is unavailable
         private String[] whyRows;  // each row's reason, worked out once per screen (null: again on the next frame)
         private int whyScreen = -1, whyScroll = -1;
+        private String liveButtonText;   // Home Settings > Live TV button's value (liveButtonValue)
+        private int liveButtonAt;
         private int sleepLeft;     // the sleep timer's minutes left, read with the state, not on every frame
         private int whyState = -1;
         private String errorShown;
@@ -416,6 +418,7 @@ public class SettingsActivity extends Activity {
             if (running) return;
             running = true;
             whyRows = null;
+            liveButtonText = null;   // the device on the port may have another name by now
             startedAt = SystemClock.uptimeMillis();
             lastNanos = 0;
             handler.post(poll);
@@ -1123,8 +1126,7 @@ public class SettingsActivity extends Activity {
             v[RECENTS_ROW] = rec.equals("home") ? Ui.tr("recents|Drawer and Home twice") : rec.equals("drawer") ? Ui.tr("recents|In the drawer") : Ui.tr("Off");
             String power = Prefs.powerOn();
             v[POWER_ON_ROW] = power.equals("home") ? Ui.tr("power|Home screen") : power.equals("live") ? Ui.tr("Live TV") : Ui.tr("TV's choice");
-            HomeApps.Item box = HomeApps.liveButtonInput(getContext());
-            v[LIVE_BUTTON_ROW] = box != null ? box.label : Ui.tr("Live TV");
+            v[LIVE_BUTTON_ROW] = liveButtonValue();
             v[ANDROID_APPS_ROW] = onOff(Prefs.androidApps());
             v[STATUS_ICONS_ROW] = onOff(Prefs.statusIcons());
             v[WEATHER_ROW] = onOff(Prefs.weather());
@@ -1139,6 +1141,20 @@ public class SettingsActivity extends Activity {
             v[v.length - 2] = keyValue(Recs.watchmodeKey());
             v[v.length - 1] = updatesValue();
             return v;
+        }
+
+        /**
+         * The Live TV button's row: Live TV, or the input it opens under its name. Naming it asks the TV for its inputs,
+         * and the list is drawn at every frame while the focus moves: read again only when a setting changed or the
+         * screen came back.
+         */
+        private String liveButtonValue() {
+            if (liveButtonText == null || liveButtonAt != Prefs.version) {
+                HomeApps.Item box = HomeApps.liveButtonInput(getContext());
+                liveButtonText = box != null ? box.label : Ui.tr("Live TV");
+                liveButtonAt = Prefs.version;
+            }
+            return liveButtonText;
         }
 
         /** "auto", then English and every language with a catalogue. */
@@ -1165,6 +1181,7 @@ public class SettingsActivity extends Activity {
                     return pickScroll + i == PLAYING_ROW ? Capabilities.NEED_LISTENER
                             : pickScroll + i == HOME_ROW ? Capabilities.NEED_HOME_ASSISTANT
                             : pickScroll + i == POWER_ON_ROW ? Capabilities.NEED_LIVE_TV
+                            : pickScroll + i == LIVE_BUTTON_ROW ? Capabilities.NEED_HDMI
                             : pickScroll + i == SAVER_ROW ? Capabilities.NEED_SCREENSAVER : null;
                 case POWER: {
                     int id = powerRows()[i];
@@ -1501,7 +1518,7 @@ public class SettingsActivity extends Activity {
                     for (HomeApps.Item it : HomeApps.allInputs(getContext())) if (it.inputId != null) ids.add(it.inputId);
                     int at = Math.max(0, ids.indexOf(Prefs.liveButton()));
                     Prefs.setLiveButton(ids.get((at + dir + ids.size()) % ids.size()));
-                    break;
+                    return;   // nothing the weather or the prices depend on
                 }
                 case ANDROID_APPS_ROW: Prefs.setAndroidApps(!Prefs.androidApps()); break;
                 case STATUS_ICONS_ROW: {
