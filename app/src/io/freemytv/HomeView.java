@@ -2463,10 +2463,17 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         gridDirty = true;
     }
 
-    /** All Apps from the remote's button. Coming back from another app, resume() opens it (it closes the sheet). */
+    /** All Apps from the remote's button: opens the sheet, or closes it when it is already open. */
     void showAllApps() {
-        if (!running) {
+        if (!running) {   // pressed inside another app: All Apps on the way back, not the home screen
             allAppsOnResume = true;
+            return;
+        }
+        long now = SystemClock.uptimeMillis();
+        if (now - allAppsAt < 400) return;   // one press can arrive twice (the Apps key and ACTION_ALL_APPS)
+        allAppsAt = now;
+        if (sheetOpen) {
+            closeSheet();
             return;
         }
         reset(false);
@@ -2474,6 +2481,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     private boolean allAppsOnResume;
+    private long allAppsAt;
 
     /** The remote's Input key (RemoteKeys, through HomeActivity): the drawer on the first input, as the top button. */
     void showInputs() {

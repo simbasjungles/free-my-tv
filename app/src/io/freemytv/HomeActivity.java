@@ -22,6 +22,12 @@ public class HomeActivity extends Activity {
     static final String EXTRA_ALL_APPS = "io.freemytv.ALL_APPS";
     /** Opens the inputs drawer (the remote's Input key while the stock inputs panel is off, RemoteKeys). */
     static final String EXTRA_INPUTS = "io.freemytv.INPUTS";
+
+    /** The Apps key reaches us as ACTION_ALL_APPS (the system's way) or as our extra (RemoteKeys). */
+    private static boolean wantsAllApps(Intent intent) {
+        return intent != null && (intent.getBooleanExtra(EXTRA_ALL_APPS, false)
+                || Intent.ACTION_ALL_APPS.equals(intent.getAction()));
+    }
     private HomeView home;
     private int prefsVersion = Prefs.version;   // settings changed while we were away: start over
 
@@ -46,7 +52,7 @@ public class HomeActivity extends Activity {
         home = new HomeView(this);
         setContentView(home);
         getWindow().setBackgroundDrawable(null);
-        if (getIntent().getBooleanExtra(EXTRA_ALL_APPS, false)) home.showAllApps();
+        if (wantsAllApps(getIntent())) home.showAllApps();
         else if (getIntent().getBooleanExtra(EXTRA_INPUTS, false)) home.showInputs();
         // At power-on "Live TV" (#346): the first time the home screen comes up after a full start, in Free My TV mode.
         if (HomeMode.noteHomeShown(this) && SystemClock.elapsedRealtime() < 240_000 && "live".equals(Prefs.powerOn())) {
@@ -123,7 +129,7 @@ public class HomeActivity extends Activity {
             AppLog.w("at power-on: Home came first, no Live TV");
         }
         if (home == null) return;
-        if (intent.getBooleanExtra(EXTRA_ALL_APPS, false)) {
+        if (wantsAllApps(intent)) {
             home.showAllApps();
             return;
         }
@@ -162,6 +168,12 @@ public class HomeActivity extends Activity {
                     + (event.getAction() == KeyEvent.ACTION_UP ? " up" : "") + "), no Live TV");
         }
         if (RemoteKeys.onKey(this, event)) return true;
+        // The Apps key, where no key service is on. With the service on, the button is Remote Buttons' (Hisense's All
+        // Apps row on Nothing leaves it to the TV), so it must not open the sheet here either.
+        if (event.getKeyCode() == KeyEvent.KEYCODE_ALL_APPS && !RemoteKeys.serviceWanted()) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN && home != null) home.showAllApps();
+            return true;
+        }
         if (home != null && home.onKey(event)) return true;
         return super.dispatchKeyEvent(event);
     }
