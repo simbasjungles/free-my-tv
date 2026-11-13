@@ -57,5 +57,19 @@ expect(prefs({clockFormat: '12'}, {clockFormat: '24'}).clockFormat(), '12', 'the
 expect(prefs({clockFormat: 'auto'}, {clockFormat: '24'}).clockFormat(), 'auto', 'Automatic picked on the TV');
 expect(prefs({clockFormat: 'noon'}).clockFormat(), 'auto', 'not a clock');
 
+// hide_services is where the Picks from switches start; a switch changed on the TV wins from then on.
+var hide = {hideServices: ['netflix', 'appletv']};
+expect(prefs({}).serviceOff('netflix'), false, 'every service on without hide_services');
+expect(prefs({}, hide).serviceOff('netflix'), true, 'hide_services until switched on the TV');
+expect(prefs({}, hide).serviceOff('prime'), false, 'a service hide_services leaves alone');
+expect(prefs({servicesOff: []}, hide).serviceOff('netflix'), false, 'all switched on on the TV wins');
+expect(prefs({servicesOff: ['prime']}, hide).serviceOff('appletv'), false, 'the list kept on the TV wins');
+expect(prefs({servicesOff: ['prime']}, hide).serviceOff('prime'), true, 'switched off on the TV');
+var switched = prefs({}, hide);
+switched.setServiceOff('netflix', false);
+expect(switched.serviceOff('netflix'), false, 'switched on on the TV');
+expect(switched.serviceOff('appletv'), true, 'the rest of hide_services stays off');
+expect(hide.hideServices.length, 2, 'the build\'s list is not changed');
+
 if (failures) process.exit(1);
 console.log('WebPrefsTest: all checks passed.');
