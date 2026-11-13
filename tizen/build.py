@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import xml.dom.minidom
 import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -60,15 +61,39 @@ def sign(profile):
         sys.exit('The package came back without its signatures.')
 
 
-def build(preview, config, profile):
+# samsung_home_button=true: what the page needs to bring itself back after Home (web/tv.js, watchBack). Only then,
+# because every TV that installs the package reads this, the feature on or off: with background-support the page keeps
+# running behind every app (Samsung's FAQ says to leave it on "disable"), and Tizen's own reference says a package
+# with required_version under 2.4 (ours is 2.3, for 2015 TVs) and a reload attribute fails to install. A 2023 TV on
+# Tizen 9 took it as it is here; no older one has tried.
+HOME_BUTTON = '''    <tizen:app-control>
+        <tizen:src name="index.html" reload="disable"/>
+        <tizen:operation name="http://tizen.org/appcontrol/operation/default"/>
+    </tizen:app-control>
+'''
+
+
+def manifest_for(config):
+    """tizen/config.xml, with what samsung_home_button needs when the settings ask for it."""
     with open(os.path.join(ROOT, 'tizen', 'config.xml'), encoding='utf-8') as f:
         manifest = f.read()
+    if config.get('homeButton'):
+        profile, off = '    <tizen:profile name="tv-samsung"/>\n', 'background-support="disable"'
+        if manifest.count(profile) != 1 or manifest.count(off) != 1:
+            sys.exit('tizen/config.xml changed: samsung_home_button no longer finds where its lines go (tizen/build.py).')
+        manifest = manifest.replace(profile, HOME_BUTTON + profile).replace(off, 'background-support="enable"')
+    xml.dom.minidom.parseString(manifest.encode('utf-8'))   # a manifest that isn't XML only fails on the TV
+    return manifest
+
+
+def build(preview, config, profile):
+    manifest = manifest_for(config)
     app_id = re.search(r'<tizen:application id="([^"]+)"', manifest).group(1)
     version = re.search(r'<widget [^>]*version="([^"]+)"', manifest).group(1)
     app = webapp.files(config, 'tizen/build.py')
-    for name in ('config.xml', 'icon.png'):
-        with open(os.path.join(ROOT, 'tizen', name), 'rb') as f:
-            app[name] = f.read()
+    app['config.xml'] = manifest.encode('utf-8')
+    with open(os.path.join(ROOT, 'tizen', 'icon.png'), 'rb') as f:
+        app['icon.png'] = f.read()
 
     with zipfile.ZipFile(WGT, 'w', zipfile.ZIP_DEFLATED) as z:
         for path in sorted(app):
@@ -81,6 +106,8 @@ def build(preview, config, profile):
         print('Preview: open out/tizen/index.html (or serve out/tizen) in a browser.')
     print('Built %s (%s %s, %d KB, %s)' % (os.path.basename(WGT), app_id, version, os.path.getsize(WGT) // 1024,
                                            'signed with "%s"' % profile if profile else 'not signed'))
+    if config.get('homeButton'):
+        print('With samsung_home_button: the app keeps running behind the apps it opens (Home Settings > Home button).')
     if not config['tmdbKey']:
         print('No TMDB key built in: the picks come once one is typed on the TV (Home Settings > TMDB key).')
 

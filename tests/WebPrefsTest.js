@@ -70,6 +70,11 @@ switched.setServiceOff('netflix', false);
 expect(switched.serviceOff('netflix'), false, 'switched on on the TV');
 expect(switched.serviceOff('appletv'), true, 'the rest of hide_services stays off');
 expect(hide.hideServices.length, 2, 'the build\'s list is not changed');
+// Samsung's Home button row: on in a build made with samsung_home_button, until turned off on the TV.
+expect(prefs({}).homeReturns(), false, 'Home stays with the TV');
+expect(prefs({}, {homeButton: true}).homeReturns(), true, 'samsung_home_button from the build');
+expect(prefs({homeReturns: false}, {homeButton: true}).homeReturns(), false, 'turned off on the TV');
+expect(prefs({homeReturns: 'yes'}).homeReturns(), false, 'not a boolean');
 
 if (failures) process.exit(1);
 console.log('WebPrefsTest: all checks passed.');

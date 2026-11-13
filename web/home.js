@@ -572,7 +572,7 @@
 
   /** On the minute, so the clock never runs late (the 30-second refresh could, by up to 30 s). */
   function tickClock() {
-    renderClock();
+    if (!resting()) renderClock();
     setTimeout(tickClock, 60000 - Date.now() % 60000 + 50);
   }
 
@@ -771,7 +771,7 @@
 
   // "Rain in ~40 min" counts down between forecasts: the card is drawn again when its line would read otherwise.
   setInterval(function () {
-    if (Prefs.weather() && Data.weather && weatherParts(Data.weather).join(' · ') !== extraKey) renderPanels();
+    if (!resting() && Prefs.weather() && Data.weather && weatherParts(Data.weather).join(' · ') !== extraKey) renderPanels();
   }, 60000);
 
   function renderPrices(card, coins) {
@@ -1919,6 +1919,12 @@
     updateFocus();
   }
 
+  /**
+   * Samsung, behind another app: a build with samsung_home_button keeps the page running there (the others are paused
+   * by the TV), and nothing is fetched or drawn for a screen nobody sees; coming back catches up (visibilitychange).
+   */
+  function resting() { return TV.name === 'tizen' && document.hidden; }
+
   function reopened() {
     // LG: with handlesRelaunch the app has to come to the front itself, or opening it again while it runs shows nothing.
     if (window.PalmSystem && window.PalmSystem.activate) window.PalmSystem.activate();
@@ -1937,6 +1943,7 @@
     if (document.hidden) return;
     idleAt = Date.now();
     TV.noteChannel();   // back from the viewer: the antenna channel it played, for Live TV
+    if (TV.name === 'tizen') { renderClock(); checkNight(); applyDim(); }   // what resting() left as it was
     loadApps(function () { renderShelf(); renderDrawer(); updateFocus(); Data.refresh(); });
   });
 
@@ -1955,6 +1962,7 @@
     Data.refresh();
   });
   setInterval(function () {
+    if (resting()) return;
     checkNight();
     Data.refresh();
     applyDim();   // automatic: medium from 22:00, off again at 07:00

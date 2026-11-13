@@ -613,7 +613,9 @@ var TV = (function () {
    * or the app closed), Free My TV comes to the front again. Home pressed in Free My TV itself still opens Smart Hub,
    * and nothing is asked while no app opened from here is in front.
    */
-  var back = {timer: null, ids: [], seen: false, away: false, asks: 0, asking: false, on: false};
+  var back = {timer: null, ids: [], seen: false, away: false, asks: 0, waits: 0, gone: 0, asking: false, on: false};
+  // Only a build made with samsung_home_button=true has the manifest for it (tizen/build.py); not Tizen 2.
+  var canReturn = samsung && !tizen2 && (window.CONFIG || {}).homeButton === true;
 
   // The server answers by an app's Smart Hub number (YouTube's 111299001912), which the app's own APIs never tell. By its
   // Tizen id it answers too, but for some apps (YouTube, which runs as com.samsung.tv.cobalt-yt) it says "not visible"
@@ -655,9 +657,6 @@ var TV = (function () {
 
   /** Brings Free My TV to the front. As an app control (the manifest's reload="disable"), the page isn't loaded again. */
   function comeBack() {
-    var self = '';
-    try { self = window.tizen.application.getCurrentApplication().appInfo.id; } catch (e) {}
-    if (!self) return;
     function launch() { try { window.tizen.application.launch(self); } catch (e) {} }
     try {
       var control = new window.tizen.ApplicationControl('http://tizen.org/appcontrol/operation/default', null, null, null, []);
@@ -674,9 +673,12 @@ var TV = (function () {
     back.seen = false;
     back.away = false;
     back.asks = 0;
+    back.waits = 0;
+    back.gone = 0;
     back.asking = false;
     back.timer = setInterval(function () {
-      if (!document.hidden) { if (back.away) stopWatch(); return; }   // back here (the app may still be opening)
+      // Back here, or the app never came to the front (20 s): nothing to watch. Until then it may still be opening.
+      if (!document.hidden) { if (back.away || ++back.waits > 50) stopWatch(); return; }
       back.away = true;
       if (back.asking) return;   // one question at a time: the TV is slow to answer while Smart Hub opens
       if (++back.asks > 50 && !back.seen) { stopWatch(); return; }   // it never showed (20 s): nothing to watch
@@ -685,8 +687,9 @@ var TV = (function () {
         back.asking = false;
         if (!back.timer) return;
         if (on === null) { stopWatch(); return; }   // the server doesn't know it: left alone
-        if (on === true) { back.seen = true; return; }
-        if (on === false && back.seen && document.hidden) { stopWatch(); comeBack(); }
+        if (on === true) { back.seen = true; back.gone = 0; return; }
+        // Twice in a row: one "not visible" in the middle of a film must not bring the home screen over it.
+        if (on === false && back.seen && document.hidden && ++back.gone >= 2) { stopWatch(); comeBack(); }
       });
     }, 400);
   }
@@ -707,8 +710,8 @@ var TV = (function () {
     takesTitle: function (service) { return samsung && !!TITLE_LINKS[service]; },
 
     /** Samsung: Home pressed in an app opened from here can bring Free My TV back (Home Settings > Home button). */
-    canReturnHome: samsung && !tizen2,
-    returnHome: function (on) { back.on = !!on; if (!on) stopWatch(); },
+    canReturnHome: canReturn,
+    returnHome: function (on) { back.on = canReturn && !!on; if (!back.on) stopWatch(); },
 
     /** Installed apps, as the TV's launcher lists them: [{id, title, icon, color}]. */
     apps: function (done) {
