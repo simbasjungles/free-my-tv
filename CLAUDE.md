@@ -664,8 +664,16 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   `tizen.application.launch` doesn't open them, the TV's DIAL server does (`POST http://127.0.0.1:8001/ws/apps/<name>`,
   `dialLaunch`). On Tizen 3 and 4 (2017 and 2018) `launch` answers success for Netflix and it stays black (#257); Smart
   Hub's number for it through the same server's REST API opens it, as phones do (`POST
-  /api/v2/applications/11101200001`, `hubLaunch`; the TV may ask once whether to allow it). `web/tv.js` is the
-  TV's side: on LG, Luna (`listLaunchPoints`, `launch`, the inputs; where webOS 6 and newer deny `listLaunchPoints`
+  /api/v2/applications/11101200001`, `hubLaunch`; the TV may ask once whether to allow it). On Tizen 9, some
+  broadcasters' apps don't open from another app at all (#469): BBC iPlayer (`DqEoaplKlw.bbchybrid`, a 45 KB "hybrid"
+  shell that loads the BBC's hosted app; a 2025 QE50LS03F) and SVT Play (an S95F) leave Free My TV and land on Smart
+  Hub's home screen, with no error to catch. Tried from the page, all the same: `launch`, `launchAppControl` with the
+  default and the `eden_resume` operations (with and without a `PAYLOAD`), `launch` after `hide()`, and DIAL on port
+  8001 (`/ws/apps/iPlayer`, refused); the REST API answers 404 for it, by Tizen id and by Smart Hub number. Smart Hub
+  itself and `0 was_execute` over SDB open it. Samsung documents no other call a page can make. Untried: DIAL on port
+  8080 under the app's registered name (`app_runtitle` in `0 vd_applist`: `uk.co.bbc.iPlayer`), and a service inside
+  the package talking to the TV's own SDB port, as TizenBrew's does: a new piece of the app, so the owner's call.
+  `web/tv.js` is the TV's side: on LG, Luna (`listLaunchPoints`, `launch`, the inputs; where webOS 6 and newer deny `listLaunchPoints`
   to Developer Mode apps, the list comes from the TV's remote control API on `ws://127.0.0.1:3000` once the TV has
   allowed it (it asks once; a "no" isn't asked again; firmware that gives the page its own origin,
   `file://io.freemytv-webos`, gets 1008 "invalid origin" there, and the call goes through `webos/service`, a JS
