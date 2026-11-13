@@ -354,7 +354,7 @@
     var top = k ? k[3][0] : app.color ? darken(app.color, 0.92) : '#2A2A2E';
     var bottom = k ? k[3][1] : app.color ? darken(app.color, 0.62) : '#161618';
     paint(box, top, bottom);
-    var word = el('div', 'word', box, app.title);
+    var word = el('div', 'word', box, I18N.name(app.title));
     if (wordSize) word.style.fontSize = wordSize + 'px';
     if (app.icon) {
       var img = el('img', '', box), url = app.icon;
@@ -527,7 +527,7 @@
       var poster = el('div', 'layer', img);
       poster.style.backgroundImage = 'url(' + (p.poster ? Data.image(p.poster, 'w342') : Data.image(p.backdrop, 'w780')) + ')';
       el('div', 'layer back', img);
-      el('div', 'name', card, p.title);
+      el('div', 'name', card, I18N.name(p.title));
       if (p.meta) el('div', 'meta', card, p.meta);
       hover(card, Z.CARDS, c);
     }
@@ -702,7 +702,7 @@
       startAt(key, xPos);
       key.style.width = tw + 'px';
       sym(item.symbol, key);
-      el('div', 'label', key, item.label);
+      el('div', 'label', key, I18N.name(item.label));
       hover(key, Z.DRAWER, k);
       xPos += tw + gap;
     }
@@ -846,7 +846,7 @@
       startAt(cell, 130 + c * 340);
       cell.style.top = (196 + r * 239) + 'px';
       face(others[i], el('div', 'face', cell), wordFit(others[i].title, 300, 34));
-      el('div', 'label', cell, others[i].title);
+      el('div', 'label', cell, I18N.name(others[i].title));
       hover(cell, Z.APPS, i);
     }
   }
@@ -971,13 +971,13 @@
     rowsNow = settingRows();
     list.style.height = Math.min(rowsNow.length, 7) * 78 + 'px';
     for (var i = 0; i < rowsNow.length; i++) {
-      var r = rowsNow[i], row = el('div', 'row' + (r.dim ? ' dim' : ''), holder, r.label);
+      var r = rowsNow[i], row = el('div', 'row' + (r.dim ? ' dim' : ''), holder, I18N.name(r.label));
       if (r.toggle !== undefined) setClass(el('div', 'toggle', row), 'on', r.toggle);
       else {
         var v = el('span', 'value', row);
         if (r.value === '›') v.textContent = '›';
-        else if (r.opens) { v.appendChild(document.createTextNode(r.value)); el('span', 'chev', v, '›'); }
-        else { el('span', 'chev', v, '‹'); v.appendChild(document.createTextNode(r.value)); el('span', 'chev', v, '›'); }
+        else if (r.opens) { v.appendChild(document.createTextNode(I18N.name(r.value))); el('span', 'chev', v, '›'); }
+        else { el('span', 'chev', v, '‹'); v.appendChild(document.createTextNode(I18N.name(r.value))); el('span', 'chev', v, '›'); }
       }
       hover(row, Z.SETTINGS, i);
     }
@@ -1362,7 +1362,7 @@
     list.style.height = Math.min(e.rows.length, 7) * 78 + 'px';
     for (var i = 0; i < e.rows.length; i++) {
       var item = e.rows[i], at = (forInputs ? e.keys : e.ids).indexOf(forInputs ? item.key : item.id);
-      var row = el('div', 'row', holder, forInputs ? item.label || tr('Live TV') : item.title);
+      var row = el('div', 'row', holder, I18N.name(forInputs ? item.label || tr('Live TV') : item.title));
       var place = el('span', 'value', row, at >= 0 ? '#' + (at + 1) : tr('shelf|Off'));
       if (at >= 0) sym('check', place).style[rtl ? 'marginRight' : 'marginLeft'] = '16px';   // shown: a check, as in the pickers
       hover(row, Z.EDIT, i);
@@ -1487,7 +1487,7 @@
     return function () {
       lookingUp = '';
       TV.launch(id, params || null, function (ok) {
-        if (!ok) toast(trf("Couldn't open {app}.", {app: name || id}));
+        if (!ok) toast(trf("Couldn't open {app}.", {app: I18N.name(name || id)}));
       });
     };
   }
@@ -1779,11 +1779,11 @@
       if (p) {
         back.style.backgroundImage = 'url(' + Data.image(p.backdrop, 'original') + ')';
         back.style.webkitTransform = back.style.transform = 'scale(1.0)';
-        clock.children[2].textContent = p.title;
+        clock.children[2].textContent = I18N.name(p.title);
         saverPick = p;
         // With Watch from the screensaver on, OK opens this title's app (any other key only closes).
         var target = Prefs.saverWatch() ? pickTarget(p) : null;
-        hint.textContent = target ? trf('Press OK to watch on {app} · any other button to close', {app: target.app.title}) : '';
+        hint.textContent = target ? trf('Press OK to watch on {app} · any other button to close', {app: I18N.name(target.app.title)}) : '';
         setTimeout(function () {
           setClass(back, 'on', true);
           setClass(front, 'on', false);

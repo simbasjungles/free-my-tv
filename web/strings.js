@@ -60,6 +60,20 @@ var I18N = (function () {
     return String(s).replace(/[0-9]/g, function (d) { return ARABIC_DIGITS.charAt(+d); });
   }
 
+  var RTL_LETTER = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/;
+  var LETTER = /[A-Za-z\u00C0-\u024F\u0370-\u052F\u0900-\u0E7F\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF]|[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/;
+
+  /**
+   * A name from elsewhere (an app, a service, a title, "°C") inside right-to-left text. One that starts left to right
+   * gets left-to-right marks around it, or the signs at its ends change sides: "Disney+" read "+Disney", "°C" read
+   * "C°", and a title's "?" came first. As it is in left-to-right languages, and for an Arabic name.
+   */
+  function ownDirection(s) {
+    if (RTL[base(lang)] !== true || !s) return s;
+    var first = LETTER.exec(s);
+    return first && !RTL_LETTER.test(first[0]) ? '\u200E' + s + '\u200E' : s;
+  }
+
   /** The text for this English key in the current language (the English itself when there is none). */
   function tr(english) {
     if (has.call(catalogue, english)) return catalogue[english];
@@ -300,6 +314,7 @@ var I18N = (function () {
     languages: languages,
     languageName: languageName,
     digits: digits,
+    name: ownDirection,
     tr: tr,
     trf: trf,
     plural: plural,

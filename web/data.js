@@ -678,7 +678,7 @@ var Data = (function () {
         var s = service(flat[i].provider_name, flat[i].provider_id);
         if (s && usable(s[1])) { p.app = s[1]; p.service = s[4]; }
       }
-      if (p.service && p.app) parts.push(p.service);
+      if (p.service && p.app) parts.push(I18N.name(p.service));
       p.meta = parts.join(' · ');
       title(p, o, function () {
         p.detailed = true;
