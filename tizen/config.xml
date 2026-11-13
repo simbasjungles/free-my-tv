@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://freemytv.io/tizen" version="1.4.0" viewmodes="maximized">
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://freemytv.io/tizen" version="1.5.0" viewmodes="maximized">
     <tizen:application id="FreeMyTVio.FreeMyTV" package="FreeMyTVio" required_version="2.3"/>
     <name>Free My TV</name>
     <author href="https://freemytv.io">Free My TV</author>
