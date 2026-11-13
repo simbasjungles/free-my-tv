@@ -38,7 +38,8 @@ final class Plex {
     private static final String TV = "https://plex.tv/api/v2";
     private static final String DISCOVER = "https://discover.provider.plex.tv";
     private static final long EVERY = 60_000L;
-    private static final int MAX_BYTES = 8 << 20;
+    /** A picture, and an answer: lists of 20 titles are well under this, and a huge one must not take :home down. */
+    private static final int MAX_BYTES = 8 << 20, MAX_JSON = 2 << 20;
 
     /** What Continue Watching shows from Plex: in progress first (Plex's order), then the watchlist. */
     static final class Lists {
@@ -118,7 +119,7 @@ final class Plex {
                     try {
                         name = new JSONObject(request(app, "GET", TV + "/user", token, 8000)).optString("username");
                     } catch (Exception e) {
-                        AppLog.w("plex user: " + e.getMessage());
+                        AppLog.w("plex user: " + why(e));
                     }
                     synchronized (Plex.class) {
                         // A new account starts clean: no server or lists of an earlier one can be mixed in.
@@ -128,7 +129,7 @@ final class Plex {
                     try {
                         findServer(app, token);
                     } catch (Exception e) {
-                        AppLog.w("plex server: " + e.getMessage());
+                        AppLog.w("plex server: " + why(e));
                     }
                     fetchedAt = 0;
                     AppLog.w("plex: signed in");
@@ -136,8 +137,8 @@ final class Plex {
                 }
                 message = Ui.tr("The code expired. Press OK for a new one.");
             } catch (Exception e) {
-                message = Ui.trf("Couldn't sign in: {error}", "error", e.getMessage());
-                AppLog.w("plex sign-in: " + e.getMessage());
+                message = Ui.trf("Couldn't sign in: {error}", "error", why(e));
+                AppLog.w("plex sign-in: " + why(e));
             } finally {
                 signingIn = false;
                 changed.run();
@@ -181,7 +182,7 @@ final class Plex {
             if (!r.optString("provides").contains("server")) continue;
             if (r.optBoolean("owned")) servers.add(0, r); else servers.add(r);
         }
-        if (servers.isEmpty()) throw new IOException("no Plex Media Server on this account");
+        if (servers.isEmpty()) throw new PlexError("no Plex Media Server on this account");
         for (JSONObject s : servers) {
             String serverToken = s.optString("accessToken", token);
             JSONArray connections = s.optJSONArray("connections");
@@ -200,7 +201,7 @@ final class Plex {
                     continue;
                 }
                 synchronized (Plex.class) {
-                    if (!token.equals(sp(c).getString("token", ""))) throw new IOException("signed out meanwhile");
+                    if (!token.equals(sp(c).getString("token", ""))) throw new PlexError("signed out meanwhile");
                     sp(c).edit().putString("serverUri", uri).putString("serverId", s.optString("clientIdentifier"))
                             .putString("serverToken", serverToken).putString("serverName", s.optString("name")).apply();
                 }
@@ -208,7 +209,7 @@ final class Plex {
                 return;
             }
         }
-        throw new IOException("couldn't reach your Plex server");
+        throw new PlexError("couldn't reach your Plex server");
     }
 
     /** A GET on your server; if the saved address stopped answering, the server is found again (once). */
@@ -270,13 +271,13 @@ final class Plex {
                     got = true;
                 } catch (Exception e) {
                     serverUp[0] = false;
-                    AppLog.w("plex continue watching: " + e.getMessage());
+                    AppLog.w("plex continue watching: " + why(e));
                 }
                 try {
                     watchlist = watchlist(app, token, serverUp);
                     got = true;
                 } catch (Exception e) {
-                    AppLog.w("plex watchlist: " + e.getMessage());
+                    AppLog.w("plex watchlist: " + why(e));
                     // Plex refused the account's token (this TV removed from the account, or every session signed
                     // out): signed out here too, so the row drops its titles and Sign in is offered again. A network
                     // failure keeps everything.
@@ -297,7 +298,7 @@ final class Plex {
                 Runnable l = listener;
                 if (l != null) l.run();
             } catch (Exception e) {
-                AppLog.w("plex: " + e.getMessage());
+                AppLog.w("plex: " + why(e));
             } finally {
                 if (token.equals(fetchingFor)) fetchingFor = null;
             }
@@ -432,19 +433,23 @@ final class Plex {
         // The key is PICTURE + server + "|" + the picture (WatchNext.Item.plex).
         int bar = key.startsWith(PICTURE) ? key.indexOf('|') : -1;
         String image = bar > 0 ? key.substring(bar + 1) : "", serverId = bar > 0 ? key.substring(PICTURE.length(), bar) : "";
-        if (!signedIn(c) || image.isEmpty()) throw new IOException("no Plex picture");
+        if (!signedIn(c) || image.isEmpty()) throw new PlexError("no Plex picture");
         HttpURLConnection conn;
         boolean server = !image.startsWith("https://");
         if (server && serverId.equals(picturesDown) && System.currentTimeMillis() < picturesDownUntil) {
-            throw new IOException("Plex server down");
+            throw new PlexError("Plex server down");
         }
-        if (!server) {
-            conn = (HttpURLConnection) new URL(image).openConnection();
-        } else {
-            String url = sp(c).getString("serverUri", "") + "/photo/:/transcode?width=1280&height=720&minSize=1&upscale=1&url="
-                    + URLEncoder.encode(image, "UTF-8");
-            conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setRequestProperty("X-Plex-Token", sp(c).getString("serverToken", ""));
+        try {
+            if (!server) {
+                conn = (HttpURLConnection) new URL(image).openConnection();
+            } else {
+                String url = sp(c).getString("serverUri", "") + "/photo/:/transcode?width=1280&height=720&minSize=1&upscale=1&url="
+                        + URLEncoder.encode(image, "UTF-8");
+                conn = (HttpURLConnection) new URL(url).openConnection();
+                conn.setRequestProperty("X-Plex-Token", sp(c).getString("serverToken", ""));
+            }
+        } catch (IOException | RuntimeException e) {
+            throw new PlexError("no Plex picture (" + e.getClass().getSimpleName() + ")");
         }
         conn.setInstanceFollowRedirects(false);
         conn.setConnectTimeout(4000);
@@ -458,11 +463,16 @@ final class Plex {
                     picturesDown = serverId;
                     picturesDownUntil = System.currentTimeMillis() + EVERY;
                 }
-                throw e;
+                // WatchArt logs this: without the address (the server's has the home's IP in it).
+                throw new PlexError("can't reach Plex (" + e.getClass().getSimpleName() + ")");
             }
-            if (status != 200) throw new IOException("Plex picture: HTTP " + status);
+            if (status != 200) throw new PlexError("Plex picture: HTTP " + status);
             try (InputStream in = conn.getInputStream()) {
-                return readAll(in);
+                return readAll(in, MAX_BYTES);
+            } catch (PlexError e) {
+                throw e;
+            } catch (IOException e) {
+                throw new PlexError("can't reach Plex (" + e.getClass().getSimpleName() + ")");
             }
         } finally {
             conn.disconnect();
@@ -470,6 +480,20 @@ final class Plex {
     }
 
     // MARK: - HTTP
+
+    /**
+     * What the log and the Plex row may say about a failure: only this file's own messages. A JSONException's text
+     * holds the answer it couldn't read (a pin's or a server list's has tokens in it), and a network error's names the
+     * server's address.
+     */
+    private static String why(Throwable e) {
+        return e instanceof PlexError ? e.getMessage() : e.getClass().getSimpleName();
+    }
+
+    /** This file's own failures: their text never has an address, a token or a piece of an answer. */
+    private static final class PlexError extends IOException {
+        PlexError(String message) { super(message); }
+    }
 
     /** Errors never carry the URL; the token is only ever in the header, which a redirect would not get either. */
     private static String request(Context c, String method, String url, String token, int timeout) throws IOException {
@@ -490,24 +514,28 @@ final class Plex {
             try {
                 status = conn.getResponseCode();
             } catch (IOException e) {
-                throw new IOException("can't reach Plex (" + e.getClass().getSimpleName() + ")");
+                throw new PlexError("can't reach Plex (" + e.getClass().getSimpleName() + ")");
             }
-            if (status < 200 || status >= 300) throw new IOException("Plex returned HTTP " + status);
+            if (status < 200 || status >= 300) throw new PlexError("Plex returned HTTP " + status);
             try (InputStream in = conn.getInputStream()) {
-                return new String(readAll(in), StandardCharsets.UTF_8);
+                return new String(readAll(in, MAX_JSON), StandardCharsets.UTF_8);
+            } catch (PlexError e) {
+                throw e;
+            } catch (IOException e) {
+                throw new PlexError("can't reach Plex (" + e.getClass().getSimpleName() + ")");
             }
         } finally {
             conn.disconnect();
         }
     }
 
-    private static byte[] readAll(InputStream in) throws IOException {
+    private static byte[] readAll(InputStream in, int max) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buffer = new byte[16384];
         int n;
         while ((n = in.read(buffer)) > 0) {
             out.write(buffer, 0, n);
-            if (out.size() > MAX_BYTES) throw new IOException("too large");
+            if (out.size() > max) throw new PlexError("Plex's answer is too large");
         }
         return out.toByteArray();
     }
