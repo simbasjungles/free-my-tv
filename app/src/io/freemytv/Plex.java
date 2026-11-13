@@ -112,12 +112,23 @@ final class Plex {
                 JSONObject pin = new JSONObject(request(app, "POST", TV + "/pins?strong=false", null, 8000));
                 code = pin.getString("code");
                 changed.run();
-                long until = System.currentTimeMillis() + pin.optLong("expiresIn", 900) * 1000L;
+                long until = System.currentTimeMillis() + pin.optLong("expiresIn", 900) * 1000L, id = pin.getLong("id");
+                long wait = 2000;
                 while (System.currentTimeMillis() < until) {
-                    Thread.sleep(2000);
-                    String token = new JSONObject(request(app, "GET", TV + "/pins/" + pin.getLong("id"), null, 8000))
-                            .optString("authToken");
+                    Thread.sleep(wait);
+                    String token;
+                    try {
+                        token = new JSONObject(request(app, "GET", TV + "/pins/" + id, null, 8000)).optString("authToken");
+                    } catch (PlexError e) {
+                        // The Wi-Fi blinked, or Plex said "slower": the code on screen is still good. Any other "no" ends it.
+                        boolean slower = "Plex returned HTTP 429".equals(e.getMessage());
+                        if (!slower && !e.getMessage().startsWith("can't reach Plex")) throw e;
+                        if (slower) wait = Math.min(wait + 1000, 10_000);
+                        continue;
+                    }
                     if (token.isEmpty() || "null".equals(token)) continue;   // not typed yet
+                    code = null;   // typed: the row says Connecting… while the account and its server are read
+                    changed.run();
                     String name = "";
                     try {
                         name = new JSONObject(request(app, "GET", TV + "/user", token, 8000)).optString("username");
@@ -141,7 +152,7 @@ final class Plex {
                     return;
                 }
                 message = Ui.tr("The code expired. Press OK for a new one.");
-            } catch (Exception e) {
+            } catch (Exception | OutOfMemoryError e) {
                 message = Ui.trf("Couldn't sign in: {error}", "error", why(e));
                 AppLog.w("plex sign-in: " + why(e));
             } finally {
