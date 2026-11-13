@@ -124,6 +124,24 @@ final class RemoteKeys {
         int source = e.getSource();
         if ((source & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
                 || (source & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) return false;
+        // Only the verified TCL remote's TV button: another device's vendor key is left alone.
+        if (TCL && e.getKeyCode() == TclRemote.KEY_TV) {
+            InputDevice device = InputDevice.getDevice(e.getDeviceId());
+            if (device != null && TclRemote.liveTv(e.getKeyCode(), e.getScanCode(),
+                    device.getVendorId(), device.getProductId())) {
+                // Consume its release and repeats without querying the tuner or opening it again.
+                if (e.getAction() != KeyEvent.ACTION_DOWN || e.getRepeatCount() != 0) return true;
+                Intent live = HomeApps.liveTv(c);
+                if (live == null) return false;
+                try {
+                    c.startActivity(live.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                    AppLog.w("remote key 4001 -> live TV");
+                } catch (android.content.ActivityNotFoundException | SecurityException ex) {
+                    AppLog.w("remote target unavailable: live TV");
+                }
+                return true;
+            }
+        }
         if (CHROMECAST_SABRINA) {
             InputDevice device = InputDevice.getDevice(e.getDeviceId());
             if (device == null || !SabrinaRemote.isRemote(device.getVendorId(), device.getProductId())) return false;
