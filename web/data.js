@@ -824,7 +824,8 @@ var Data = (function () {
             var meta = [tr('Series')];
             if (c.sh.genres && c.sh.genres.length) meta.push(genre(c.sh.genres[0]));
             meta.push(c.sv[4]);
-            out.push({id: 'maze' + c.sh.id, kind: 'tv', title: c.sh.name, backdrop: back, poster: poster,
+            // source: not a TMDB title, so no TMDB-id links (Nuvio, Watchmode): it opens its streaming app
+            out.push({id: 'maze' + c.sh.id, source: 'tvmaze', kind: 'tv', title: c.sh.name, backdrop: back, poster: poster,
               meta: meta.join(' · '), app: c.sv[1], service: c.sv[4], detailed: true});
           }
           next();

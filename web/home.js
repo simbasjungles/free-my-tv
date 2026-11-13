@@ -1466,7 +1466,8 @@
 
   function pickTarget(p) {
     if (!p) return null;
-    var via = Prefs.openPicks() === 'nuvio' ? nuvio() : null;
+    // Nuvio's links take a TMDB id: TVMaze's picks (no TMDB key) open their streaming app.
+    var via = Prefs.openPicks() === 'nuvio' && p.source !== 'tvmaze' ? nuvio() : null;
     var app = via || Data.appFor(p.app);
     if (!app) return null;
     // Nuvio's own link for the title, as on Android (nuvio://tmdb/movie/603); webOS apps get links as contentTarget.
