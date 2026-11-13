@@ -501,23 +501,18 @@ var TV = (function () {
   }
 
   function samsungInputs(done) {
-    var live = {id: 'source:TV:1', key: 'live', label: null, symbol: 'live_tv', connected: true};
-    function hdmi(n, on) { return {id: 'source:HDMI:' + n, key: 'hdmi' + n, label: 'HDMI ' + n, symbol: 'hdmi', connected: on}; }
-    try {
-      window.tizen.systeminfo.getPropertyValue('VIDEOSOURCE', function (v) {
-        // The ports the TV has are the ones it lists, connected or not (a 2023 CU7000 has three): only those show.
-        var on = {}, ports = [], list = [live], i;
-        for (i = 0; v && v.connected && i < v.connected.length; i++) if (v.connected[i].type === 'HDMI') on[v.connected[i].number] = true;
-        var all = v ? (v.connected || []).concat(v.disconnected || []) : [];
-        for (i = 0; i < all.length; i++) if (all[i].type === 'HDMI' && all[i].number >= 1 && ports.indexOf(all[i].number) < 0) ports.push(all[i].number);
-        ports.sort(function (a, b) { return a - b; });
-        if (!ports.length) ports = [1, 2, 3, 4];
-        for (i = 0; i < ports.length; i++) list.push(hdmi(ports[i], !v || !!on[ports[i]]));
-        done(list);
-      }, function () { done([live, hdmi(1, true), hdmi(2, true), hdmi(3, true), hdmi(4, true)]); });
-    } catch (e) {
-      done([live, hdmi(1, true), hdmi(2, true), hdmi(3, true), hdmi(4, true)]);
-    }
+    var list = [{id: 'source:TV:1', key: 'live', label: null, symbol: 'live_tv', connected: true}];
+    for (var n = 1; n <= 4; n++) list.push({id: 'source:HDMI:' + n, key: 'hdmi' + n, label: 'HDMI ' + n, symbol: 'hdmi', connected: true});
+    samsungSources(function (sources) {
+      if (sources) {
+        for (var i = 1; i < list.length; i++) list[i].connected = false;
+        for (var j = 0; j < sources.length; j++) {
+          var s = sources[j];
+          if (s.type === 'HDMI' && s.number >= 1 && s.number <= 4) list[s.number].connected = true;
+        }
+      }
+      done(list);
+    });
   }
 
   /** Samsung's settings: whichever app answers the platform's "settings" request, else the TV's menu (Tizen 3). */
