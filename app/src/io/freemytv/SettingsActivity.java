@@ -214,6 +214,7 @@ public class SettingsActivity extends Activity {
         private Toast whyToast;   // why the focused option is unavailable
         private String[] whyRows;  // each row's reason, worked out once per screen (null: again on the next frame)
         private int whyScreen = -1, whyScroll = -1;
+        private boolean whyDollar;
         private String liveButtonText;   // Home Settings > Live TV button's value (liveButtonValue)
         private int liveButtonAt;
         private int sleepLeft;     // the sleep timer's minutes left, read with the state, not on every frame
@@ -235,6 +236,7 @@ public class SettingsActivity extends Activity {
         private final Runnable poll = new Runnable() {
             @Override public void run() {
                 if (!running) return;
+                clampHomeScroll();
                 state = HomeMode.state(getContext());
                 sleepLeft = SleepTimer.minutesLeft(getContext());
                 hasKey = Recs.hasKey(getContext());
@@ -257,10 +259,11 @@ public class SettingsActivity extends Activity {
                         announceForAccessibility(stalledText());
                     }
                 }
-                // What can change the reasons away from a key: a switch (or the watchdog's revert) and the overlay's and the
-                // listener's checks.
+                // What can change the reasons away from a key: a switch (or the watchdog's revert), the overlay's and the
+                // listener's checks, and whether the Dollar row is shown.
                 int whyNow = (freeActive() ? 1 : 0) | (Capabilities.refused(getContext(), Capabilities.OVERLAY) ? 2 : 0)
-                        | (Capabilities.refused(getContext(), Capabilities.LISTENER) ? 4 : 0);
+                        | (Capabilities.refused(getContext(), Capabilities.LISTENER) ? 4 : 0)
+                        | (dollar() ? 8 : 0);
                 if (whyNow != whyState) whyRows = null;
                 whyState = whyNow;
                 // A switch just ended: TalkBack reads how it went (the newest notice).
@@ -350,7 +353,7 @@ public class SettingsActivity extends Activity {
                     boolean keys = screen == REMOTE_KEYS;
                     String[] labels = listLabels(), values = listValues();
                     int at = keys ? row : pickScroll + row;
-                    return at >= labels.length ? "" : values[at].equals("›") ? labels[at] : labels[at] + ", " + values[at];   // "›" is only drawn
+                    return at >= labels.length || at >= values.length ? "" : values[at].equals("›") ? labels[at] : labels[at] + ", " + values[at];   // "›" is only drawn
                 }
                 case PICKER: {
                     int at = pickScroll + row;
@@ -418,6 +421,7 @@ public class SettingsActivity extends Activity {
             if (running) return;
             running = true;
             whyRows = null;
+            clampHomeScroll();
             liveButtonText = null;   // the device on the port may have another name by now
             startedAt = SystemClock.uptimeMillis();
             lastNanos = 0;
@@ -999,7 +1003,17 @@ public class SettingsActivity extends Activity {
         private static final int SETTINGS_VISIBLE = 10;
 
         private boolean dollar() {
-            return "BRL".equals(Place.currency());
+            HomeData.get(getContext());
+            return HomeData.dollarRow();
+        }
+
+        private void clampHomeScroll() {
+            if (screen != HOME_SETTINGS) return;
+            int rows = settingLabels().length;
+            int maxScroll = Math.max(0, rows - SETTINGS_VISIBLE);
+            if (pickScroll > maxScroll) pickScroll = maxScroll;
+            int visible = Math.min(SETTINGS_VISIBLE, rows);
+            if (focus >= visible) focus = Math.max(0, visible - 1);
         }
 
         private String[] settingLabels() {
@@ -1202,10 +1216,12 @@ public class SettingsActivity extends Activity {
         private String unavailable(int i) {
             int n = rowCount();
             if (i < 0 || i >= n) return null;
-            if (whyRows == null || whyRows.length != n || whyScreen != screen || whyScroll != pickScroll) {
+            boolean d = screen == HOME_SETTINGS && dollar();
+            if (whyRows == null || whyRows.length != n || whyScreen != screen || whyScroll != pickScroll || whyDollar != d) {
                 whyRows = new String[n];
                 whyScreen = screen;
                 whyScroll = pickScroll;
+                whyDollar = d;
                 for (int r = 0; r < n; r++) {
                     String need = need(r);
                     whyRows[r] = screen == HOME_SETTINGS && pickScroll + r >= COIN_ROWS && pickScroll + r < keyRow() && !Prefs.quotes()
@@ -2410,6 +2426,7 @@ public class SettingsActivity extends Activity {
         }
 
         private void drawList(Canvas c) {
+            clampHomeScroll();
             boolean keys = screen == REMOTE_KEYS;
             String[] labels = listLabels();
             String[] values = listValues();
@@ -2417,7 +2434,9 @@ public class SettingsActivity extends Activity {
             c.drawText(keys ? Ui.tr("Remote Buttons") : screen == POWER ? Ui.tr("Sleep Timer") : screen == PICKS ? Ui.tr("Picks") : Ui.tr("Home Settings"),
                     LIST_X * k + 30 * k, (LIST_TOP - 24) * k, heading);
             float pitch = LIST_ROW_H + LIST_ROW_GAP;
-            int rows = keys ? labels.length : rowCount(), from = keys ? 0 : pickScroll;
+            int from = keys ? 0 : Math.min(pickScroll, Math.max(0, labels.length - rowCount()));
+            int rows = keys ? Math.min(labels.length, values.length)
+                    : Math.min(rowCount(), Math.min(labels.length, values.length) - from);
             for (int i = 0; i < rows; i++) {
                 float y = (LIST_TOP + 20 + i * pitch) * k;
                 rowRect.set(LIST_X * k, y, LIST_R * k, y + LIST_ROW_H * k);
