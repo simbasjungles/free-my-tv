@@ -64,8 +64,15 @@ def read_config(path):
         'showCrypto': values.get('show_crypto', 'true').lower() != 'false',
         'hideAnimation': values.get('hide_animation', 'false').lower() == 'true',
         'hideApps': [s.strip() for s in values.get('hide_apps', '').split(',') if s.strip()],
+        # Where Home Settings' Picks from switches start, as on Android (Prefs.offServices): netflix, prime, disney...
+        'hideServices': [s.strip().lower() for s in values.get('hide_services', '').split(',') if s.strip()],
+        # Samsung: a pick opens its title's page in its app (Watchmode's free plan: 2,500 requests a month).
+        'watchmodeKey': values.get('watchmode_key', '').strip(),
         'shelfApps': [s.strip() for s in values.get('shelf_apps', '').split(',') if s.strip()],
         'drawerFirst': values.get('drawer_first', 'false').lower() == 'true',
+        # Samsung: Home pressed in an app opened from here brings Free My TV back. It changes the package's manifest
+        # (tizen/build.py), so only a build that asks for it carries it; the release doesn't.
+        'homeButton': values.get('samsung_home_button', 'false').lower() == 'true',
         'openPicksIn': 'nuvio' if values.get('open_picks_in', '').strip().lower() == 'nuvio' else 'apps',
         # 24 or 12 forces the clock; auto follows the language's catalogue.
         'clockFormat': values.get('clock_format', '').strip() if values.get('clock_format', '').strip() in ('24', '12') else 'auto',

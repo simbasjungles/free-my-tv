@@ -15,13 +15,17 @@ var I18N = (function () {
 
   /** The usual country for each language's dates and numbers, when the TV itself is in another language. */
   var REGIONS = {pt: 'BR', es: 'ES', de: 'DE', fr: 'FR', it: 'IT', nl: 'NL', pl: 'PL', sv: 'SE', da: 'DK', nb: 'NO',
-    fi: 'FI', cs: 'CZ', sk: 'SK', ro: 'RO', tr: 'TR', ru: 'RU', uk: 'UA', el: 'GR', ja: 'JP', ko: 'KR', hi: 'IN', id: 'ID', vi: 'VN', th: 'TH'};
+    fi: 'FI', cs: 'CZ', sk: 'SK', ro: 'RO', tr: 'TR', ru: 'RU', uk: 'UA', el: 'GR', ja: 'JP', ko: 'KR', hi: 'IN', id: 'ID', vi: 'VN', th: 'TH',
+    ar: 'SA'};
+
+  /** Languages written right to left: the home screen is mirrored for them (home.js). */
+  var RTL = {ar: true, he: true, fa: true, ur: true};
 
   /** Each language in its own name, for TVs without Intl.DisplayNames (Chromium before 81). */
   var NAMES = {en: 'English', pt: 'Português', es: 'Español', de: 'Deutsch', fr: 'Français', it: 'Italiano',
     nl: 'Nederlands', pl: 'Polski', sv: 'Svenska', da: 'Dansk', nb: 'Norsk bokmål', fi: 'Suomi', cs: 'Čeština', sk: 'Slovenčina',
     ro: 'Română', tr: 'Türkçe', ru: 'Русский', uk: 'Українська', el: 'Ελληνικά', ja: '日本語', ko: '한국어',
-    'zh-CN': '简体中文', 'zh-TW': '繁體中文', hi: 'हिन्दी', id: 'Indonesia', vi: 'Tiếng Việt', th: 'ไทย'};
+    'zh-CN': '简体中文', 'zh-TW': '繁體中文', hi: 'हिन्दी', id: 'Indonesia', vi: 'Tiếng Việt', th: 'ไทย', ar: 'العربية'};
 
   /**
    * The CLDR plural category of a whole number, for TVs without Intl.PluralRules (Chromium before 63). Only the
@@ -36,12 +40,38 @@ var I18N = (function () {
     },
     cs: function (n) { return n === 1 ? 'one' : n >= 2 && n <= 4 ? 'few' : 'other'; },
     sk: function (n) { return n === 1 ? 'one' : n >= 2 && n <= 4 ? 'few' : 'other'; },
-    ro: function (n) { var h = n % 100; return n === 1 ? 'one' : n === 0 || (h >= 1 && h <= 19) ? 'few' : 'other'; }
+    ro: function (n) { var h = n % 100; return n === 1 ? 'one' : n === 0 || (h >= 1 && h <= 19) ? 'few' : 'other'; },
+    ar: function (n) {
+      var h = n % 100;
+      return n === 0 ? 'zero' : n === 1 ? 'one' : n === 2 ? 'two' : h >= 3 && h <= 10 ? 'few' : h >= 11 ? 'many' : 'other';
+    }
   };
 
   function slavic(n) {
     var t = n % 10, h = n % 100;
     return t === 1 && h !== 11 ? 'one' : t >= 2 && t <= 4 && (h < 12 || h > 14) ? 'few' : 'many';
+  }
+
+  var ARABIC_DIGITS = '٠١٢٣٤٥٦٧٨٩';
+
+  /** Digits 0-9 written as the language writes them: ٠-٩ in Arabic, as they are elsewhere. */
+  function digits(s) {
+    if (base(lang) !== 'ar') return s;
+    return String(s).replace(/[0-9]/g, function (d) { return ARABIC_DIGITS.charAt(+d); });
+  }
+
+  var RTL_LETTER = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/;
+  var LETTER = /[A-Za-z\u00C0-\u024F\u0370-\u052F\u0900-\u0E7F\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF]|[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/;
+
+  /**
+   * A name from elsewhere (an app, a service, a title, "°C") inside right-to-left text. One that starts left to right
+   * gets left-to-right marks around it, or the signs at its ends change sides: "Disney+" read "+Disney", "°C" read
+   * "C°", and a title's "?" came first. As it is in left-to-right languages, and for an Arabic name.
+   */
+  function ownDirection(s) {
+    if (RTL[base(lang)] !== true || !s) return s;
+    var first = LETTER.exec(s);
+    return first && !RTL_LETTER.test(first[0]) ? '\u200E' + s + '\u200E' : s;
   }
 
   /** The text for this English key in the current language (the English itself when there is none). */
@@ -56,7 +86,7 @@ var I18N = (function () {
   /** A pattern with named placeholders, filled from an object: trf('{n} min ago', {n: 12}). */
   function trf(english, values) {
     return tr(english).replace(/\{([a-zA-Z_][a-zA-Z_0-9]*)\}/g, function (all, name) {
-      return values && has.call(values, name) ? String(values[name]) : all;
+      return values && has.call(values, name) ? (typeof values[name] === 'number' ? digits(String(values[name])) : String(values[name])) : all;
     });
   }
 
@@ -72,7 +102,7 @@ var I18N = (function () {
       if (name === category) chosen = last;
       if (name === 'other') other = last;
     }
-    return (chosen !== null ? chosen : other !== null ? other : last).replace(/\{n\}/g, String(n));
+    return (chosen !== null ? chosen : other !== null ? other : last).replace(/\{n\}/g, digits(String(n)));
   }
 
   function pluralOf(n) {
@@ -97,6 +127,7 @@ var I18N = (function () {
     else if (clock === '12' && CLOCK12[key]) pattern = CLOCK12[key];
     var out = format(pattern, d, locale);
     if (out === null) out = format(key.substring(key.indexOf('|') + 1), d, 'en-US');
+    out = digits(out);
     formatted[key] = {minute: minute, lang: lang, text: out};
     return out;
   }
@@ -197,6 +228,8 @@ var I18N = (function () {
       var parts = new Intl.DateTimeFormat(loc, {hour: 'numeric', hour12: true}).formatToParts(d);
       for (var i = 0; i < parts.length; i++) if (parts[i].type === 'dayPeriod') return parts[i].value;
     } catch (e) { /* older Chromium: no formatToParts */ }
+    // Chromium before 57 (webOS 3 and 4, Tizen 3 and 4) and Tizen 2: Arabic's own letters, not "PM" in an Arabic clock.
+    if (base(lang) === 'ar') return d.getHours() < 12 ? 'ص' : 'م';
     return d.getHours() < 12 ? 'AM' : 'PM';
   }
 
@@ -253,6 +286,8 @@ var I18N = (function () {
   function localeOf(code) {
     if (code === 'en') return 'en-US';
     if (code === 'pt') return 'pt-BR';
+    // Gregorian dates (ar-SA alone gives the Hijri calendar), with the Arabic digits ٠-٩.
+    if (code === 'ar') return 'ar-SA-u-ca-gregory-nu-arab';
     if (code.indexOf('-') > 0) return code;
     var tv = navigator.language || '';
     if (base(tv) === code && tv.indexOf('-') > 0) return code + tv.substring(tv.indexOf('-'));
@@ -270,12 +305,16 @@ var I18N = (function () {
     },
     /** The catalogue in use: "en", "pt", "zh-CN"… */
     get lang() { return lang; },
+    /** True for a language written right to left. */
+    get rtl() { return RTL[base(lang)] === true; },
     /** The language without its country, as TMDB names it ("zh" for "zh-CN"). */
     get base() { return base(lang); },
-    /** BCP 47 tag for dates, numbers and TMDB. */
+    /** BCP 47 tag for dates and numbers (Arabic's carries its calendar and digits: "-u-ca-gregory-nu-arab"). */
     locale: function () { return locale; },
     languages: languages,
     languageName: languageName,
+    digits: digits,
+    name: ownDirection,
     tr: tr,
     trf: trf,
     plural: plural,

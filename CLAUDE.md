@@ -216,6 +216,24 @@ Developer Mode; Samsung's home screen stays. Two ways:
    with their own account (Samsung decides who gets that level): the release and TizenBrew's builds can't carry it,
    a build with another author certificate means uninstalling first (Home Settings and the TMDB key go with it), and
    certificates, their passwords and the DUID never go in the chat.
+   *Home button* (`samsung_home_button=true` in their own build, then Home Settings, `Prefs.homeReturns`;
+   `TV.canReturnHome`, not Tizen 2) brings Free My TV back when Home is pressed in an app opened from it: no app may
+   take Samsung's Home key, so `watchBack` asks the TV's own server (`GET 127.0.0.1:8001/api/v2/applications/<id>`,
+   `visible`) every 0.4 s while that app is in front, and once it isn't (twice in a row), `comeBack` opens Free My TV
+   as an app control. It can't tell Home from anything else that takes the screen (another input, an app opened by
+   voice or from a phone). Tested on a 2023 QN55Q60C (Tizen 9.0). What it needs: `background-support="enable"`
+   (without it the page freezes once hidden, and nothing is asked), the manifest's `<tizen:app-control>` with
+   `reload="disable"` (without it the page loads again: 2 to 5 s instead of 0.8), and the app's Smart Hub number.
+   The two manifest pieces go in only with that setting (`manifest_for` in `tizen/build.py`), never in the release,
+   until someone has installed and updated such a build on older TVs: every TV reads the manifest, the feature on or
+   off; Samsung's FAQ says to leave `background-support` on "disable" (the page then runs behind every app: `resting()`
+   in home.js keeps it from fetching or drawing there); and Tizen's reference says `reload` with `required_version`
+   under 2.4 fails to install (ours is 2.3; Tizen 9 took it anyway, and Samsung's own guide for 2015 TVs pairs it
+   with a `devel.api.version` 2.4 metadata line, untried here). The Smart Hub number (`HUB_IDS`; `0 vd_applist` over SDB lists each `app_id`): by its Tizen id the server doesn't
+   know the built-in apps, and says YouTube (`9Ur5IzDKqV.TizenYouTube`, which runs as `com.samsung.tv.cobalt-yt`) is
+   never visible. The app's own status listener (`addAppStatusChangeListener`) says nothing there, and a POST to that
+   server from the app is refused (from a computer it works). A Tizen Web Service could watch without the page, but it
+   needs a Partner certificate (see `on-boot` above).
 
 ## Releases
 
@@ -364,7 +382,11 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   `python3 tools/translate.py`: it rebuilds `en.json` from the code and lists what each language lacks; translate those
   in every catalogue (or `--fill` with `ANTHROPIC_API_KEY`, which sends only the strings), and keep placeholders as they
   are. Run `python3 tools/translate.py --check` to validate all catalogues without writing files.
-  No right-to-left languages yet (the layout isn't mirrored); CJK and Devanagari use the system font.
+  Right to left: the web app (LG, Samsung) mirrors for Arabic (`I18N.rtl`; home.js places things with `startAt`/`endAt`
+  from the start edge and swaps ← → where the layout runs; home.css's `.rtl` rules mirror the rest), and `I18N.digits`
+  writes ٠-٩ in Arabic. The Android app isn't mirrored yet, so `Ui.languages()` leaves the right-to-left catalogues
+  out (`Ui.RTL`): Arabic isn't in its list, and "auto" on an Arabic TV stays in English; `ar.json` still ships for the
+  web app and is checked like the others. CJK, Devanagari and Arabic use the system font.
   Comments in English, short, only where the why isn't obvious.
 - Settings come from `config.properties` through the generated `out/gen/io/freemytv/Config.java` (never edit that).
   Built with `--generic`, the place values are empty and `Place` fills them from the TV's time zone
@@ -404,8 +426,11 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   in `remote-keys.txt` (`Prefs.keyApp`), never in SharedPreferences, and `onKeyEvent` does no heavy work.
   The Apps key reaches us two ways, and does the same on every brand: the system starts `HomeActivity` with
   `ACTION_ALL_APPS` (the manifest filter) where a stock home screen answered it, and `KEYCODE_ALL_APPS` is taken in
-  `HomeActivity.dispatchKeyEvent` where no key service is on. `HomeView.showAllApps` opens the sheet, or closes it on a
-  second press, ignoring the same press delivered twice within 400 ms.
+  `HomeActivity.dispatchKeyEvent` unless the key has a row in Remote Buttons on this TV (Hisense).
+  `HomeView.showAllApps` opens the sheet, or closes it on a second press, ignoring the same press delivered twice within
+  400 ms. Neither reaches us where the system aims `ACTION_ALL_APPS` at `com.android.tv.settings` and keeps the key (a
+  Mi Stick, #414; a TCL on Google TV 14: `START {act=android.intent.action.ALL_APPS pkg=com.android.tv.settings}`
+  fails with -91 and the window never sees 284).
   The service is also off while every button is *Nothing* (not on Hisense, for the Input key), and always on TCL's
   Android 11 (`RemoteKeys.FILTER_SAFE`): there any key filter makes the TV act on a volume key twice (one press moves
   2 steps and a held key gets stuck, #325; turning off only our service fixed it), so the buttons work only where they
@@ -556,6 +581,13 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   It unbinds itself as soon as it connects (the permission is all it's for), and the home screen and the screensaver
   watch the sessions only while they show. The line is cut to fit when the title changes, never while drawing; the
   home screen's bars bounce again only for a new title (`Watch.title`), and TalkBack announces it then.
+- The drawer's inputs are the person's to choose (#488, #497): *Inputs* (Settings on Google TV and Android TV, Home
+  Settings on LG and Samsung, where it took the place of the *Live TV* switch and carries it over) is the Shelf's
+  editor over Live TV and the HDMI ports: OK shows or hides one, ← → move it (`Prefs.inputsOrder`/`inputsHidden` on both
+  sides, `VisibleOrder` on Android). Never by signal; until it's used, everything shows in the TV's order; a port
+  that turns up later joins at the end, and one that's gone keeps its place. The quick panel follows it, and with no
+  input at all the row is Unavailable. *Home Settings* → *Live TV button* (`Prefs.liveButton`, #422, #503) is separate:
+  what the first top button opens, Live TV or an HDMI input, even one hidden from the drawer.
 - *At power-on* (Home Settings, `Prefs.powerOn()`: `tv`, the default, `home` or `live`; #396, #346) acts only after a
   full start, never on a wake from standby. `HomeActivity` keeps the uptime of the first time the home screen came up
   in this start (`HomeMode.noteHomeShown`, the file `home-shown` with `Settings.Global.BOOT_COUNT`). `live`: 10 s later,
@@ -655,15 +687,32 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   `tizen.application.launch` doesn't open them, the TV's DIAL server does (`POST http://127.0.0.1:8001/ws/apps/<name>`,
   `dialLaunch`). On Tizen 3 and 4 (2017 and 2018) `launch` answers success for Netflix and it stays black (#257); Smart
   Hub's number for it through the same server's REST API opens it, as phones do (`POST
-  /api/v2/applications/11101200001`, `hubLaunch`; the TV may ask once whether to allow it). `web/tv.js` is the
-  TV's side: on LG, Luna (`listLaunchPoints`, `launch`, the inputs; where webOS 6 and newer deny `listLaunchPoints`
+  /api/v2/applications/11101200001`, `hubLaunch`; the TV may ask once whether to allow it). On Tizen 9, some
+  broadcasters' apps don't open from another app at all (#469): BBC iPlayer (`DqEoaplKlw.bbchybrid`, a 45 KB "hybrid"
+  shell that loads the BBC's hosted app; a 2025 QE50LS03F) and SVT Play (an S95F) leave Free My TV and land on Smart
+  Hub's home screen, with no error to catch. Tried from the page, all the same: `launch`, `launchAppControl` with the
+  default and the `eden_resume` operations (with and without a `PAYLOAD`), `launch` after `hide()`, and DIAL on port
+  8001 (`/ws/apps/iPlayer`, refused); the REST API answers 404 for it, by Tizen id and by Smart Hub number. Smart Hub
+  itself and `0 was_execute` over SDB open it. Samsung documents no other call a page can make. Untried: DIAL on port
+  8080 under the app's registered name (`app_runtitle` in `0 vd_applist`: `uk.co.bbc.iPlayer`), and a service inside
+  the package talking to the TV's own SDB port, as TizenBrew's does: a new piece of the app, so the owner's call.
+  `web/tv.js` is the TV's side: on LG, Luna (`listLaunchPoints`, `launch`, the inputs; where webOS 6 and newer deny `listLaunchPoints`
   to Developer Mode apps, the list comes from the TV's remote control API on `ws://127.0.0.1:3000` once the TV has
   allowed it (it asks once; a "no" isn't asked again; firmware that gives the page its own origin,
   `file://io.freemytv-webos`, gets 1008 "invalid origin" there, and the call goes through `webos/service`, a JS
   service in the package whose handshake says `file://`; webOS 22 with 2026 firmware tested), and until then from
   `getAppLoadStatus` over a list of known app ids, which shows the logo bundled in `web/icons/` where there is one, otherwise the name on the brand's color);
   on Samsung, `tizen.application` (`getAppsInfo`, `launch`), the `VIDEOSOURCE` property and
-  `tizen.tvwindow.setSource` for the inputs, then Samsung's viewer (`org.tizen.tv-viewer`) to show them. Samsung's own
+  `tizen.tvwindow.setSource` for the inputs, then Samsung's viewer (`org.tizen.tv-viewer`) to show them. The viewer
+  plays whatever it played last, Samsung TV Plus's channels too, so Live TV tunes the antenna first (`tuneAntenna`,
+  `tizen.tvchannel`, the `tv.channel` privilege): the last antenna channel seen when the home screen comes back
+  (`noteChannel`, `fmtv.channel`), else the first one (a 2023 QN55Q60C, Tizen 9.0, went to TV Plus before; the one TV
+  it was tried on). Samsung took `tizen.tvchannel` out of its API reference in 2019 (it was public, since Tizen 2.3):
+  where it's missing, refuses, or a list or the tuner doesn't answer in 2.5 s, the viewer opens as before. With a
+  `watchmode_key`, a Prime Video pick opens its title (`TV.takesTitle`, `samsungDeepLink`: the `eden_resume` operation
+  with `{"values": "<GTI>"}` under PAYLOAD, the GTI from Watchmode's web address, #483). Disney+ (Tizen 9: the entity
+  id, the address, eden_resume or view, running or not), Netflix and HBO Max open at home, so only Prime is looked up,
+  and only when a pick is opened (`Data.titleLink`). Samsung's own
   data is unreliable: on Tizen 3 no app's `iconPath` loads (on Tizen 4 and 5, YouTube's and Prime Video's are a
   placeholder), so logos are bundled in `web/icons/` and keyed by app id in `SAMSUNG_ICONS` (SVGs need a width and
   height for old WebKit); some names are empty or long (`SAMSUNG_TITLES`); and Tizen 3 answers no "settings" app

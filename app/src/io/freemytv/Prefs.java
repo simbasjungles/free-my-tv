@@ -356,6 +356,11 @@ final class Prefs {
 
     static void setPowerOn(String v) { put("powerOn", v); }
 
+    /** Home Settings > Live TV button: the TV input (its id) the Live TV button opens instead, or "" for Live TV. */
+    static String liveButton() { return sp().getString("liveButton", ""); }
+
+    static void setLiveButton(String inputId) { put("liveButton", inputId); }
+
     // MARK: - Widgets and coins
 
     static boolean weather() { return sp().getBoolean("weather", true); }
@@ -487,6 +492,38 @@ final class Prefs {
         StringBuilder sb = new StringBuilder();
         for (String p : keys) sb.append(sb.length() == 0 ? "" : ",").append(p);
         put("topButtons", sb.toString());
+    }
+
+    // MARK: - Drawer inputs
+
+    /** The drawer's inputs in the person's order (Settings > Inputs): the shown ones' keys ("live", "hdmi1"...),
+     *  an input the TV no longer lists keeping its place. null until the editor is used: the TV's order then. */
+    static List<String> inputsOrder() {
+        String v = sp().getString("inputsOrder", null);
+        if (v == null) return null;
+        List<String> out = new ArrayList<>();
+        for (String p : v.split(",")) if (!p.isEmpty()) out.add(p);
+        return out;
+    }
+
+    static void setInputsOrder(List<String> keys) {
+        StringBuilder sb = new StringBuilder();
+        for (String p : keys) sb.append(sb.length() == 0 ? "" : ",").append(p);
+        put("inputsOrder", sb.toString());
+    }
+
+    /** The inputs Settings > Inputs hides; none until it's used. */
+    static List<String> inputsHidden() {
+        String v = sp().getString("inputsHidden", "");
+        List<String> out = new ArrayList<>();
+        for (String p : v.split(",")) if (!p.isEmpty()) out.add(p);
+        return out;
+    }
+
+    static void setInputsHidden(List<String> keys) {
+        StringBuilder sb = new StringBuilder();
+        for (String p : keys) sb.append(sb.length() == 0 ? "" : ",").append(p);
+        put("inputsHidden", sb.toString());
     }
 
     // MARK: - Remote buttons

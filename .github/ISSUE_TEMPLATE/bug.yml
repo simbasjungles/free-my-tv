@@ -40,7 +40,7 @@ body:
       description: |
         LG and Samsung: the last line of Home Settings → About this TV.
         Google TV / Android TV / Fire TV: on the Free My TV settings screen, on the left under the name.
-      placeholder: "1.4"
+      placeholder: "1.5"
   - type: textarea
     id: what
     attributes:

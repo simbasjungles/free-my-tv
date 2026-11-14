@@ -42,11 +42,39 @@ expect(prefs({}).liveInput(), true, 'Live TV in the inputs until hidden');
 expect(prefs({liveInput: false}).liveInput(), false, 'Live TV hidden');
 expect(prefs({liveInput: 'off'}).liveInput(), true, 'not a boolean');
 
+expect(prefs({}).inputsOrder(), null, 'the TV inputs order until the editor is used');
+expect(prefs({inputsOrder: ['hdmi2', 'live']}).inputsOrder().join(','), 'hdmi2,live', 'the saved inputs order');
+expect(prefs({inputsOrder: 'hdmi2'}).inputsOrder(), null, 'an order that is not a list');
+expect(prefs({}).inputsHidden().join(','), '', 'no input hidden until picked');
+expect(prefs({liveInput: false}).inputsHidden().join(','), 'live', 'the Live TV switch until the editor is used');
+expect(prefs({liveInput: false, inputsHidden: []}).inputsHidden().join(','), '', 'the editor carries the switch over');
+expect(prefs({inputsHidden: ['hdmi3']}).inputsHidden().join(','), 'hdmi3', 'a hidden input');
+expect(prefs({inputsHidden: 'none'}).inputsHidden().join(','), '', 'hidden inputs that are not a list');
+
 expect(prefs({}).clockFormat(), 'auto', 'the clock of the language until picked');
 expect(prefs({}, {clockFormat: '24'}).clockFormat(), '24', 'clock_format from the build');
 expect(prefs({clockFormat: '12'}, {clockFormat: '24'}).clockFormat(), '12', 'the choice on the TV wins');
 expect(prefs({clockFormat: 'auto'}, {clockFormat: '24'}).clockFormat(), 'auto', 'Automatic picked on the TV');
 expect(prefs({clockFormat: 'noon'}).clockFormat(), 'auto', 'not a clock');
+
+// hide_services is where the Picks from switches start; a switch changed on the TV wins from then on.
+var hide = {hideServices: ['netflix', 'appletv']};
+expect(prefs({}).serviceOff('netflix'), false, 'every service on without hide_services');
+expect(prefs({}, hide).serviceOff('netflix'), true, 'hide_services until switched on the TV');
+expect(prefs({}, hide).serviceOff('prime'), false, 'a service hide_services leaves alone');
+expect(prefs({servicesOff: []}, hide).serviceOff('netflix'), false, 'all switched on on the TV wins');
+expect(prefs({servicesOff: ['prime']}, hide).serviceOff('appletv'), false, 'the list kept on the TV wins');
+expect(prefs({servicesOff: ['prime']}, hide).serviceOff('prime'), true, 'switched off on the TV');
+var switched = prefs({}, hide);
+switched.setServiceOff('netflix', false);
+expect(switched.serviceOff('netflix'), false, 'switched on on the TV');
+expect(switched.serviceOff('appletv'), true, 'the rest of hide_services stays off');
+expect(hide.hideServices.length, 2, 'the build\'s list is not changed');
+// Samsung's Home button row: on in a build made with samsung_home_button, until turned off on the TV.
+expect(prefs({}).homeReturns(), false, 'Home stays with the TV');
+expect(prefs({}, {homeButton: true}).homeReturns(), true, 'samsung_home_button from the build');
+expect(prefs({homeReturns: false}, {homeButton: true}).homeReturns(), false, 'turned off on the TV');
+expect(prefs({homeReturns: 'yes'}).homeReturns(), false, 'not a boolean');
 
 if (failures) process.exit(1);
 console.log('WebPrefsTest: all checks passed.');

@@ -659,3 +659,47 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .flat .cell.focus .face { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4) !important; }
 .flat #home, .flat #drawer, .flat #cards, .flat .card, .flat #tiles, .flat .tile { will-change: transform; }
 .flat #top { will-change: opacity; }
+
+/*
+ * MARK: - Right to left (Arabic)
+ * home.js puts what it places (shelf, cards, drawer, buttons) at distances from the start edge, which is the right one
+ * here; this mirrors the rest. Arabic letters join, so no letter spacing; the font needs Arabic letters, which Inter
+ * lacks, so the TV's own Arabic font takes over for them.
+ */
+.rtl #cards, .rtl #tiles { width: 1920px; }
+.rtl * { letter-spacing: 0 !important; }
+body.rtl { font-family: 'Inter', 'Noto Sans Arabic', 'SamsungOne', 'Segoe UI', Tahoma, Arial, sans-serif; }
+
+.rtl #title { left: auto; right: 76px; }
+.rtl #tabs { left: auto; right: 54px; }
+.rtl .tab { margin-right: 0; margin-left: 4px; }
+.rtl #quotes .q { margin-left: 0; margin-right: 24px; }
+.rtl #quotes svg { margin-right: 0; margin-left: 6px; }
+.rtl .round.last .tip { left: -10px; right: auto; margin-left: 0; text-align: left; }
+.rtl .card .name, .rtl .card .meta { left: auto; right: 0; }
+.rtl #clock { left: auto; right: 76px; }
+
+.rtl .panel .head { left: auto; right: 34px; }
+.rtl .panel .side { right: auto; left: 34px; }
+.rtl #weather .now, .rtl #weather .cond, .rtl #weather .extra, .rtl #weather .range { left: auto; right: 34px; }
+.rtl #weather .now .sym { margin-right: 0; margin-left: 18px; }
+.rtl #weather .split { left: auto; right: 391px; }
+.rtl #weather .hours { left: 30px; right: 422px; }
+.rtl #weather .hour .low { margin-left: 0; margin-right: 6px; }
+.rtl #weather .sun { left: auto; right: 422px; }
+.rtl #weather .sun .sym { margin-right: 0; margin-left: 10px; }
+.rtl #weather .sun span { margin-right: 0; margin-left: 36px; }
+.rtl #prices .coin svg { left: auto; right: 2px; }
+.rtl #prices .coin .n { left: auto; right: 50px; }
+.rtl #prices .coin .p { right: auto; left: 128px; }
+.rtl #prices .coin .c { right: auto; left: 0; }
+
+.rtl .box .title .sym { margin-right: 0; margin-left: 14px; }
+.rtl .box .row .value { right: auto; left: 24px; }
+.rtl .toggle { right: auto; left: 24px; }
+.rtl .toggle::after { left: auto; right: 4px; }
+.rtl .toggle.on::after { -webkit-transform: translateX(-34px); transform: translateX(-34px); }
+.rtl #saver .clock { left: auto; right: 80px; }
+.rtl #ambient .clock { left: auto; right: 96px; }
+.rtl #ambient .date { left: auto; right: 108px; }
+.rtl #ambient .side { right: auto; left: 108px; text-align: left; }

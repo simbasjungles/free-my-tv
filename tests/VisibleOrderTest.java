@@ -13,6 +13,12 @@ public final class VisibleOrderTest {
         assertions++;
         if (!condition) throw new AssertionError(reason);
     }
+    private static void arrange(List<String> saved, List<String> hidden, List<String> current, List<String> expected) {
+        List<String> currentOriginal = new ArrayList<>(current);
+        check(VisibleOrder.arrange(saved, hidden, current).equals(expected), "wrong arranged order");
+        check(current.equals(currentOriginal), "the current list must not change");
+    }
+
     private static void order(List<String> saved, List<String> moved, List<String> expected) {
         List<String> original = new ArrayList<>(saved), moveOriginal = new ArrayList<>(moved);
         check(VisibleOrder.replace(saved, moved).equals(expected), "wrong saved order");
@@ -40,6 +46,13 @@ public final class VisibleOrderTest {
         }
         List<String> moved = VisibleOrder.replace(list("live", "store", "inputs", "settings"), list("settings", "live", "inputs"));
         order(moved, list("store", "settings", "inputs", "live"), list("store", "settings", "inputs", "live"));
+        // arrange: saved order first, unknown keys appended, hidden keys out, gone keys skipped
+        arrange(null, list(), list("live", "hdmi1"), list("live", "hdmi1"));
+        arrange(list("hdmi2", "live"), list(), list("live", "hdmi1", "hdmi2"), list("hdmi2", "live", "hdmi1"));
+        arrange(list("live", "hdmi3", "hdmi2"), list(), list("live", "hdmi1", "hdmi2"), list("live", "hdmi2", "hdmi1"));
+        arrange(list("live", "hdmi1", "hdmi2"), list("hdmi1"), list("live", "hdmi1", "hdmi2"), list("live", "hdmi2"));
+        arrange(null, list("hdmi1"), list("live", "hdmi1"), list("live"));
+        arrange(list("hdmi3", "live"), list("hdmi3"), list("live", "hdmi1"), list("live", "hdmi1"));
         System.out.println("VisibleOrder: " + assertions + " assertions passed");
     }
 
