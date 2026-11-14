@@ -94,6 +94,9 @@ var Prefs = (function () {
     tmdbKey: function () { return String(pick('tmdbKey', CONFIG.tmdbKey || '')).trim(); },
     /** True when the key in use was typed on the TV (Remove takes it back to config.properties'). */
     tmdbKeyOnTV: function () { return v.tmdbKey !== undefined; },
+    /** The Watchmode key typed on the TV (Home Settings → Watchmode key), or config.properties' ('' for none). */
+    watchmodeKey: function () { return String(pick('watchmodeKey', CONFIG.watchmodeKey || '')).trim(); },
+    watchmodeKeyOnTV: function () { return v.watchmodeKey !== undefined; },
     setCity: function (name, lat, lon) { v.city = name; v.latitude = lat; v.longitude = lon; save(); this.version++; },
     /** Streaming services (keys like "netflix") whose titles are left out of the picks: hide_services until switched on the TV. */
     serviceOff: function (key) { return pick('servicesOff', CONFIG.hideServices || []).indexOf(key) >= 0; },
@@ -516,7 +519,7 @@ var Data = (function () {
    * requests a title, then remembered, '' too). Without a key, after a refused key or a failed lookup (10 min), ''.
    */
   function titleLink(p, done) {
-    var key = String(CONFIG.watchmodeKey || '').trim();
+    var key = Prefs.watchmodeKey();
     if (!key || wmRefused || !p || !p.app || !(p.id > 0) || Date.now() < wmRetryAt) { done(''); return; }
     var links = stored('wm') || {}, id = p.kind + ':' + p.id + ':' + p.app;
     if (typeof links[id] === 'string') { done(links[id]); return; }
@@ -567,6 +570,14 @@ var Data = (function () {
   }
 
   /** Asks TMDB whether a key works before it's saved: done(error), with error.rejected when TMDB said no. */
+  /** A Watchmode key typed on the TV, checked with Watchmode's /status/ (as on Android) before it's kept. */
+  function checkWatchmodeKey(key, done) {
+    get(WATCHMODE + '/status/?apiKey=' + encodeURIComponent(key), {}, function (err) {
+      if (err && /rejected/.test(err.message)) err.rejected = true;   // get() calls any 401 "rejected the key"
+      done(err || null);
+    });
+  }
+
   function checkKey(key, done) {
     tmdb('/configuration', function (err) {
       if (err && /rejected/.test(err.message)) err.rejected = true;
@@ -853,6 +864,9 @@ var Data = (function () {
     activeCoins: activeCoins,
     hasKey: function () { return !!KEY; },
     checkKey: checkKey,
+    checkWatchmodeKey: checkWatchmodeKey,
+    /** A Watchmode key typed (or removed) on the TV: lookups start again with it (a refused key no longer stops them). */
+    watchmodeKeyChanged: function () { wmRefused = false; wmRetryAt = 0; },
     /** A key typed (or removed) on the TV: the picks come again with it, or go. */
     keyChanged: function () { KEY = Prefs.tmdbKey(); recsError = ''; failedAt = 0; refreshRecs(); changed(); },
     recsError: function () { return recsError; },

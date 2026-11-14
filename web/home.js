@@ -929,7 +929,12 @@
       })(i);
     }
     rows.push({label: tr('TMDB key'), value: Prefs.tmdbKey().length >= 4 ? '•••• ' + Prefs.tmdbKey().slice(-4) : tr('Not set'), opens: true, tmdb: true,
-      step: function (d) { if (d >= 0) openKey(); }});
+      step: function (d) { if (d >= 0) openKey('tmdb'); }});
+    // Watchmode: only where a pick can open on its title (Samsung's Prime Video, TV.takesTitle); LG opens the app.
+    if (TV.name !== 'webos') {
+      rows.push({label: tr('Watchmode key'), value: Prefs.watchmodeKey().length >= 4 ? '•••• ' + Prefs.watchmodeKey().slice(-4) : tr('Not set'),
+        opens: true, watchmode: true, step: function (d) { if (d >= 0) openKey('watchmode'); }});
+    }
     var sv = Data.services();
     if (sv.length) {
       var someOff = false;   // only the services this TV has count
@@ -1175,22 +1180,44 @@
     else closeCities(true);
   }
 
-  // MARK: - TMDB key: typed on the TV, so builds without one (the releases) get the picks too; TMDB checks it first
+  // MARK: - TMDB and Watchmode keys: typed on the TV, so builds without one (the releases) get them too; each service
+  // checks its key first. One sheet for both: keyKind says which.
 
-  var keyStatus = '', keyWarn = false, keyTimer = 0, keySeq = 0, keyAsking = false;
+  var keyStatus = '', keyWarn = false, keyTimer = 0, keySeq = 0, keyAsking = false, keyKind = 'tmdb';
 
-  function keyRows() { return keyAsking ? 2 : Prefs.tmdbKeyOnTV() ? 3 : 2; }
-
-  function keySteps() {
-    return tr("The key brings the picks: what's trending on your streaming apps, with their photos on the screensaver.") + '\n'
-      + tr('Free, and it takes two minutes:') + '\n' + I18N.digits(1) + '. ' + tr('Create an account at themoviedb.org.')
-      + '\n' + I18N.digits(2) + '. ' + tr('Open Settings → API and request a developer key.');
+  /** What the sheet says and does for keyKind (each text a literal for tools/translate.py). */
+  function keyText() {
+    if (keyKind === 'watchmode') {
+      return {
+        title: tr('Watchmode key'), removeAsk: tr('Remove the Watchmode key?'), checking: tr('Checking the key with Watchmode…'),
+        bad: tr("That doesn't look like a Watchmode key."), refused: tr('Watchmode refused this key.'),
+        unreachable: function (e) { return trf("Couldn't reach Watchmode: {error}", {error: e}); }, saved: tr("Saved. The picks' pages arrive in a moment."),
+        placeholder: tr('Watchmode key'), pref: 'watchmodeKey', onTV: Prefs.watchmodeKeyOnTV(),
+        check: Data.checkWatchmodeKey, changed: Data.watchmodeKeyChanged,
+        steps: tr("The key makes a pick open the title's page in its app, where the app allows it.") + '\n'
+          + tr('Free, and it takes two minutes:') + '\n' + I18N.digits(1) + '. ' + tr('Create an account at api.watchmode.com.')
+          + '\n' + I18N.digits(2) + '. ' + tr('Copy the API key it gives you.')
+      };
+    }
+    return {
+      title: tr('TMDB key'), removeAsk: tr('Remove the TMDB key?'), checking: tr('Checking the key with TMDB…'),
+      bad: tr("That doesn't look like a TMDB key."), refused: tr('TMDB refused this key.'),
+      unreachable: function (e) { return trf("Couldn't reach TMDB: {error}", {error: e}); }, saved: tr('Saved. The picks arrive in a moment.'),
+      placeholder: tr('API Read Access Token or API Key'), pref: 'tmdbKey', onTV: Prefs.tmdbKeyOnTV(),
+      check: Data.checkKey, changed: Data.keyChanged,
+      steps: tr("The key brings the picks: what's trending on your streaming apps, with their photos on the screensaver.") + '\n'
+        + tr('Free, and it takes two minutes:') + '\n' + I18N.digits(1) + '. ' + tr('Create an account at themoviedb.org.')
+        + '\n' + I18N.digits(2) + '. ' + tr('Open Settings → API and request a developer key.')
+    };
   }
+
+  function keyRows() { return keyAsking ? 2 : keyText().onTV ? 3 : 2; }
 
   function renderKey() {
     var box = $('keypick').firstChild, old = fieldOf('keypick'), typed = old ? old.value : '', inField = typingIn('keypick');
     box.innerHTML = '';
-    el('div', 'title', box, keyAsking ? tr('Remove the TMDB key?') : tr('TMDB key'));
+    var kt = keyText();
+    el('div', 'title', box, keyAsking ? kt.removeAsk : kt.title);
     var list = el('div', 'list', box), holder = el('div', 'rows', list);
     list.style.height = keyRows() * 78 + 'px';
     if (keyAsking) {
@@ -1199,21 +1226,22 @@
       updateFocus();
       return;
     }
-    var keyField = textField(holder, Z.KEY, typed, tr('API Read Access Token or API Key'), tr('TMDB key'));
+    var keyField = textField(holder, Z.KEY, typed, kt.placeholder, kt.title);
     // A v3 key is lowercase hex: the TV's keyboard mustn't capitalize it (the city's field wants capitals).
     keyField.setAttribute('autocapitalize', 'none');
     keyField.setAttribute('autocorrect', 'off');
     var save = el('div', 'row', holder, tr('Save'));
     forward(el('span', 'value', save));
     hover(save, Z.KEY, 1);
-    if (Prefs.tmdbKeyOnTV()) hover(el('div', 'row', holder, tr('Remove the key')), Z.KEY, 2);
+    if (kt.onTV) hover(el('div', 'row', holder, tr('Remove the key')), Z.KEY, 2);
     if (keyStatus) setClass(el('div', 'hint', box, keyStatus), 'warn', keyWarn);
-    el('div', 'hint steps', box, keySteps());
+    el('div', 'hint steps', box, kt.steps);
     if (inField) openField('keypick');
     updateFocus();
   }
 
-  function openKey() {
+  function openKey(kind) {
+    keyKind = kind === 'watchmode' ? 'watchmode' : 'tmdb';
     setClass($('settings'), 'open', false);
     st.zone = Z.KEY;
     st.key = 0;
@@ -1229,7 +1257,7 @@
     keyStatus = text;
     keyWarn = !!warn;
     clearTimeout(keyTimer);
-    if (text && text !== tr('Checking the key with TMDB…')) keyTimer = setTimeout(function () {
+    if (text && text !== keyText().checking) keyTimer = setTimeout(function () {
       keyStatus = '';
       var line = st.zone === Z.KEY && $('keypick').querySelector('.hint:not(.steps)');
       if (line) line.parentNode.removeChild(line);
@@ -1246,28 +1274,30 @@
     var f = fieldOf('keypick'), typed = f ? f.value : '', key = cleanKey(typed);
     closeField('keypick');
     if (!typed.replace(/\s+/g, '')) { st.key = 0; openField('keypick'); updateFocus(); return; }
-    if (keyStatus === tr('Checking the key with TMDB…')) return;
-    if (!key) { setKeyStatus(tr("That doesn't look like a TMDB key."), true); return; }
-    setKeyStatus(tr('Checking the key with TMDB…'));
+    var kt = keyText();
+    if (keyStatus === kt.checking) return;
+    if (!key) { setKeyStatus(kt.bad, true); return; }
+    setKeyStatus(kt.checking);
     var mine = ++keySeq;   // an answer for a sheet already closed is dropped
-    Data.checkKey(key, function (err) {
+    kt.check(key, function (err) {
       if (mine !== keySeq || st.zone !== Z.KEY) return;
-      if (err) { setKeyStatus(err.rejected ? tr('TMDB refused this key.') : trf("Couldn't reach TMDB: {error}", {error: err.message}), true); return; }
-      Prefs.set('tmdbKey', key);
+      if (err) { setKeyStatus(err.rejected ? kt.refused : kt.unreachable(err.message), true); return; }
+      Prefs.set(kt.pref, key);
       if (fieldOf('keypick')) fieldOf('keypick').value = '';
-      Data.keyChanged();
-      setKeyStatus(tr('Saved. The picks arrive in a moment.'));
+      kt.changed();
+      setKeyStatus(kt.saved);
     });
   }
 
   /** Back to config.properties' key (none in the releases): the picks go. */
   function removeKey() {
-    Prefs.set('tmdbKey', undefined);   // left out of the saved settings
+    var kt = keyText();
+    Prefs.set(kt.pref, undefined);   // left out of the saved settings
     closeKey();
-    Data.keyChanged();
+    kt.changed();
   }
 
-  /** Back on the TMDB key row of Home Settings. */
+  /** Back on the key's row of Home Settings. */
   function closeKey() {
     closeField('keypick');
     setClass($('keypick'), 'open', false);
@@ -1278,7 +1308,7 @@
     var f = fieldOf('keypick');
     if (f) f.value = '';
     openSettings();
-    for (var i = 0; i < rowsNow.length; i++) if (rowsNow[i].tmdb) st.row = i;
+    for (var i = 0; i < rowsNow.length; i++) if (keyKind === 'watchmode' ? rowsNow[i].watchmode : rowsNow[i].tmdb) st.row = i;
     updateFocus();
   }
 
