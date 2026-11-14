@@ -29,6 +29,7 @@
  "Bottom right": "Dưới phải",
  "COMPARISON": "SO SÁNH",
  "Cancel": "Hủy",
+ "Cancel sign-in": "Hủy đăng nhập",
  "Cartoons and anime": "Phim hoạt hình và anime",
  "Check now": "Kiểm tra ngay",
  "Checking the key with TMDB…": "Đang kiểm tra khóa với TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "Trên trái",
  "Top of the screen": "Phía trên màn hình",
  "Top right": "Trên phải",
+ "Turn off": "Tắt",
+ "Turn on": "Bật",
  "Turn on the Quotes widget to pick its coins.": "Bật tiện ích giá để chọn đồng tiền.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Đã bật lại: {list}. Các ngõ vào hoặc điều khiển của TV cần nó.",
  "Turned off what was missing: {list}.": "Đã tắt phần còn sót: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "còn {n} phút",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on}/{total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "còn {time}",
  "{url}, code {code}": "{url}, mã {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "Đã có {version}: hãy build lại",
  "← → to move · OK to drop · Back to cancel": "← → di chuyển · OK đặt · Quay lại hủy"
 }

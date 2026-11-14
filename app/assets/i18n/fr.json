@@ -29,6 +29,7 @@
  "Bottom right": "En bas à droite",
  "COMPARISON": "COMPARAISON",
  "Cancel": "Annuler",
+ "Cancel sign-in": "Annuler la connexion",
  "Cartoons and anime": "Dessins animés et anime",
  "Check now": "Vérifier",
  "Checking the key with TMDB…": "Vérification de la clé auprès de TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "En haut à gauche",
  "Top of the screen": "Haut de l'écran",
  "Top right": "En haut à droite",
+ "Turn off": "Désactiver",
+ "Turn on": "Activer",
  "Turn on the Quotes widget to pick its coins.": "Activez le widget des cours pour choisir ses cryptos.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Réactivé : {list}. Les entrées ou la télécommande de la TV en ont besoin.",
  "Turned off what was missing: {list}.": "Désactivé ce qui manquait : {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "{n} min restantes",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} sur {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "encore {time}",
  "{url}, code {code}": "{url}, code {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "La {version} est sortie : recompilez-la",
  "← → to move · OK to drop · Back to cancel": "← → déplacer · OK déposer · Retour annuler"
 }

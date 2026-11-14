@@ -29,6 +29,7 @@
  "Bottom right": "Jos, în dreapta",
  "COMPARISON": "COMPARAȚIE",
  "Cancel": "Anulează",
+ "Cancel sign-in": "Anulează conectarea",
  "Cartoons and anime": "Desene animate și anime",
  "Check now": "Verifică acum",
  "Checking the key with TMDB…": "Se verifică cheia la TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "Sus, în stânga",
  "Top of the screen": "Partea de sus a ecranului",
  "Top right": "Sus, în dreapta",
+ "Turn off": "Dezactivează",
+ "Turn on": "Activează",
  "Turn on the Quotes widget to pick its coins.": "Activează widgetul de cotații ca să-i alegi monedele.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Am reactivat {list}: intrările sau telecomanda televizorului au nevoie de asta.",
  "Turned off what was missing: {list}.": "Am dezactivat ce lipsea: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "au rămas {n} min",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} din {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "mai sunt {time}",
  "{url}, code {code}": "{url}, cod {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "A apărut {version}: compilează din nou",
  "← → to move · OK to drop · Back to cancel": "← → mută · OK plasează · Înapoi anulează"
 }

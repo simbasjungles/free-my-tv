@@ -29,6 +29,7 @@
  "Bottom right": "Vpravo dole",
  "COMPARISON": "POROVNANIE",
  "Cancel": "Zrušiť",
+ "Cancel sign-in": "Zrušiť prihlásenie",
  "Cartoons and anime": "Kreslené filmy a anime",
  "Check now": "Skontrolovať",
  "Checking the key with TMDB…": "Overujem kľúč v TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "Vľavo hore",
  "Top of the screen": "Horná časť obrazovky",
  "Top right": "Vpravo hore",
+ "Turn off": "Vypnúť",
+ "Turn on": "Zapnúť",
  "Turn on the Quotes widget to pick its coins.": "Zapnite widget kurzov a vyberte jeho meny.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Znova zapnuté: {list}. Potrebujú to vstupy alebo ovládač televízora.",
  "Turned off what was missing: {list}.": "Vypnuté, čo chýbalo: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "zostáva {n} min",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} z {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "zostáva {time}",
  "{url}, code {code}": "{url}, kód {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "Vyšla verzia {version}: zostavte ju znova",
  "← → to move · OK to drop · Back to cancel": "← → presunúť · OK umiestniť · Späť zrušiť"
 }

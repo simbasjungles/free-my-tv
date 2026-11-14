@@ -29,6 +29,7 @@
  "Bottom right": "Rechtsonder",
  "COMPARISON": "VERGELIJKING",
  "Cancel": "Annuleren",
+ "Cancel sign-in": "Inloggen annuleren",
  "Cartoons and anime": "Tekenfilms en anime",
  "Check now": "Nu zoeken",
  "Checking the key with TMDB…": "Sleutel controleren bij TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "Linksboven",
  "Top of the screen": "Bovenaan het scherm",
  "Top right": "Rechtsboven",
+ "Turn off": "Uitschakelen",
+ "Turn on": "Inschakelen",
  "Turn on the Quotes widget to pick its coins.": "Zet de koerswidget aan om munten te kiezen.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Weer aangezet: {list}. De ingangen of de afstandsbediening van de tv hebben het nodig.",
  "Turned off what was missing: {list}.": "Uitgezet wat nog ontbrak: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "nog {n} min",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} van {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "nog {time}",
  "{url}, code {code}": "{url}, code {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} is uit: bouw hem opnieuw",
  "← → to move · OK to drop · Back to cancel": "← → verplaatsen · OK neerzetten · Terug annuleren"
 }
