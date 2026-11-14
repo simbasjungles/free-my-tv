@@ -1039,14 +1039,25 @@ final class HomeMode {
                         AppLog.w("turned the TV's home screen back on: Google TV's setup app is on");
                     }
                 }
-                if (!reverted && !homeHolder(adb).contains(PKG)) {
+                // A launcher or screensaver the person installed (another app's, not the TV's) was their choice:
+                // leave it. Only the TV's own taking them back (after an update, say) is put right.
+                Set<String> installed = packages(adb, "-3");
+                String holder = homeHolder(adb);
+                boolean homeChosen = !holder.isEmpty() && !holder.contains(PKG) && installed.contains(holder);
+                if (homeChosen) AppLog.w("left the home screen to " + holder + ": an app the person installed");
+                if (!reverted && !homeChosen && !holder.contains(PKG)) {
                     adb.shell("cmd package set-home-activity " + HOME_ACTIVITY);
                     fixed.add(Ui.tr("the home screen"));
                 }
                 wakeWatch(adb, !reverted);   // again after a restart, which ends it (running already: left alone)
                 // Whole component names: ".ScreensaverAlone" (Android 11 to 12L) contains ".Screensaver" (the others).
                 List<String> savers = Arrays.asList(adb.shell("settings get secure screensaver_components").trim().split(","));
-                if (Config.SCREENSAVER && !reverted && !savers.contains(DREAM)) {
+                boolean saverChosen = false;
+                for (String saver : savers) {
+                    String p = packageOf(saver);
+                    if (p != null && !p.equals(PKG) && installed.contains(p)) saverChosen = true;
+                }
+                if (Config.SCREENSAVER && !reverted && !saverChosen && !savers.contains(DREAM)) {
                     adb.shell("settings put secure screensaver_components " + DREAM);
                     if (!savers.contains(OTHER_DREAM)) fixed.add(Ui.tr("the screensaver"));   // ours, moved: not the TV
                 } else if (!Config.SCREENSAVER && !reverted && (savers.contains(DREAM) || savers.contains(OTHER_DREAM))) {
