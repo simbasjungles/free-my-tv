@@ -50,6 +50,9 @@ final class Trakt {
     static final int RECOMMENDED_MAX = 10;
     /** Shows watched most recently whose next episode is looked up (one Trakt request each). */
     private static final int UP_NEXT_SHOWS = 8;
+    // Trakt's /sync lists come in pages: 100 items unless asked, 250 at most (a 1,407-movie history came as its first 100).
+    // Every page is read, up to PAGES_MAX.
+    private static final int PAGE = 250, PAGES_MAX = 40;
 
     /** Something they're in the middle of: a paused movie or episode, or a show's next episode. */
     static final class Progress {
@@ -282,7 +285,7 @@ final class Trakt {
      */
     private static List<Seen> watched(Context c, String path, String type, Set<String> out, Map<String, String> at) throws Exception {
         List<Seen> seen = new ArrayList<>();
-        stream(c, path, r -> {
+        for (int page = 1, pages = 1; page <= pages && page <= PAGES_MAX; page++) pages = stream(c, paged(path, page), r -> {
             r.beginArray();
             while (r.hasNext()) {
                 String watchedAt = "", updatedAt = "";
@@ -326,6 +329,25 @@ final class Trakt {
             r.endArray();
         });
         return seen;
+    }
+
+    /** One page of a /sync list: PAGE items. */
+    private static String paged(String path, int page) {
+        return path + (path.indexOf('?') >= 0 ? "&" : "?") + "limit=" + PAGE + "&page=" + page;
+    }
+
+    /** Every page of a /sync list, as one array. */
+    private static JSONArray all(Context c, String path) throws Exception {
+        JSONArray out = new JSONArray();
+        for (int page = 1, pages = 1; page <= pages && page <= PAGES_MAX; page++) {
+            Response r = send("GET", paged(path, page), null, token(c));
+            if (r.code == 401) throw new IOException("Trakt refused the key or the sign-in");
+            if (r.code != 200) throw new IOException("Trakt returned HTTP " + r.code);
+            JSONArray a = new JSONArray(r.body);
+            for (int i = 0; i < a.length(); i++) out.put(a.get(i));
+            pages = r.pages;
+        }
+        return out;
     }
 
     private static String string(JsonReader r) throws IOException {
@@ -397,7 +419,7 @@ final class Trakt {
 
     /** The newest additions first (listed_at is ISO 8601 in UTC, so it sorts as text). */
     private static void watchlist(Context c, String path, String type, List<String> out) throws Exception {
-        JSONArray a = new JSONArray(get(c, path));
+        JSONArray a = all(c, path);   // every page: sorted below, the newest may be on the last one
         List<JSONObject> items = new ArrayList<>();
         for (int i = 0; i < a.length(); i++) if (a.optJSONObject(i) != null) items.add(a.optJSONObject(i));
         Collections.sort(items, (x, y) -> y.optString("listed_at").compareTo(x.optString("listed_at")));
@@ -423,6 +445,7 @@ final class Trakt {
 
     private static final class Response {
         int code;
+        int pages = 1;   // X-Pagination-Page-Count, on a paged list
         String body = "";
     }
 
@@ -442,8 +465,8 @@ final class Trakt {
         void read(JsonReader r) throws IOException;
     }
 
-    /** A GET read as it arrives, without the whole body in memory. */
-    private static void stream(Context c, String path, Parser parser) throws Exception {
+    /** A GET read as it arrives, without the whole body in memory; returns how many pages the list has (1 if unpaged). */
+    private static int stream(Context c, String path, Parser parser) throws Exception {
         HttpURLConnection h = open("GET", path, token(c));
         try {
             int code = h.getResponseCode();
@@ -452,6 +475,7 @@ final class Trakt {
             try (JsonReader r = new JsonReader(new InputStreamReader(new BufferedInputStream(h.getInputStream()), StandardCharsets.UTF_8))) {
                 parser.read(r);
             }
+            return h.getHeaderFieldInt("X-Pagination-Page-Count", 1);
         } finally {
             h.disconnect();
         }
@@ -489,6 +513,7 @@ final class Trakt {
             }
             Response r = new Response();
             r.code = c.getResponseCode();
+            r.pages = c.getHeaderFieldInt("X-Pagination-Page-Count", 1);
             InputStream in = r.code < 400 ? c.getInputStream() : c.getErrorStream();
             if (in != null) {
                 try (InputStream s = in) {
