@@ -364,7 +364,7 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   token), at the https addresses plex.tv lists, with the usual certificate checks and never plain http. Every failure
   it logs or shows is a `PlexError` or a class name (`Plex.why`): a JSONException's text holds the answer, which may
   have tokens in it. Turned off in *Continue Watching apps*, nothing is asked of Plex; a server that doesn't answer
-  rests up to 8 minutes, and one that refuses its token (401: a share taken back) loses its list and is looked for
+  rests up to 8 minutes, and one that refuses its token (401 or 403: a share taken back) loses its list and is looked for
   again. Sign out forgets the token on the TV and asks plex.tv to drop it (`DELETE /api/v2/users/signout`, best
   effort, as Trakt's revoke). The row shows the account that typed the code on every Plex Home profile.
 - Trakt (`Trakt`, Google TV only) needs the person's own API app: `trakt_client_id` (the Client ID only: device code

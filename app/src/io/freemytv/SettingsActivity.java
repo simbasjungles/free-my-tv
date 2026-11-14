@@ -2109,17 +2109,18 @@ public class SettingsActivity extends Activity {
         private void plexMenu() {
             Context c = getContext();
             boolean signedIn = Plex.signedIn(c), signingIn = Plex.busy(), on = !Prefs.watchOff().contains(Plex.PKG);
-            String first = signingIn ? Ui.tr("Cancel sign-in") : signedIn ? Ui.tr("Sign out") : Ui.tr("Sign in");
+            // Signed in wins: once the code is typed the account is saved, and only Sign out undoes it.
+            String first = signedIn ? Ui.tr("Sign out") : signingIn ? Ui.tr("Cancel sign-in") : Ui.tr("Sign in");
             String[] items = {first, on ? Ui.tr("Turn off") : Ui.tr("Turn on")};
             new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                     .setTitle("Plex")   // the row behind it already says who is signed in
                     .setItems(items, (d, which) -> {
                         // Each choice does what its label said, if it still applies (a sign-in may have finished
                         // while the menu was open): Sign in never starts a second account, Sign out only signs out.
-                        if (which == 0 && signingIn) {
-                            Plex.cancelSignIn();
-                        } else if (which == 0 && signedIn) {
+                        if (which == 0 && signedIn) {
                             if (Plex.signedIn(c)) Plex.signOut(c);
+                        } else if (which == 0 && signingIn) {
+                            Plex.cancelSignIn();
                         } else if (which == 0) {
                             // TalkBack reads the row again at each step: the code as it appears, then who signed in.
                             if (!Plex.signedIn(c)) Plex.signIn(c, () -> handler.post(() -> {

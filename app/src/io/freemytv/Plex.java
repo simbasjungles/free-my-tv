@@ -53,6 +53,8 @@ final class Plex {
     private static volatile boolean signingIn;
     /** Which sign-in is the current one: cancelling (or leaving Settings) moves it on, and the old one stops asking. */
     private static volatile int signInRun;
+    /** The run whose code was typed and whose token is saved: from then on it can't be cancelled, only signed out. */
+    private static volatile int claimedRun;
     /** The token whose lists are being fetched now, or null: another account's slow fetch doesn't hold up a new one. */
     private static volatile String fetchingFor;
     private static volatile long fetchedAt;
@@ -143,11 +145,16 @@ final class Plex {
                     } catch (Exception e) {
                         AppLog.w("plex user: " + why(e));
                     }
-                    if (run != signInRun) return;   // cancelled as it was typed: that token is never kept
-                    synchronized (Plex.class) {
-                        // A new account starts clean: no server or lists of an earlier one can be mixed in.
-                        String client = sp(app).getString("client", "");
-                        sp(app).edit().clear().putString("client", client).putString("token", token).putString("user", name).apply();
+                    // The check and the save together: a cancel lands before them (that token is never kept) or after them
+                    // (the code was typed: signed in, and the menu offers Sign out).
+                    synchronized (SIGN_IN) {
+                        if (run != signInRun) return;
+                        synchronized (Plex.class) {
+                            // A new account starts clean: no server or lists of an earlier one can be mixed in.
+                            String client = sp(app).getString("client", "");
+                            sp(app).edit().clear().putString("client", client).putString("token", token).putString("user", name).apply();
+                        }
+                        claimedRun = run;
                     }
                     try {
                         findServer(app, token);
@@ -176,7 +183,7 @@ final class Plex {
     /** Stops a sign-in that's waiting for its code (Cancel in the Plex menu, or leaving Settings). */
     static void cancelSignIn() {
         synchronized (SIGN_IN) {
-            if (!signingIn) return;
+            if (!signingIn || claimedRun == signInRun) return;   // already typed: it finishes, and Sign out undoes it
             signInRun++;
             signingIn = false;
             code = null;
@@ -357,9 +364,9 @@ final class Plex {
                         // Tried again at the next refresh, then every 2nd, 4th and 8th (half a minute short, to land on one).
                         serverRestUntil = System.currentTimeMillis() + (EVERY << Math.min(serverFailures++, 3)) - EVERY / 2;
                         AppLog.w("plex continue watching: " + why(e));
-                        // The server refused its token (a share taken back, its token renewed): its list and the server
+                        // The server refused its token (401 or 403: a share taken back, its token renewed): its list and the server
                         // are forgotten, and a later refresh looks for a server again. Silence keeps both.
-                        if (e.getMessage() != null && e.getMessage().startsWith("Plex returned HTTP 401")) {
+                        if ("Plex returned HTTP 401".equals(e.getMessage()) || "Plex returned HTTP 403".equals(e.getMessage())) {
                             synchronized (Plex.class) {
                                 if (token.equals(sp(app).getString("token", ""))) {
                                     sp(app).edit().remove("serverUri").remove("serverId").remove("serverToken")
