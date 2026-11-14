@@ -684,7 +684,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   to Developer Mode apps, the list comes from the TV's remote control API on `ws://127.0.0.1:3000` once the TV has
   allowed it (it asks once; a "no" isn't asked again; firmware that gives the page its own origin,
   `file://io.freemytv-webos`, gets 1008 "invalid origin" there, and the call goes through `webos/service`, a JS
-  service in the package whose handshake says `file://`; webOS 22 with 2026 firmware tested), and until then from
+  service in the package whose handshake says `file://`; it tries plain 3000 first, then the same API over TLS on
+  3001 where newer firmware resets plain connections (a 2025 75UA841CPSA does; webOS 22 with 2026 firmware tested on
+  3000), and until then from
   `getAppLoadStatus` over a list of known app ids, which shows the logo bundled in `web/icons/` where there is one, otherwise the name on the brand's color);
   on Samsung, `tizen.application` (`getAppsInfo`, `launch`), the `VIDEOSOURCE` property and
   `tizen.tvwindow.setSource` for the inputs, then Samsung's viewer (`org.tizen.tv-viewer`) to show them. The viewer

@@ -1,10 +1,13 @@
 /*
- * Free My TV's service on LG webOS: one call to the TV's remote control API (127.0.0.1:3000) for the web app.
+ * Free My TV's service on LG webOS: one call to the TV's remote control API for the web app.
  * Newer webOS gives each app's page its own origin (file://io.freemytv-webos), and the API closes any connection
  * that isn't from file:// ("invalid origin"); from here the handshake says file://.
- * Plain ES5 with Node's net only: older webOS ships an old Node.
+ * The API listens on ws://127.0.0.1:3000, and some newer firmware resets plain connections there: the same API
+ * answers over TLS on 3001 (a 2025 UA84), so a plain attempt that fails is tried again there.
+ * Plain ES5 with Node's net and tls only: older webOS ships an old Node.
  */
 var net = require('net');
+var tls = require('tls');
 var Service = require('webos-service');
 
 var service = new Service(require('./package.json').name);
@@ -23,19 +26,16 @@ function frame(text) {
 
 /** done({clientKey, payload}), {refused: true} when the person said no on the TV, or null. */
 function call(uri, clientKey, done) {
-  var socket = net.connect(3000, '127.0.0.1'), buf = buffer([]), open = false, text = '', finished = false;
+  var socket = null, finished = false;
   var timer = setTimeout(function () { finish(null); }, 90000);   // time to answer the TV's prompt
   function finish(result) {
     if (finished) return;
     finished = true;
     clearTimeout(timer);
-    socket.destroy();
+    if (socket) socket.destroy();
     done(result);
   }
-  function send(obj) {
-    socket.write(frame(JSON.stringify(obj)));
-  }
-  function onMessage(m) {
+  function onMessage(m, send) {
     if (m.type === 'registered') {
       clientKey = m.payload['client-key'];
       send({type: 'request', id: 'call', uri: 'ssap://' + uri});
@@ -45,50 +45,72 @@ function call(uri, clientKey, done) {
       finish(m.id === 'register' ? {refused: true} : null);
     }
   }
-  socket.on('connect', function () {
-    socket.write('GET / HTTP/1.1\r\nHost: 127.0.0.1:3000\r\nOrigin: file://\r\nUpgrade: websocket\r\n' +
-        'Connection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: ZnJlZW15dHYtd2Vib3MtYXBp\r\n\r\n');
-  });
-  socket.on('data', function (chunk) {
-    buf = Buffer.concat([buf, chunk]);
-    if (!open) {
-      var end = buf.toString('binary').indexOf('\r\n\r\n');
-      if (end < 0) return;
-      if (!/^HTTP\/1\.1 101/.test(buf.toString('utf8', 0, 12))) { finish(null); return; }
-      open = true;
-      buf = buf.slice(end + 4);
-      var payload = {forcePairing: false, pairingType: 'PROMPT',
-        manifest: {manifestVersion: 1, appVersion: '1.0', permissions: ['READ_INSTALLED_APPS']}};
-      if (clientKey) payload['client-key'] = clientKey;
-      send({type: 'register', id: 'register', payload: payload});
+  /** One attempt: plain 3000, or the same API over TLS 3001 where newer firmware resets plain connections. */
+  function attempt(secure) {
+    var sock = secure
+        ? tls.connect({host: '127.0.0.1', port: 3001, rejectUnauthorized: false})
+        : net.connect(3000, '127.0.0.1');
+    var buf = buffer([]), open = false, text = '', moved = false;
+    socket = sock;
+    function send(obj) {
+      sock.write(frame(JSON.stringify(obj)));
     }
-    // The server's frames: unmasked, a message possibly in several (continuation frames until FIN).
-    while (buf.length >= 2) {
-      var fin = buf[0] & 0x80, op = buf[0] & 0x0f, n = buf[1] & 0x7f, off = 2;
-      if (n === 126) {
-        if (buf.length < 4) return;
-        n = buf.readUInt16BE(2);
-        off = 4;
-      } else if (n === 127) {
-        if (buf.length < 10) return;
-        n = buf.readUInt32BE(6);
-        off = 10;
+    function next() {
+      if (finished || moved) return;
+      moved = true;
+      sock.destroy();
+      if (secure) finish(null);
+      else attempt(true);
+    }
+    function start() {
+      sock.write('GET / HTTP/1.1\r\nHost: 127.0.0.1:' + (secure ? 3001 : 3000) +
+          '\r\nOrigin: file://\r\nUpgrade: websocket\r\n' +
+          'Connection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: ZnJlZW15dHYtd2Vib3MtYXBp\r\n\r\n');
+    }
+    if (secure) sock.on('secureConnect', start);
+    else sock.on('connect', start);
+    sock.on('data', function (chunk) {
+      buf = Buffer.concat([buf, chunk]);
+      if (!open) {
+        var end = buf.toString('binary').indexOf('\r\n\r\n');
+        if (end < 0) return;
+        if (!/^HTTP\/1\.1 101/.test(buf.toString('utf8', 0, 12))) { next(); return; }
+        open = true;
+        buf = buf.slice(end + 4);
+        var payload = {forcePairing: false, pairingType: 'PROMPT',
+          manifest: {manifestVersion: 1, appVersion: '1.0', permissions: ['READ_INSTALLED_APPS']}};
+        if (clientKey) payload['client-key'] = clientKey;
+        send({type: 'register', id: 'register', payload: payload});
       }
-      if (buf.length < off + n) return;
-      var data = buf.slice(off, off + n);
-      buf = buf.slice(off + n);
-      if (op === 8) { finish(null); return; }
-      if (op !== 1 && op !== 0) continue;
-      text += data.toString('utf8');
-      if (!fin) continue;
-      var m = null;
-      try { m = JSON.parse(text); } catch (e) {}
-      text = '';
-      if (m) onMessage(m);
-    }
-  });
-  socket.on('error', function () { finish(null); });
-  socket.on('close', function () { finish(null); });
+      // The server's frames: unmasked, a message possibly in several (continuation frames until FIN).
+      while (buf.length >= 2) {
+        var fin = buf[0] & 0x80, op = buf[0] & 0x0f, n = buf[1] & 0x7f, off = 2;
+        if (n === 126) {
+          if (buf.length < 4) return;
+          n = buf.readUInt16BE(2);
+          off = 4;
+        } else if (n === 127) {
+          if (buf.length < 10) return;
+          n = buf.readUInt32BE(6);
+          off = 10;
+        }
+        if (buf.length < off + n) return;
+        var data = buf.slice(off, off + n);
+        buf = buf.slice(off + n);
+        if (op === 8) { finish(null); return; }
+        if (op !== 1 && op !== 0) continue;
+        text += data.toString('utf8');
+        if (!fin) continue;
+        var m = null;
+        try { m = JSON.parse(text); } catch (e) {}
+        text = '';
+        if (m) onMessage(m, send);
+      }
+    });
+    sock.on('error', function () { if (open) finish(null); else next(); });
+    sock.on('close', function () { if (open) finish(null); else next(); });
+  }
+  attempt(false);
 }
 
 service.register('ssap', function (message) {
