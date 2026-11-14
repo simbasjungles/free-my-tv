@@ -4040,6 +4040,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             x = topRects[i].right + 4 * k;
         }
         float b = L_BUTTON * k, right = CONTENT_R * k, cy = L_BUTTON_CY * k;
+        if (smallClockShowing()) right -= 16 * k + capsuleText.measureText(clockText);   // the small clock takes the far right
         for (int i = lightButtons.size() - 1; i >= 0; i--) {
             topRects[3 + i].set(right - b, cy - b / 2, right, cy + b / 2);
             right -= b + L_BUTTON_GAP * k;
@@ -4122,6 +4123,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     /** The clock, the date and the weather: nothing at the top, or picks without a TMDB key. */
     private boolean clockMode() {
         return !picksMode() && !continueMode();
+    }
+
+    /** The small clock at the top right: only where the big clock isn't (Top of the screen on Clock already reads the time there). */
+    private boolean smallClockShowing() {
+        return Prefs.cornerClock() && !clockMode();
     }
 
     private boolean continueMode() {
@@ -4875,8 +4881,14 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             }
             if (transform) c.restore();
         }
+        if (smallClockShowing() && !clockText.isEmpty()) {
+            c.drawText(clockText, CONTENT_R * k - capsuleText.measureText(clockText), L_BUTTON_CY * k + Ui.halfCap(capsuleText), capsuleText);
+        }
         if (sleepText.isEmpty()) return;
-        float right = (lightButtons.isEmpty() ? CONTENT_R * k : topRects[3].left) - 28 * k, cy = L_BUTTON_CY * k;
+        float right = lightButtons.isEmpty() ? CONTENT_R * k : topRects[3].left, cy = L_BUTTON_CY * k;
+        if (lightButtons.isEmpty() && smallClockShowing() && !clockText.isEmpty())
+            right -= capsuleText.measureText(clockText);   // no buttons: the countdown keeps left of the small clock
+        right -= 28 * k;
         float tw = lQuote.measureText(sleepText), size = lQuote.getTextSize();
         c.drawText(sleepText, right - tw, cy + Ui.halfCap(lQuote), lQuote);
         Symbols.draw(getContext(), c, "bedtime", right - tw - size * 0.9f, cy, size, lQuote.getColor());

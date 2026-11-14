@@ -293,6 +293,9 @@ final class Prefs {
     /** Wi-Fi/Ethernet, Bluetooth and USB icons at the top-left of the home screen. */
     static boolean statusIcons() { return sp().getBoolean("statusicons", false); }
     static void setStatusIcons(boolean on) { put("statusicons", on); }
+    /** A small clock at the top right, for when the picks or Continue Watching are at the top. */
+    static boolean cornerClock() { return sp().getBoolean("cornerclock", false); }
+    static void setCornerClock(boolean on) { put("cornerclock", on); }
 
     // MARK: - City
 
