@@ -97,6 +97,17 @@ var Prefs = (function () {
     /** The Watchmode key typed on the TV (Home Settings → Watchmode key), or config.properties' ('' for none). */
     watchmodeKey: function () { return String(pick('watchmodeKey', CONFIG.watchmodeKey || '')).trim(); },
     watchmodeKeyOnTV: function () { return v.watchmodeKey !== undefined; },
+    /**
+     * Home Settings > Posters with ratings: 'off', one of RPDB's free styles ('bar', 'blocks', 'rounded', 'boxes') or
+     * 'custom' (a key of one's own). Off until picked, or custom where config.properties has an rpdb_key.
+     */
+    rpdbStyle: function () {
+      var s = pick('rpdbStyle', CONFIG.rpdbKey ? 'custom' : 'off');
+      return /^(off|bar|blocks|rounded|boxes|custom)$/.test(s) ? s : 'off';
+    },
+    /** The RPDB key typed on the TV (Home Settings → RPDB key), or config.properties' ('' for none). */
+    rpdbKey: function () { return String(pick('rpdbKey', CONFIG.rpdbKey || '')).trim(); },
+    rpdbKeyOnTV: function () { return v.rpdbKey !== undefined; },
     setCity: function (name, lat, lon) { v.city = name; v.latitude = lat; v.longitude = lon; save(); this.version++; },
     /** Streaming services (keys like "netflix") whose titles are left out of the picks: hide_services until switched on the TV. */
     serviceOff: function (key) { return pick('servicesOff', CONFIG.hideServices || []).indexOf(key) >= 0; },
@@ -578,6 +589,26 @@ var Data = (function () {
     });
   }
 
+  // MARK: - RPDB (ratingposterdb.com): the picks' posters with their IMDb, Metacritic and Rotten Tomatoes scores
+
+  var RPDB = 'https://api.ratingposterdb.com/';
+  // RPDB's free keys (Tier 0, poster-default only), the same for everyone, one per style of the scores' strip.
+  var RPDB_FREE = {bar: 't0-free-rpdb', blocks: 't0-free-rpdb-blocks', rounded: 't0-free-rpdb-rounded-blocks', boxes: 't0-free-rpdb-boxes'};
+
+  /** The key the posters use now: a free style's, the custom one, or '' (off: RPDB is never asked). */
+  function rpdbKey() {
+    var style = Prefs.rpdbStyle();
+    return style === 'custom' ? Prefs.rpdbKey() : RPDB_FREE[style] || '';
+  }
+
+  /** An RPDB key typed on the TV, checked with RPDB's /isValid before it's kept (403 for a key it doesn't know). */
+  function checkRpdbKey(key, done) {
+    get(RPDB + encodeURIComponent(key) + '/isValid', {}, function (err, r) {
+      if (err && /403|rejected/.test(err.message)) err.rejected = true;
+      done(err || (r && r.valid === false ? {rejected: true, message: 'invalid'} : null));
+    });
+  }
+
   function checkKey(key, done) {
     tmdb('/configuration', function (err) {
       if (err && /rejected/.test(err.message)) err.rejected = true;
@@ -865,6 +896,11 @@ var Data = (function () {
     hasKey: function () { return !!KEY; },
     checkKey: checkKey,
     checkWatchmodeKey: checkWatchmodeKey,
+    checkRpdbKey: checkRpdbKey,
+    /** Whether the posters come from RPDB now (their scores' strip is along the bottom: the card keeps it in view). */
+    rpdbOn: function () { return !!rpdbKey(); },
+    /** Posters with ratings changed on the TV (a style, or a key typed or removed): the cards are drawn again. */
+    rpdbChanged: function () { changed(); },
     /** A Watchmode key typed (or removed) on the TV: lookups start again with it (a refused key no longer stops them). */
     watchmodeKeyChanged: function () { wmRefused = false; wmRetryAt = 0; },
     /** A key typed (or removed) on the TV: the picks come again with it, or go. */
@@ -874,13 +910,13 @@ var Data = (function () {
     showcase: all,
     image: function (path, size) { return path ? 'https://image.tmdb.org/t/p/' + (size || 'w1280') + path : ''; },
     /**
-     * A pick's poster: with an rpdb_key, RPDB's (ratingposterdb.com), the same poster with its scores in a strip along
-     * its bottom, asked by the TMDB id it already has; else TMDB's, as before ('' without one).
+     * A pick's poster: with Posters with ratings on, RPDB's, the same poster with its scores in a strip along its bottom,
+     * asked by the TMDB id it already has; else TMDB's, as before ('' without one).
      */
     poster: function (p, size) {
-      var key = String(CONFIG.rpdbKey || '').trim();
+      var key = rpdbKey();
       if (key && p.id > 0 && (p.kind === 'movie' || p.kind === 'tv')) {
-        return 'https://api.ratingposterdb.com/' + encodeURIComponent(key) + '/tmdb/poster-default/' + (p.kind === 'tv' ? 'series-' : 'movie-') + p.id + '.jpg';
+        return RPDB + encodeURIComponent(key) + '/tmdb/poster-default/' + (p.kind === 'tv' ? 'series-' : 'movie-') + p.id + '.jpg';
       }
       return p.poster ? 'https://image.tmdb.org/t/p/' + (size || 'w342') + p.poster : '';
     },

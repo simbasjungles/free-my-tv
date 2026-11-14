@@ -516,6 +516,8 @@
 
   // MARK: - Picks and background
 
+  var cardArt = [];   // each card's poster address as drawn
+
   function renderCards() {
     var list = Data.picks(TAB_KIND[st.tab]);
     var holder = $('cards');
@@ -523,9 +525,11 @@
     setClass(body, 'no-key', !Data.hasKey());   // as on Android: no title or tabs that could never show anything
     if (!Data.hasKey() && st.zone === Z.TOP && st.top < 3) st.top = 3;
     var same = list.length === cards.length;
-    for (var i = 0; same && i < list.length; i++) same = list[i].id === cards[i].id && list[i].backdrop === cards[i].backdrop && list[i].meta === cards[i].meta;
+    // The poster's address too: a style picked in Posters with ratings changes it for the same picks.
+    for (var i = 0; same && i < list.length; i++) same = list[i].id === cards[i].id && list[i].backdrop === cards[i].backdrop && list[i].meta === cards[i].meta && Data.poster(list[i], 'w342') === cardArt[i];
     if (same && holder.children.length === list.length) return;
     cards = list;
+    cardArt = [];
     holder.innerHTML = '';
     for (var c = 0; c < list.length; c++) {
       var p = list[c], card = el('div', 'card', holder);
@@ -533,8 +537,9 @@
       // Narrow: the poster (the backdrop cropped without one); the wide card fades its backdrop in over it, loaded then.
       var poster = el('div', 'layer', img);
       var art = Data.poster(p, 'w342');
+      cardArt.push(art);
       poster.style.backgroundImage = 'url(' + (art || Data.image(p.backdrop, 'w780')) + ')';
-      if (CONFIG.rpdbKey && art) poster.style.backgroundPosition = '50% 100%';   // RPDB's scores along the bottom: never cropped
+      if (Data.rpdbOn() && art) poster.style.backgroundPosition = '50% 100%';   // RPDB's scores along the bottom: never cropped
       el('div', 'layer back', img);
       el('div', 'name', card, I18N.name(p.title));
       if (p.meta) el('div', 'meta', card, p.meta);
@@ -937,6 +942,15 @@
       rows.push({label: tr('Watchmode key'), value: Prefs.watchmodeKey().length >= 4 ? '•••• ' + Prefs.watchmodeKey().slice(-4) : tr('Not set'),
         opens: true, watchmode: true, step: function (d) { if (d >= 0) openKey('watchmode'); }});
     }
+    var styles = ['off', 'bar', 'blocks', 'rounded', 'boxes', 'custom'];
+    var styleNames = {off: tr('Off'), bar: tr('rpdb|Dark bar'), blocks: tr('rpdb|Blocks'), rounded: tr('rpdb|Rounded blocks'),
+      boxes: tr('rpdb|Boxes'), custom: tr('rpdb|Custom')};
+    rows.push({label: tr('Posters with ratings'), value: styleNames[Prefs.rpdbStyle()],
+      step: function (d) { cycle('rpdbStyle', styles, Prefs.rpdbStyle(), d); Data.rpdbChanged(); }});
+    if (Prefs.rpdbStyle() === 'custom') {
+      rows.push({label: tr('RPDB key'), value: Prefs.rpdbKey().length >= 4 ? '•••• ' + Prefs.rpdbKey().slice(-4) : tr('Not set'),
+        opens: true, rpdb: true, step: function (d) { if (d >= 0) openKey('rpdb'); }});
+    }
     var sv = Data.services();
     if (sv.length) {
       var someOff = false;   // only the services this TV has count
@@ -1189,6 +1203,17 @@
 
   /** What the sheet says and does for keyKind (each text a literal for tools/translate.py). */
   function keyText() {
+    if (keyKind === 'rpdb') {
+      return {
+        title: tr('RPDB key'), removeAsk: tr('Remove the RPDB key?'), checking: tr('Checking the key with RPDB…'),
+        bad: tr("That doesn't look like an RPDB key."), refused: tr('RPDB refused this key.'),
+        unreachable: function (e) { return trf("Couldn't reach RPDB: {error}", {error: e}); }, saved: tr('Saved. The posters change in a moment.'),
+        placeholder: tr('RPDB key'), pref: 'rpdbKey', onTV: Prefs.rpdbKeyOnTV(),
+        check: Data.checkRpdbKey, changed: Data.rpdbChanged,
+        steps: tr("A key of your own RPDB plan, for the posters and ratings it adds. The free styles above need none.") + '\n'
+          + I18N.digits(1) + '. ' + tr('Subscribe at ratingposterdb.com.') + '\n' + I18N.digits(2) + '. ' + tr('Copy the API key it gives you.')
+      };
+    }
     if (keyKind === 'watchmode') {
       return {
         title: tr('Watchmode key'), removeAsk: tr('Remove the Watchmode key?'), checking: tr('Checking the key with Watchmode…'),
@@ -1243,7 +1268,7 @@
   }
 
   function openKey(kind) {
-    keyKind = kind === 'watchmode' ? 'watchmode' : 'tmdb';
+    keyKind = kind === 'watchmode' || kind === 'rpdb' ? kind : 'tmdb';
     setClass($('settings'), 'open', false);
     st.zone = Z.KEY;
     st.key = 0;
@@ -1310,7 +1335,7 @@
     var f = fieldOf('keypick');
     if (f) f.value = '';
     openSettings();
-    for (var i = 0; i < rowsNow.length; i++) if (keyKind === 'watchmode' ? rowsNow[i].watchmode : rowsNow[i].tmdb) st.row = i;
+    for (var i = 0; i < rowsNow.length; i++) if (rowsNow[i][keyKind]) st.row = i;
     updateFocus();
   }
 

@@ -345,7 +345,7 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   from the https addresses the apps themselves left there (Netflix and JioHotstar do, #174), only through `NetPicture`:
   https, no host on the TV or the home network (redirects checked hop by hop), `image/*`, 4 MB, 10 s, and errors that
   never carry the address. Nothing else may be fetched from an address another app wrote. Besides those, the app talks only to TMDB, Open-Meteo, Binance, Watchmode (with a `watchmode_key`), RPDB (LG and Samsung,
-  with an `rpdb_key`: the posters' images, by TMDB id), your Plex server (with a `plex_url`), your Immich server (with `immich_server` and its key), Trakt (with a `trakt_client_id`,
+  while Home Settings > Posters with ratings isn't Off: the posters' images, by TMDB id), your Plex server (with a `plex_url`), your Immich server (with `immich_server` and its key), Trakt (with a `trakt_client_id`,
   once the person signs in on the TV) and GitHub's releases (Updates): new sources (such as Stremio) must not add
   network calls without the owner's OK.
 - Trakt (`Trakt`, Google TV only) needs the person's own API app: `trakt_client_id` (the Client ID only: device code
