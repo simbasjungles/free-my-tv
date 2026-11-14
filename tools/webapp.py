@@ -76,6 +76,8 @@ def read_config(path):
         'openPicksIn': 'nuvio' if values.get('open_picks_in', '').strip().lower() == 'nuvio' else 'apps',
         # 24 or 12 forces the clock; auto follows the language's catalogue.
         'clockFormat': values.get('clock_format', '').strip() if values.get('clock_format', '').strip() in ('24', '12') else 'auto',
+        # Optional: the person's RPDB key (ratingposterdb.com): the picks' posters with their IMDb, Metacritic and Rotten Tomatoes scores.
+        'rpdbKey': values.get('rpdb_key', '').strip(),
     }
 
 

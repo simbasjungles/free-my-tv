@@ -337,15 +337,15 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   Project Nayuki's MIT encoder, whose notice stays in the file), and checks a key with TMDB (`/configuration`) before
   saving it. Never log it. Nothing may escape KeyPage's threads: `:home`'s watchdog counts it as a home screen crash.
   The Watchmode key has the same screen and page (`Prefs.watchmodeKey`, read through `Recs.watchmodeKey()`, checked with
-  `/status/`), on Google TV and Android TV only.
+  `/status/`), on Google TV and Android TV; on Samsung it's typed, as the TMDB key there (below).
   On LG and Samsung it's typed in Home Settings (no QR: a web app can't serve a page): `Prefs.tmdbKey()` (localStorage)
   wins over `CONFIG.tmdbKey`, and `Data.keyChanged()` fetches the picks again.
 - Continue Watching gets `READ_TV_LISTINGS` with `pm grant` through the TV's own ADB only when picked in Home Settings;
   *Original* revokes it with `pm revoke`. Watch Next pictures load from the TV (`content://`, `android.resource://`) and
   from the https addresses the apps themselves left there (Netflix and JioHotstar do, #174), only through `NetPicture`:
   https, no host on the TV or the home network (redirects checked hop by hop), `image/*`, 4 MB, 10 s, and errors that
-  never carry the address. Nothing else may be fetched from an address another app wrote. Besides those, the app talks only to TMDB, Open-Meteo, Binance, Watchmode (with a `watchmode_key`), your Plex
-  server (with a `plex_url`), your Immich server (with `immich_server` and its key), Trakt (with a `trakt_client_id`,
+  never carry the address. Nothing else may be fetched from an address another app wrote. Besides those, the app talks only to TMDB, Open-Meteo, Binance, Watchmode (with a `watchmode_key`), RPDB (LG and Samsung,
+  while Home Settings > Posters with ratings isn't Off: the posters' images, by TMDB id), your Plex server (with a `plex_url`), your Immich server (with `immich_server` and its key), Trakt (with a `trakt_client_id`,
   once the person signs in on the TV) and GitHub's releases (Updates): new sources (such as Stremio) must not add
   network calls without the owner's OK.
 - Trakt (`Trakt`, Google TV only) needs the person's own API app: `trakt_client_id` (the Client ID only: device code
@@ -696,7 +696,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   `watchmode_key`, a Prime Video pick opens its title (`TV.takesTitle`, `samsungDeepLink`: the `eden_resume` operation
   with `{"values": "<GTI>"}` under PAYLOAD, the GTI from Watchmode's web address, #483). Disney+ (Tizen 9: the entity
   id, the address, eden_resume or view, running or not), Netflix and HBO Max open at home, so only Prime is looked up,
-  and only when a pick is opened (`Data.titleLink`). Samsung's own
+  and only when a pick is opened (`Data.titleLink`). The key can be typed in Home Settings > Watchmode key (not on LG,
+  where no pick takes a title), the same sheet as the TMDB key's: `Prefs.watchmodeKey()` wins over `CONFIG.watchmodeKey`,
+  checked with `/status/` before it's kept. Samsung's own
   data is unreliable: on Tizen 3 no app's `iconPath` loads (on Tizen 4 and 5, YouTube's and Prime Video's are a
   placeholder), so logos are bundled in `web/icons/` and keyed by app id in `SAMSUNG_ICONS` (SVGs need a width and
   height for old WebKit); some names are empty or long (`SAMSUNG_TITLES`); and Tizen 3 answers no "settings" app

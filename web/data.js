@@ -94,6 +94,20 @@ var Prefs = (function () {
     tmdbKey: function () { return String(pick('tmdbKey', CONFIG.tmdbKey || '')).trim(); },
     /** True when the key in use was typed on the TV (Remove takes it back to config.properties'). */
     tmdbKeyOnTV: function () { return v.tmdbKey !== undefined; },
+    /** The Watchmode key typed on the TV (Home Settings → Watchmode key), or config.properties' ('' for none). */
+    watchmodeKey: function () { return String(pick('watchmodeKey', CONFIG.watchmodeKey || '')).trim(); },
+    watchmodeKeyOnTV: function () { return v.watchmodeKey !== undefined; },
+    /**
+     * Home Settings > Posters with ratings: 'off', one of RPDB's free styles ('bar', 'blocks', 'rounded', 'boxes') or
+     * 'custom' (a key of one's own). Off until picked, or custom where config.properties has an rpdb_key.
+     */
+    rpdbStyle: function () {
+      var s = pick('rpdbStyle', CONFIG.rpdbKey ? 'custom' : 'off');
+      return /^(off|bar|blocks|rounded|boxes|custom)$/.test(s) ? s : 'off';
+    },
+    /** The RPDB key typed on the TV (Home Settings → RPDB key), or config.properties' ('' for none). */
+    rpdbKey: function () { return String(pick('rpdbKey', CONFIG.rpdbKey || '')).trim(); },
+    rpdbKeyOnTV: function () { return v.rpdbKey !== undefined; },
     setCity: function (name, lat, lon) { v.city = name; v.latitude = lat; v.longitude = lon; save(); this.version++; },
     /** Streaming services (keys like "netflix") whose titles are left out of the picks: hide_services until switched on the TV. */
     serviceOff: function (key) { return pick('servicesOff', CONFIG.hideServices || []).indexOf(key) >= 0; },
@@ -516,7 +530,7 @@ var Data = (function () {
    * requests a title, then remembered, '' too). Without a key, after a refused key or a failed lookup (10 min), ''.
    */
   function titleLink(p, done) {
-    var key = String(CONFIG.watchmodeKey || '').trim();
+    var key = Prefs.watchmodeKey();
     if (!key || wmRefused || !p || !p.app || !(p.id > 0) || Date.now() < wmRetryAt) { done(''); return; }
     var links = stored('wm') || {}, id = p.kind + ':' + p.id + ':' + p.app;
     if (typeof links[id] === 'string') { done(links[id]); return; }
@@ -567,6 +581,34 @@ var Data = (function () {
   }
 
   /** Asks TMDB whether a key works before it's saved: done(error), with error.rejected when TMDB said no. */
+  /** A Watchmode key typed on the TV, checked with Watchmode's /status/ (as on Android) before it's kept. */
+  function checkWatchmodeKey(key, done) {
+    get(WATCHMODE + '/status/?apiKey=' + encodeURIComponent(key), {}, function (err) {
+      if (err && /rejected/.test(err.message)) err.rejected = true;   // get() calls any 401 "rejected the key"
+      done(err || null);
+    });
+  }
+
+  // MARK: - RPDB (ratingposterdb.com): the picks' posters with their IMDb, Metacritic and Rotten Tomatoes scores
+
+  var RPDB = 'https://api.ratingposterdb.com/';
+  // RPDB's free keys (Tier 0, poster-default only), the same for everyone, one per style of the scores' strip.
+  var RPDB_FREE = {bar: 't0-free-rpdb', blocks: 't0-free-rpdb-blocks', rounded: 't0-free-rpdb-rounded-blocks', boxes: 't0-free-rpdb-boxes'};
+
+  /** The key the posters use now: a free style's, the custom one, or '' (off: RPDB is never asked). */
+  function rpdbKey() {
+    var style = Prefs.rpdbStyle();
+    return style === 'custom' ? Prefs.rpdbKey() : RPDB_FREE[style] || '';
+  }
+
+  /** An RPDB key typed on the TV, checked with RPDB's /isValid before it's kept (403 for a key it doesn't know). */
+  function checkRpdbKey(key, done) {
+    get(RPDB + encodeURIComponent(key) + '/isValid', {}, function (err, r) {
+      if (err && /403|rejected/.test(err.message)) err.rejected = true;
+      done(err || (r && r.valid === false ? {rejected: true, message: 'invalid'} : null));
+    });
+  }
+
   function checkKey(key, done) {
     tmdb('/configuration', function (err) {
       if (err && /rejected/.test(err.message)) err.rejected = true;
@@ -853,12 +895,31 @@ var Data = (function () {
     activeCoins: activeCoins,
     hasKey: function () { return !!KEY; },
     checkKey: checkKey,
+    checkWatchmodeKey: checkWatchmodeKey,
+    checkRpdbKey: checkRpdbKey,
+    /** Whether the posters come from RPDB now (their scores' strip is along the bottom: the card keeps it in view). */
+    rpdbOn: function () { return !!rpdbKey(); },
+    /** Posters with ratings changed on the TV (a style, or a key typed or removed): the cards are drawn again. */
+    rpdbChanged: function () { changed(); },
+    /** A Watchmode key typed (or removed) on the TV: lookups start again with it (a refused key no longer stops them). */
+    watchmodeKeyChanged: function () { wmRefused = false; wmRetryAt = 0; },
     /** A key typed (or removed) on the TV: the picks come again with it, or go. */
     keyChanged: function () { KEY = Prefs.tmdbKey(); recsError = ''; failedAt = 0; refreshRecs(); changed(); },
     recsError: function () { return recsError; },
     picks: now,
     showcase: all,
     image: function (path, size) { return path ? 'https://image.tmdb.org/t/p/' + (size || 'w1280') + path : ''; },
+    /**
+     * A pick's poster: with Posters with ratings on, RPDB's, the same poster with its scores in a strip along its bottom,
+     * asked by the TMDB id it already has; else TMDB's, as before ('' without one).
+     */
+    poster: function (p, size) {
+      var key = rpdbKey();
+      if (key && p.id > 0 && (p.kind === 'movie' || p.kind === 'tv')) {
+        return RPDB + encodeURIComponent(key) + '/tmdb/poster-default/' + (p.kind === 'tv' ? 'series-' : 'movie-') + p.id + '.jpg';
+      }
+      return p.poster ? 'https://image.tmdb.org/t/p/' + (size || 'w342') + p.poster : '';
+    },
 
     /** Night at the location: from sunset to sunrise (the last forecast; without one, 6:00 and 18:00). */
     isNight: function (at) {
