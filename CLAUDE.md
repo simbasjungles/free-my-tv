@@ -643,6 +643,21 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   times out waiting for input data and queues later requests. Live TV opens `com.amazon.tv.livetv/.DttIconWrapperActivity`, the antenna's entry.
   A Fire OS TV restarts quietly into standby when turned off (QHB) once it booted from power; after a reboot from
   software (`adb reboot`) every power-off restarts it with the screen on, until it's unplugged for 30 seconds.
+- Fire TV Stick Lite (AFTSS, Fire OS 7.7.1.7, Android 9; the Lite remote has no volume or power buttons), tested with
+  another app through ADB, without root (#479): `set-home-activity` answers `Success` and changes nothing,
+  `com.amazon.tv.launcher` is a protected package, and the `CUSTOM_HOME` hook needs `RECEIVE_CUSTOM_HOME`
+  (`signature|amazon`). An accessibility service binds at ~21 s of uptime and an activity it starts is on screen at
+  ~22.6 s, while `BOOT_COMPLETED` reaches apps at ~60-68 s; DNS doesn't resolve yet at ~22 s. After a Home press,
+  activity starts from another app wait ~5 s (the app-switch delay), from an accessibility service too. On wake from
+  standby Amazon's launcher can come to the front again: its window change brings the app back, as after Home.
+  `am force-stop` turns the app's accessibility service off. Keys from `adb shell input keyevent` don't reach the
+  accessibility key filter, and neither do the TV remote's keys over CEC (`deviceId` -1, source `0x2000001`), which
+  reach only the app in front. CEC: the TV's `<Standby>` puts the Stick to sleep, but the Stick never sends one to the
+  TV, even with `hdmi_control_auto_device_off_enabled=1`; TV volume goes only through Amazon's Equipment Control
+  (`com.amazon.tv.devicecontrol`), which is unavailable with the Lite remote. A note, not a feature:
+  `settings put global com.amazon.tv.oobe.RESTRICT_REMOTE_BUTTONS 1` locks Home, Alexa, the TV (guide) button and the
+  app buttons (arrows, OK, Back, Menu and media keys still work), and `com.amazon.tv.oobe/.BootCompleteReceiver` sets
+  it back to 0 at ~52-65 s after every boot; with it on, Home can't bring Free My TV back either.
 - Realtek TVs on Hikeen boards (Romsat `D50A114D-U-T2-S`, KIVI; Android 9 tested; their `com.hikeen.*` apps tell
   them) force-stop the app in front as they go to standby (a hook in ActivityManager), so the TV woke on Realtek's
   black `FallbackHome` until Home was pressed, and nothing in the app survives the force-stop (#367).
