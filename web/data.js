@@ -831,7 +831,7 @@ var Data = (function () {
   return {
     COINS: COINS,
     get city() { return Prefs.city(); },
-    currency: CURRENCY,
+    get currency() { return CURRENCY; },
     onChange: function (fn) { listeners.push(fn); },
     setApps: function (apps) { installed = apps; },
     appFor: appFor,
@@ -851,6 +851,7 @@ var Data = (function () {
     changes: changes,
     get pricesAt() { return pricesAt; },
     activeCoins: activeCoins,
+    dollarRow: dollarRow,
     hasKey: function () { return !!KEY; },
     checkKey: checkKey,
     /** A key typed (or removed) on the TV: the picks come again with it, or go. */

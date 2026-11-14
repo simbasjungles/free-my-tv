@@ -4,22 +4,38 @@
  */
 'use strict';
 var fs = require('fs'), path = require('path'), vm = require('vm');
+var dataCode = fs.readFileSync(path.join(__dirname, '..', 'web', 'data.js'), 'utf8');
 
-function prefs(stored, config) {
+function loadData(store, config, respond) {
+  var mem = store || {};
   var sandbox = {
     window: {CONFIG: config || {}},
     navigator: {language: 'en-US'},
     localStorage: {
-      getItem: function () { return stored === undefined ? null : JSON.stringify(stored); },
-      setItem: function () {}
+      getItem: function (k) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; },
+      setItem: function (k, v) { mem[k] = String(v); }
     },
     I18N: {},
     TV: {zone: function () { return ''; }},
-    XMLHttpRequest: function () {}
+    XMLHttpRequest: function () {
+      var x = {open: function (m, u) { this.url = u; }, setRequestHeader: function () {}};
+      x.send = function () {
+        var r = respond ? respond(x.url) : {status: 500, body: {}};
+        x.readyState = 4;
+        x.status = r.status;
+        x.responseText = JSON.stringify(r.body);
+        if (x.onreadystatechange) x.onreadystatechange();
+      };
+      return x;
+    }
   };
-  var code = fs.readFileSync(path.join(__dirname, '..', 'web', 'data.js'), 'utf8');
-  vm.runInNewContext(code, sandbox, {filename: 'web/data.js'});
-  return sandbox.Prefs;
+  vm.runInNewContext(dataCode, sandbox, {filename: 'web/data.js'});
+  return sandbox;
+}
+
+function prefs(stored, config) {
+  var mem = stored === undefined ? {} : {'fmtv.prefs': JSON.stringify(stored)};
+  return loadData(mem, config).Prefs;
 }
 
 var failures = 0;
@@ -75,6 +91,74 @@ expect(prefs({}).homeReturns(), false, 'Home stays with the TV');
 expect(prefs({}, {homeButton: true}).homeReturns(), true, 'samsung_home_button from the build');
 expect(prefs({homeReturns: false}, {homeButton: true}).homeReturns(), false, 'turned off on the TV');
 expect(prefs({homeReturns: 'yes'}).homeReturns(), false, 'not a boolean');
+
+// Dollar toggle & live Data.currency across FX conversion and dollar fallback.
+var br = loadData({}, {currency: 'BRL'});
+expect(br.Data.currency, 'BRL', 'BRL starts in BRL');
+expect(br.Data.dollarRow(), true, 'BRL exposes Dollar row');
+expect(br.Data.activeCoins().join(','), '0,1,2,3', 'BRL activates Dollar card');
+
+var usd = loadData({}, {currency: 'USD'});
+expect(usd.Data.currency, 'USD', 'USD starts in USD');
+expect(usd.Data.dollarRow(), false, 'USD has no Dollar row');
+expect(usd.Data.activeCoins().join(','), '0,1,2', 'USD omits Dollar card');
+
+var fxCached = loadData({'fmtv.fxFor': JSON.stringify('COP')}, {currency: 'COP'});
+expect(fxCached.Data.currency, 'COP', 'cached FX keeps COP');
+expect(fxCached.Data.dollarRow(), true, 'cached FX exposes Dollar row');
+expect(fxCached.Data.activeCoins().join(','), '0,1,2,3', 'cached FX activates Dollar card');
+fxCached.Prefs.setCoin(3, false);
+expect(fxCached.Data.dollarRow(), true, 'hiding Dollar card keeps Dollar toggle');
+expect(fxCached.Data.activeCoins().join(','), '0,1,2', 'toggling Dollar off drops Dollar card');
+
+var fxLive = loadData({}, {currency: 'COP'}, function (url) {
+  if (url.indexOf('USDTCOP') >= 0) {
+    return {status: 200, body: [
+      {symbol: 'BTCUSDT', lastPrice: '90000', openPrice: '89000'},
+      {symbol: 'ETHUSDT', lastPrice: '3000', openPrice: '2900'},
+      {symbol: 'SOLUSDT', lastPrice: '200', openPrice: '190'},
+      {symbol: 'USDTCOP', lastPrice: '4000', openPrice: '3950'}
+    ]};
+  }
+  return {status: 400, body: {msg: 'Invalid symbol.'}};
+});
+expect(fxLive.Data.dollarRow(), false, 'COP has no Dollar row before FX discovery');
+fxLive.Data.settingsChanged();
+expect(fxLive.Data.currency, 'COP', 'FX discovery keeps COP');
+expect(fxLive.Data.dollarRow(), true, 'FX discovery exposes Dollar row');
+expect(fxLive.Data.activeCoins().join(','), '0,1,2,3', 'FX discovery activates Dollar card');
+
+var inrFallback = loadData({}, {currency: 'INR'}, function (url) {
+  if (url.indexOf('INR') < 0) {
+    return {status: 200, body: [
+      {symbol: 'BTCUSDT', lastPrice: '90000', openPrice: '89000'},
+      {symbol: 'ETHUSDT', lastPrice: '3000', openPrice: '2900'},
+      {symbol: 'SOLUSDT', lastPrice: '200', openPrice: '190'}
+    ]};
+  }
+  return {status: 400, body: {msg: 'Invalid symbol.'}};
+});
+inrFallback.Data.settingsChanged();
+expect(inrFallback.Data.currency, 'USD', '400 on direct and FX pairs moves Data.currency to USD');
+expect(inrFallback.Data.dollarRow(), false, 'dollar fallback drops Dollar row');
+expect(inrFallback.Data.activeCoins().join(','), '0,1,2', 'dollar fallback omits Dollar card');
+
+var haltedBr = loadData({}, {currency: 'BRL'}, function (url) {
+  if (url.indexOf('BRL') >= 0) {
+    return {status: 200, body: [
+      {symbol: 'BTCBRL', lastPrice: '500000', openPrice: '500000', closeTime: 1}
+    ]};
+  }
+  return {status: 200, body: [
+    {symbol: 'BTCUSDT', lastPrice: '90000', openPrice: '89000', closeTime: Date.now()},
+    {symbol: 'ETHUSDT', lastPrice: '3000', openPrice: '2900', closeTime: Date.now()},
+    {symbol: 'SOLUSDT', lastPrice: '200', openPrice: '190', closeTime: Date.now()}
+  ]};
+});
+haltedBr.Data.settingsChanged();
+expect(haltedBr.Data.currency, 'USD', 'halted market moves Data.currency to USD');
+expect(haltedBr.Data.dollarRow(), false, 'halted BRL market drops Dollar row');
+expect(haltedBr.Data.activeCoins().join(','), '0,1,2', 'halted BRL market omits Dollar card');
 
 if (failures) process.exit(1);
 console.log('WebPrefsTest: all checks passed.');
