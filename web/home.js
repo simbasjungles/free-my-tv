@@ -909,6 +909,8 @@
         step: function (d) { Prefs.set('cards', 3 + (Prefs.cards() - 3 + (d || 1) + 4) % 4); renderCards(); }},
       {label: tr('Cartoons and anime'), toggle: !Prefs.hideAnimation(),
         step: function () { Prefs.set('hideAnimation', !Prefs.hideAnimation()); Data.refresh(); }},
+      // Trakt, with the person's own API app in config.properties: OK signs in with a code, or (twice) out.
+      Trakt.available() ? {label: 'Trakt', value: traktValue(), okOnly: true, step: traktOk} : null,
       {label: tr('Watch from the screensaver'), toggle: Prefs.saverWatch(),
         step: function () { Prefs.set('saverWatch', !Prefs.saverWatch()); }},
       {label: tr('Weather widget'), toggle: Prefs.weather(),
@@ -958,6 +960,7 @@
     rows.push({label: tr('Shelf'), value: '›', shelf: true, step: function (d) { if (d >= 0) openShelfEdit(); }});
     rows.push({label: tr('About this TV'), value: '›', about: true, step: function (d) { if (d >= 0) openAbout(); }});
     if (TV.canOpenSettings) rows.push({label: tr('TV Settings'), value: '›', step: function (d) { if (d >= 0) tvSettings(); }});
+    rows = rows.filter(function (r) { return !!r; });   // rows a TV or a build doesn't have (Trakt)
     return rows;
   }
 
@@ -966,7 +969,27 @@
     Prefs.set(name, values[(i + (d || 1) + values.length) % values.length]);
   }
 
-  var rowsNow = [];
+  var rowsNow = [], traktLeaving = false;
+
+  /** The Trakt row's words: the code to type while signing in, then the account's name. */
+  function traktValue() {
+    if (Trakt.code) return trf('{url}, code {code}', {url: Trakt.url, code: Trakt.code});
+    if (Trakt.busy()) return tr('Connecting…');
+    if (Trakt.signedIn()) return traktLeaving ? tr('Sign out') : Trakt.user() || tr('Signed in');
+    return Trakt.message() || tr('Sign in');
+  }
+
+  /** OK on the Trakt row: a code to sign in with; signed in, a first OK asks, a second signs out. */
+  function traktOk() {
+    if (!Trakt.signedIn()) { if (!Trakt.busy()) Trakt.signIn(); return; }
+    if (!traktLeaving) {
+      traktLeaving = true;
+      toast(trf("Sign out of {name}? The picks go back to TMDB's alone.", {name: Trakt.user() || 'Trakt'}));
+      return;
+    }
+    traktLeaving = false;
+    Trakt.signOut();
+  }
 
   function renderSettings() {
     var box = $('settings').firstChild;
@@ -984,6 +1007,7 @@
         var v = el('span', 'value', row);
         if (r.value === '›') v.textContent = '›';
         else if (r.opens) { v.appendChild(document.createTextNode(I18N.name(r.value))); el('span', 'chev', v, '›'); }
+        else if (r.okOnly) v.textContent = r.value;   // OK acts, the arrows don't: no chevrons
         else { el('span', 'chev', v, '‹'); v.appendChild(document.createTextNode(I18N.name(r.value))); el('span', 'chev', v, '›'); }
       }
       hover(row, Z.SETTINGS, i);
@@ -1644,11 +1668,11 @@
         if (g >= 0 && g < others.length && (dx === 0 || Math.floor(g / 5) === Math.floor(st.grid / 5))) st.grid = g;
         break;
       case Z.SETTINGS:
-        if (dy) st.row = Math.max(0, Math.min(rowsNow.length - 1, st.row + dy));
+        if (dy) { st.row = Math.max(0, Math.min(rowsNow.length - 1, st.row + dy)); traktLeaving = false; }   // off the row: no sign-out pending
         else if (dx && rowsNow[st.row]) {
           var r = rowsNow[st.row];
           // A row that opens a list opens toward its chevron, which points left when mirrored.
-          if (r.value !== '›') { r.step(rtl && r.opens ? -dx : dx); if (st.zone === Z.SETTINGS) renderSettings(); }
+          if (r.value !== '›' && !r.okOnly) { r.step(rtl && r.opens ? -dx : dx); if (st.zone === Z.SETTINGS) renderSettings(); }
         }
         break;
       case Z.EDIT:
@@ -1973,6 +1997,12 @@
     reset();
     loadApps(function () { renderShelf(); renderDrawer(); restInDrawer(); Data.refresh(); });
   }
+
+  // Trakt: each step of a sign-in shows in its row; signing in or out brings the picks again.
+  Trakt.onChange(function () {
+    Data.traktChanged();
+    if (st.zone === Z.SETTINGS) renderSettings();
+  });
 
   window.addEventListener('resize', fit);
   document.addEventListener('webOSRelaunch', reopened);   // LG: opened again while running

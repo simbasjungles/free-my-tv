@@ -348,7 +348,10 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   server (with a `plex_url`), your Immich server (with `immich_server` and its key), Trakt (with a `trakt_client_id`,
   once the person signs in on the TV) and GitHub's releases (Updates): new sources (such as Stremio) must not add
   network calls without the owner's OK.
-- Trakt (`Trakt`, Google TV only) needs the person's own API app: `trakt_client_id` (the Client ID only: device code
+- Trakt (`Trakt`; on LG and Samsung `web/trakt.js`, the same: device code with PKCE, read only, the picks' mix of
+  Recs.now, a `last_activities` check every 10 minutes, the tokens in localStorage `fmtv.trakt`, one renewal at a time
+  so a refresh token is never sent twice; Trakt's sync lists are read in every page, as they come 250 at most) needs
+  the person's own API app: `trakt_client_id` (the Client ID only: device code
   with PKCE, so no secret is built in). Until they sign in on the Picks screen, nothing talks to `api.trakt.tv`. The
   tokens stay in `:home`'s private `trakt` preferences, are never logged and never follow a redirect, and only `:home`
   uses them (`Trakt.available()`): on Android 11 to 12L the screensaver's main process has no Trakt, and the saved list

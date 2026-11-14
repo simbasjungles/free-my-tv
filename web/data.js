@@ -576,9 +576,12 @@ var Data = (function () {
 
   var cache = stored('recs') || {};
   var picks = cache.picks || [], listAt = cache.listAt || 0, period = cache.period, listLang = cache.lang || '', stamp = cache.stamp || '';
+  var traktActivity = cache.traktActivity || '', traktCheckedAt = cache.traktCheckedAt || 0;
   var fetchingRecs = false, failedAt = 0, recsError = '';
 
-  function saveRecs() { store('recs', {picks: picks, listAt: listAt, period: period, lang: listLang, stamp: stamp}); }
+  function saveRecs() {
+    store('recs', {picks: picks, listAt: listAt, period: period, lang: listLang, stamp: stamp, traktActivity: traktActivity, traktCheckedAt: traktCheckedAt});
+  }
 
   function hourPeriod(d) {
     var h = d.getHours();
@@ -586,7 +589,7 @@ var Data = (function () {
   }
 
   function sourceStamp() {
-    var s = KEY.length + ':' + KEY.slice(-6) + ':' + REGION + (Prefs.hideAnimation() ? ':no-animation' : '');
+    var s = KEY.length + ':' + KEY.slice(-6) + ':' + REGION + (Prefs.hideAnimation() ? ':no-animation' : '') + ':' + Trakt.stamp();
     for (var i = 0; i < SERVICES.length; i++) s += usable(SERVICES[i][1]) ? '1' : '0';
     return s;
   }
@@ -597,20 +600,33 @@ var Data = (function () {
     return (cut > 0 ? t.slice(0, cut) : t).replace(/^\s+|\s+$/g, '');
   }
 
-  /** This hour's picks (Prefs.cards()): movies ("movie"), shows ("tv") or both (null). */
+  /**
+   * This hour's picks (Prefs.cards()): movies ("movie"), shows ("tv") or both (null). Signed in to Trakt, as on Android
+   * (Recs.now): what they're in the middle of first (as Trakt orders it), up to 2 in 5 cards, then their watchlist and
+   * Trakt's recommendations, up to 3 in 5 with those, then TMDB's; Trakt's fill the rest when TMDB's run short. A new
+   * set each hour, never two from the same franchise.
+   */
   function now(kind) {
-    var list = [];
+    var progress = [], liked = [], list = [];
     if (!KEY) return list;
     for (var i = 0; i < picks.length; i++) {
       var p = picks[i];
-      if ((kind === null || kind === p.kind) && (!p.detailed || (p.app && usable(p.app)))) list.push(p);
+      if ((kind === null || kind === p.kind) && (!p.detailed || (p.app && usable(p.app)))) {
+        (p.mine === 'progress' ? progress : p.mine === 'liked' ? liked : list).push(p);
+      }
     }
-    if (!list.length) return list;
     var hour = Math.floor(Date.now() / 3600000), out = [], seen = {}, n = Prefs.cards();
-    for (var j = 0; j < list.length && out.length < n; j++) {
-      var q = list[(hour * n + j) % list.length], f = franchise(q.title);
-      if (!seen[f]) { seen[f] = true; out.push(q); }
+    function take(from, start, max) {
+      for (var j = 0; j < from.length && out.length < max; j++) {
+        var q = from[(start + j) % from.length], f = franchise(q.title);
+        if (!seen[f]) { seen[f] = true; out.push(q); }
+      }
     }
+    take(progress, 0, Math.max(1, Math.floor(n * 2 / 5)));
+    take(liked, hour * n, Math.max(2, Math.floor(n * 3 / 5)));
+    take(list, hour * n, n);
+    take(progress, 0, n);
+    take(liked, hour * n, n);
     return out;
   }
 
@@ -679,6 +695,7 @@ var Data = (function () {
         if (s && usable(s[1])) { p.app = s[1]; p.service = s[4]; }
       }
       if (p.service && p.app) parts.push(I18N.name(p.service));
+      if (p.tag) parts.unshift(p.tag);   // Trakt's ("Up next: S2 E5", "On your watchlist"), first, as on Android
       p.meta = parts.join(' · ');
       title(p, o, function () {
         p.detailed = true;
@@ -734,7 +751,63 @@ var Data = (function () {
     })();
   }
 
+  // Trakt's titles in the list: about what a tab shows of them (now(): up to 2 in 5 in progress, 3 in 5 liked).
+  var TRAKT_MAX = 6;
+
+  /**
+   * Signed in to Trakt: its lists, then its titles as picks with their details, kept only when on one of the TV's apps
+   * (each costs a TMDB request, so once there are enough the rest aren't looked up), as on Android (Recs.fetch).
+   * done(watched, ours): what was watched (left out of TMDB's) and Trakt's picks in order. Trakt failing leaves the
+   * picks as they'd be without it.
+   */
+  function traktPicks(done) {
+    if (!Trakt.signedIn()) { done({}, []); return; }
+    Trakt.lists(function (err, L) {
+      traktCheckedAt = Date.now();
+      if (err || !L) { done({}, []); return; }
+      traktActivity = L.activity;
+      var progress = [], lm = [], ls = [], rm = [], rs = [], few = Math.max(1, Math.floor(TRAKT_MAX * 2 / 5));
+      var got = {movie: 0, tv: 0}, todo = [];
+      for (var i = 0; i < L.progress.length; i++) {
+        var pr = L.progress[i];
+        todo.push({key: pr.key, mine: 'progress', into: progress, tag: pr.season === 0 ? tr('Continue watching')
+          : pr.paused ? trf('Continue: S{s} E{e}', {s: pr.season, e: pr.episode}) : trf('Up next: S{s} E{e}', {s: pr.season, e: pr.episode})});
+      }
+      function more(keys, tag, into) { for (var k = 0; k < keys.length; k++) if (!L.watched[keys[k]]) todo.push({key: keys[k], mine: 'liked', into: into, tag: tag}); }
+      more(L.watchlistMovies, tr('On your watchlist'), lm);
+      more(L.watchlistShows, tr('On your watchlist'), ls);
+      more(L.recommendedMovies, tr('Recommended on Trakt'), rm);
+      more(L.recommendedShows, tr('Recommended on Trakt'), rs);
+      // Up to `few` in progress of each kind; the watchlist and the recommendations then share, per kind, half of what
+      // the titles in progress leave of TRAKT_MAX (Recs.now's `each`). The progress ones come first in `todo`, so their
+      // count is final by then.
+      function full(t) {
+        var kind = t.key.split(':')[0];
+        if (t.mine === 'progress') return got[kind] >= few;
+        return (kind === 'movie' ? lm.length + rm.length : ls.length + rs.length) >= Math.floor((TRAKT_MAX - progress.length + 1) / 2);
+      }
+      each(todo, function (t, next) {
+        if (full(t)) { next(); return; }
+        var k = t.key.split(':'), p = {id: +k[1], kind: k[0], title: '', backdrop: '', poster: '', meta: '', app: null, detailed: false, tag: t.tag, mine: t.mine};
+        details(p, function (e) {
+          if (!e && p.app && p.backdrop && !full(t)) { t.into.push(p); if (t.mine === 'progress') got[p.kind]++; }
+          next();
+        });
+      }, function () {
+        var ours = [], seen = {};
+        for (var j = 0; j < progress.length; j++) if (!seen[keyOf(progress[j])]) { seen[keyOf(progress[j])] = true; ours.push(progress[j]); }
+        alternate(ours, seen, lm, ls, TRAKT_MAX);
+        alternate(ours, seen, rm, rs, TRAKT_MAX);
+        done(L.watched, ours);
+      });
+    });
+  }
+
   function fetchList(done) {
+    traktPicks(function (watched, ours) { fetchTmdb(watched, ours, done); });
+  }
+
+  function fetchTmdb(watched, ours, done) {
     tmdb('/watch/providers/movie?language=' + lang() + '&watch_region=' + REGION, function (err, res) {
       if (err) { done(err); return; }
       var ids = [];
@@ -753,17 +826,19 @@ var Data = (function () {
           for (var j = 0; !e && j < r.results.length && j < 16; j++) addPick(candidates, r.results[j], kind);
           // Trending is only kept when it's on one of the TV's apps: the details say where.
           each(candidates, function (p, n) {
+            if (watched[keyOf(p)]) { n(); return; }   // seen already (Trakt)
             details(p, function (de) { if (!de && p.app) hot[kind].push(p); n(); });
           }, next);
         });
       }, function () {
         tmdb('/discover/movie?vote_count.gte=30&primary_release_date.gte=' + day(-365) + '&primary_release_date.lte=' + day(0) + common, function (e1, r1) {
-          for (var j = 0; !e1 && j < r1.results.length; j++) addPick(fresh.movie, r1.results[j], 'movie');
+          for (var j = 0; !e1 && j < r1.results.length; j++) if (!watched['movie:' + r1.results[j].id]) addPick(fresh.movie, r1.results[j], 'movie');
           tmdb('/discover/tv?vote_count.gte=20&air_date.gte=' + day(-90) + '&air_date.lte=' + day(0) + common, function (e2, r2) {
-            for (var k = 0; !e2 && k < r2.results.length; k++) addPick(fresh.tv, r2.results[k], 'tv');
-            var list = [], seen = {};
-            alternate(list, seen, hot.movie, hot.tv, 24);
-            alternate(list, seen, fresh.movie, fresh.tv, 24);
+            for (var k = 0; !e2 && k < r2.results.length; k++) if (!watched['tv:' + r2.results[k].id]) addPick(fresh.tv, r2.results[k], 'tv');
+            var list = ours.slice(), seen = {};
+            for (var o = 0; o < list.length; o++) seen[keyOf(list[o])] = true;
+            alternate(list, seen, hot.movie, hot.tv, ours.length + 24);
+            alternate(list, seen, fresh.movie, fresh.tv, ours.length + 24);
             if (!list.length) { done(new Error('TMDB returned no recommendations')); return; }
             picks = list;
             done(null);
@@ -774,6 +849,7 @@ var Data = (function () {
   }
 
   /** Fetches the list when stale (6 h, a new period of the day, language, key or apps), then this hour's details. */
+  var TRAKT_EVERY = 10 * 60000;
   function refreshRecs() {
     if (!KEY || fetchingRecs || !installed.length) return;
     var t = Date.now(), p = hourPeriod(new Date()), st = sourceStamp();
@@ -781,6 +857,15 @@ var Data = (function () {
     var stale = st !== stamp || p !== period || t - listAt > 6 * 3600000 || t < listAt || !picks.length || listLang !== I18N.lang;
     var wanted = all(), missing = false;
     for (var i = 0; i < wanted.length; i++) missing = missing || !wanted[i].detailed;
+    // Signed in to Trakt: every 10 minutes one small request (last_activities) says whether the account changed
+    // (marked watched, added to the watchlist); then the list comes again.
+    if (!stale && !missing && Trakt.signedIn() && (t - traktCheckedAt > TRAKT_EVERY || t < traktCheckedAt)) {
+      traktCheckedAt = t;
+      Trakt.activity(function (err, a) {
+        if (!err && a && a !== traktActivity) { listAt = 0; refreshRecs(); } else saveRecs();
+      });
+      return;
+    }
     if (!stale && !missing) return;
     fetchingRecs = true;
     stamp = st;
@@ -839,6 +924,8 @@ var Data = (function () {
     usable: usable,
     services: services,
     refresh: function () { refreshWeather(); refreshAir(); refreshPrices(); refreshRecs(); },
+    /** Signed in or out of Trakt (or a code to show): the picks come again with it, or without. */
+    traktChanged: function () { refreshRecs(); changed(); },
     settingsChanged: function () { pricesAt = 0; refreshPrices(); changed(); },
     findCity: findCity,
     /** Another city picked: its weather now (none shown until it comes). */
