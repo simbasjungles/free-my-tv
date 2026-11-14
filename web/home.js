@@ -921,7 +921,7 @@
         step: function () { Prefs.set('quotes', !Prefs.quotes()); Data.settingsChanged(); }}
     ];
     var names = ['Bitcoin', 'Ethereum', 'Solana', tr('Dollar')];
-    var count = Data.currency === 'BRL' ? 4 : 3;
+    var count = Data.dollarRow() ? 4 : 3;
     for (var i = 0; i < count; i++) {
       (function (i) {
         rows.push({label: names[i], toggle: Prefs.quotes() && Prefs.coin(i), dim: !Prefs.quotes(),
@@ -989,6 +989,17 @@
       hover(row, Z.SETTINGS, i);
     }
     el('div', 'hint', box, tr('OK or the arrows change the value.'));
+    updateFocus();
+  }
+
+  function syncSettingsRows() {
+    var focusLabel = rowsNow[st.row] && rowsNow[st.row].label;
+    if (settingRows().length === rowsNow.length) return;
+    renderSettings();
+    if (focusLabel) {
+      for (var i = 0; i < rowsNow.length; i++) if (rowsNow[i].label === focusLabel) { st.row = i; break; }
+    }
+    st.row = Math.max(0, Math.min(rowsNow.length - 1, st.row));
     updateFocus();
   }
 
@@ -1950,6 +1961,7 @@
     renderQuotes();
     renderCards();
     renderPanels();
+    if (st.zone === Z.SETTINGS) syncSettingsRows();
     checkNight();
   });
 
