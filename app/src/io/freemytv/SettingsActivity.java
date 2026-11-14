@@ -431,6 +431,7 @@ public class SettingsActivity extends Activity {
 
         void pause() {
             commitWatch();
+            Plex.cancelSignIn();   // leaving Settings ends a sign-in still waiting for its code
             if (running && !busy() && memoryMissing()) {   // measured once the home screen is back in front
                 AppLog.w("memory of " + state.optString("mode") + " missing: measuring again");
                 ModeJob.schedule(getContext(), ModeJob.MEMORY, state.optString("mode"), 5_000);
@@ -2107,14 +2108,17 @@ public class SettingsActivity extends Activity {
         /** OK on Plex: sign in (or out), and on or off in Continue Watching, in one small menu. */
         private void plexMenu() {
             Context c = getContext();
-            boolean signedIn = Plex.signedIn(c), on = !Prefs.watchOff().contains(Plex.PKG);
-            String[] items = {signedIn ? Ui.tr("Sign out") : Ui.tr("Sign in"), on ? Ui.tr("Turn off") : Ui.tr("Turn on")};
+            boolean signedIn = Plex.signedIn(c), signingIn = Plex.busy(), on = !Prefs.watchOff().contains(Plex.PKG);
+            String first = signingIn ? Ui.tr("Cancel sign-in") : signedIn ? Ui.tr("Sign out") : Ui.tr("Sign in");
+            String[] items = {first, on ? Ui.tr("Turn off") : Ui.tr("Turn on")};
             new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                     .setTitle("Plex")   // the row behind it already says who is signed in
                     .setItems(items, (d, which) -> {
                         // Each choice does what its label said, if it still applies (a sign-in may have finished
                         // while the menu was open): Sign in never starts a second account, Sign out only signs out.
-                        if (which == 0 && signedIn) {
+                        if (which == 0 && signingIn) {
+                            Plex.cancelSignIn();
+                        } else if (which == 0 && signedIn) {
                             if (Plex.signedIn(c)) Plex.signOut(c);
                         } else if (which == 0) {
                             // TalkBack reads the row again at each step: the code as it appears, then who signed in.

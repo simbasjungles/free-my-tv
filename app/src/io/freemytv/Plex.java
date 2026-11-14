@@ -38,6 +38,8 @@ final class Plex {
     private static final String TV = "https://plex.tv/api/v2";
     private static final String DISCOVER = "https://discover.provider.plex.tv";
     private static final long EVERY = 60_000L;
+    /** A watchlist title's place on your server is looked up again after this (it may have been added since). */
+    private static final long LINKS_EVERY = 6 * 3600_000L;
     /** A picture, and an answer: lists of 20 titles are well under this, and a huge one must not take :home down. */
     private static final int MAX_BYTES = 8 << 20, MAX_JSON = 2 << 20;
 
@@ -49,6 +51,8 @@ final class Plex {
     // Sign-in in progress (Settings shows it in the Plex row); null when none.
     private static volatile String code, message = "";
     private static volatile boolean signingIn;
+    /** Which sign-in is the current one: cancelling (or leaving Settings) moves it on, and the old one stops asking. */
+    private static volatile int signInRun;
     /** The token whose lists are being fetched now, or null: another account's slow fetch doesn't hold up a new one. */
     private static volatile String fetchingFor;
     private static volatile long fetchedAt;
@@ -100,9 +104,11 @@ final class Plex {
 
     /** Starts the code sign-in in the background; `changed` runs (on that thread) at every step. */
     static void signIn(Context c, Runnable changed) {
+        final int run;
         synchronized (SIGN_IN) {
             if (signingIn || !available() || signedIn(c)) return;   // one account at a time: sign out first
             signingIn = true;
+            run = ++signInRun;
         }
         code = null;
         message = "";
@@ -110,12 +116,14 @@ final class Plex {
         new Thread(() -> {
             try {
                 JSONObject pin = new JSONObject(request(app, "POST", TV + "/pins?strong=false", null, 8000));
+                if (run != signInRun) return;   // cancelled meanwhile
                 code = pin.getString("code");
                 changed.run();
                 long until = System.currentTimeMillis() + pin.optLong("expiresIn", 900) * 1000L, id = pin.getLong("id");
                 long wait = 2000;
                 while (System.currentTimeMillis() < until) {
                     Thread.sleep(wait);
+                    if (run != signInRun) return;   // cancelled: the code on plex.tv just expires unused
                     String token;
                     try {
                         token = new JSONObject(request(app, "GET", TV + "/pins/" + id, null, 8000)).optString("authToken");
@@ -135,6 +143,7 @@ final class Plex {
                     } catch (Exception e) {
                         AppLog.w("plex user: " + why(e));
                     }
+                    if (run != signInRun) return;   // cancelled as it was typed: that token is never kept
                     synchronized (Plex.class) {
                         // A new account starts clean: no server or lists of an earlier one can be mixed in.
                         String client = sp(app).getString("client", "");
@@ -151,22 +160,50 @@ final class Plex {
                     AppLog.w("plex: signed in");
                     return;
                 }
-                message = Ui.tr("The code expired. Press OK for a new one.");
+                if (run == signInRun) message = Ui.tr("The code expired. Press OK for a new one.");
             } catch (Exception | OutOfMemoryError e) {
-                message = Ui.trf("Couldn't sign in: {error}", "error", why(e));
+                if (run == signInRun) message = Ui.trf("Couldn't sign in: {error}", "error", why(e));
                 AppLog.w("plex sign-in: " + why(e));
             } finally {
-                signingIn = false;
+                synchronized (SIGN_IN) {
+                    if (run == signInRun) signingIn = false;
+                }
                 changed.run();
             }
         }, "plex").start();
     }
 
-    /** Forgets the account and its server here (the client id stays: it's this TV). */
+    /** Stops a sign-in that's waiting for its code (Cancel in the Plex menu, or leaving Settings). */
+    static void cancelSignIn() {
+        synchronized (SIGN_IN) {
+            if (!signingIn) return;
+            signInRun++;
+            signingIn = false;
+            code = null;
+            message = "";
+        }
+    }
+
+    /**
+     * Forgets the account and its server here (the client id stays: it's this TV), and asks plex.tv to drop the
+     * token in the background, best effort (as Trakt's sign-out does): the TV leaves the account's devices.
+     */
     static void signOut(Context c) {
+        final String token;
         synchronized (Plex.class) {
+            token = sp(c).getString("token", "");
             String client = sp(c).getString("client", "");
             sp(c).edit().clear().putString("client", client).apply();
+        }
+        if (!token.isEmpty()) {
+            Context app = c.getApplicationContext();
+            new Thread(() -> {
+                try {
+                    request(app, "DELETE", TV + "/users/signout", token, 8000);
+                } catch (Exception | OutOfMemoryError e) {
+                    AppLog.w("plex sign-out: " + why(e));
+                }
+            }, "plex").start();
         }
         message = "";
         fetchedAt = 0;
@@ -320,6 +357,18 @@ final class Plex {
                         // Tried again at the next refresh, then every 2nd, 4th and 8th (half a minute short, to land on one).
                         serverRestUntil = System.currentTimeMillis() + (EVERY << Math.min(serverFailures++, 3)) - EVERY / 2;
                         AppLog.w("plex continue watching: " + why(e));
+                        // The server refused its token (a share taken back, its token renewed): its list and the server
+                        // are forgotten, and a later refresh looks for a server again. Silence keeps both.
+                        if (e.getMessage() != null && e.getMessage().startsWith("Plex returned HTTP 401")) {
+                            synchronized (Plex.class) {
+                                if (token.equals(sp(app).getString("token", ""))) {
+                                    sp(app).edit().remove("serverUri").remove("serverId").remove("serverToken")
+                                            .remove("serverName").remove("links").apply();
+                                }
+                            }
+                            watching = new JSONArray();
+                            got = true;
+                        }
                     }
                 }
                 try {
@@ -375,6 +424,9 @@ final class Plex {
         }
         JSONArray out = new JSONArray();
         String id = sp(c).getString("serverId", "");
+        // Plex lists them newest first; a next episode has no time of its own, so it takes the one before it (just
+        // under), and the row mixes them with the other apps' titles without losing Plex's order.
+        long last = System.currentTimeMillis();
         for (int i = 0; list != null && i < list.length() && out.length() < CONTINUE_MAX; i++) {
             JSONObject m = list.getJSONObject(i);
             String type = m.optString("type");
@@ -383,31 +435,63 @@ final class Plex {
             String art = episode ? first(m, "grandparentArt", "art", "thumb") : first(m, "art", "thumb");
             String link = link(id, m.optString("key"));
             if (link == null) continue;
+            long viewed = m.optLong("lastViewedAt") * 1000;
+            last = viewed > 0 && viewed < last ? viewed : last - 1;
             out.put(new JSONObject().put("title", episode ? first(m, "grandparentTitle", "title") : m.optString("title"))
                     .put("season", episode ? m.optInt("parentIndex") : 0).put("episode", episode ? m.optInt("index") : 0)
                     .put("duration", m.optLong("duration")).put("position", m.optLong("viewOffset"))
-                    .put("engaged", m.optLong("lastViewedAt") * 1000).put("picture", art).put("intent", link));
+                    .put("engaged", last).put("picture", art).put("intent", link));
         }
         return out;
     }
 
-    /** The Plex Watchlist, newest first: the one on your server opens there (it plays), else its page in Plex. */
+    /**
+     * The Plex Watchlist, newest first: the one on your server opens there (it plays), else its page in Plex. Where
+     * each title is on the server is remembered for LINKS_EVERY, so a refresh asks the server only about new titles.
+     */
     private static JSONArray watchlist(Context c, String token, boolean[] serverUp) throws Exception {
         JSONArray list = metadata(new JSONObject(request(c, "GET", DISCOVER
                 + "/library/sections/watchlist/all?X-Plex-Container-Start=0&X-Plex-Container-Size=20", token, 8000)));
+        JSONObject known = links(c), kept = new JSONObject();
+        long now = System.currentTimeMillis();
         JSONArray out = new JSONArray();
         for (int i = 0; list != null && i < list.length() && out.length() < WATCHLIST_MAX; i++) {
             JSONObject m = list.getJSONObject(i);
             String type = m.optString("type");
             if (!type.equals("movie") && !type.equals("show")) continue;
-            String art = first(m, "art", "thumb"), slug = m.optString("slug");
-            String link = serverUp[0] ? libraryLink(c, token, m.optString("guid"), serverUp) : null;
+            String art = first(m, "art", "thumb"), slug = m.optString("slug"), guid = m.optString("guid");
+            // {link ("" = not on the server), when, which server}: fresh, or the server can't be asked now.
+            JSONObject seen = guid.isEmpty() ? null : known.optJSONObject(guid);
+            boolean sameServer = seen != null && seen.optString("s").equals(sp(c).getString("serverId", ""));
+            boolean fresh = sameServer && now - seen.optLong("at") >= 0 && now - seen.optLong("at") < LINKS_EVERY;
+            String link;
+            if (fresh || sameServer && !serverUp[0]) {
+                link = seen.optString("l").isEmpty() ? null : seen.optString("l");
+                kept.put(guid, seen);
+            } else {
+                link = serverUp[0] ? libraryLink(c, token, guid, serverUp) : null;
+                if (serverUp[0] && !guid.isEmpty()) {   // the server answered: remember it, found or not
+                    kept.put(guid, new JSONObject().put("l", link == null ? "" : link).put("at", now)
+                            .put("s", sp(c).getString("serverId", "")));
+                }
+            }
             if (link == null && !slug.isEmpty()) link = "https://watch.plex.tv/" + (type.equals("show") ? "show/" : "movie/") + slug;
             if (!art.startsWith("https://")) art = "";   // the watchlist's artwork is Plex's own https address
             out.put(new JSONObject().put("title", m.optString("title")).put("picture", art)
                     .put("intent", link == null ? "" : link).put("watchlist", true));
         }
+        synchronized (Plex.class) {   // only this watchlist's titles are kept; another account's never are
+            if (token.equals(sp(c).getString("token", ""))) sp(c).edit().putString("links", kept.toString()).apply();
+        }
         return out;
+    }
+
+    private static JSONObject links(Context c) {
+        try {
+            return new JSONObject(sp(c).getString("links", "{}"));
+        } catch (Exception e) {
+            return new JSONObject();
+        }
     }
 
     /** The link to the title on your server, found by Plex's guid; null if it isn't there or the server is down. */

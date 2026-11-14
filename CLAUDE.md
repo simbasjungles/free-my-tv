@@ -349,11 +349,13 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   once the person signs in on the TV), Plex's account and your Plex server (once the person signs in to Plex on the
   TV) and GitHub's releases (Updates): new sources (such as Stremio) must not add network calls without the owner's OK.
 - Plex sign-in (`Plex`, `:home` only, like Trakt): Plex's own row in *Continue Watching apps* (always listed when Plex
-  is installed) opens a small menu, sign in or out and on or off, and shows Plex's TV code (plex.tv/link) while
-  signing in. When Plex is on there but no one signed in and the row has nothing from Plex, the home screen says
-  where to sign in (`plexHint`). The token stays in `:home`'s private `plex` preferences, only travels in the `X-Plex-Token` header,
-  never follows a redirect and is never logged. Continue Watching then starts with the server's in-progress titles
-  (Plex's order, beyond `PER_APP`) and ends with the Plex Watchlist; the TV's own Plex rows (Google TV) are dropped once that list has titles, not before, and
+  is installed, and while signed in even without it) opens a small menu, sign in or out (or cancel a sign-in) and
+  on or off, and shows Plex's TV code (plex.tv/link) while signing in; leaving Settings cancels a sign-in that's
+  still waiting. The home screen says nothing about signing in: that row is the place. The token stays in `:home`'s private `plex` preferences, only travels in the `X-Plex-Token` header,
+  never follows a redirect and is never logged. Continue Watching then mixes the server's in-progress titles in with
+  the other apps' by when they were last watched (a next episode takes the time of the one before it, so Plex's order
+  stays; up to `Plex.CONTINUE_MAX` rather than `PER_APP`) and ends with the Plex Watchlist, whose places on the server
+  are remembered per title for 6 hours (`links`); the TV's own Plex rows (Google TV) are dropped once that list has titles, not before, and
   its pictures (`Plex.PICTURE` keys in `WatchArt`, on its network thread) come from the server, with its token
   (`Plex.picture`), or, for Plex's artwork (https addresses on Plex's and its partners' image hosts), through
   `NetPicture` like any app's, without a token. Plex
@@ -362,8 +364,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   token), at the https addresses plex.tv lists, with the usual certificate checks and never plain http. Every failure
   it logs or shows is a `PlexError` or a class name (`Plex.why`): a JSONException's text holds the answer, which may
   have tokens in it. Turned off in *Continue Watching apps*, nothing is asked of Plex; a server that doesn't answer
-  rests up to 8 minutes. Sign out forgets the token on the TV (the TV stays under the account's authorized devices
-  on plex.tv until removed there).
+  rests up to 8 minutes, and one that refuses its token (401: a share taken back) loses its list and is looked for
+  again. Sign out forgets the token on the TV and asks plex.tv to drop it (`DELETE /api/v2/users/signout`, best
+  effort, as Trakt's revoke). The row shows the account that typed the code on every Plex Home profile.
 - Trakt (`Trakt`, Google TV only) needs the person's own API app: `trakt_client_id` (the Client ID only: device code
   with PKCE, so no secret is built in). Until they sign in on the Picks screen, nothing talks to `api.trakt.tv`. The
   tokens stay in `:home`'s private `trakt` preferences, are never logged and never follow a redirect, and only `:home`

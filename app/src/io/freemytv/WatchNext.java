@@ -20,8 +20,8 @@ import java.util.Set;
  * What you were watching in your apps, from Android TV's own lists (TvContract, needs READ_TV_LISTINGS): the system
  * Watch Next list, where Prime Video, Disney+, HBO Max, Plex and others note what you left half-way, and the home
  * screen channels some apps publish under the name "Continue Watching" instead (Stremio). Newest first, a few per app,
- * so one show doesn't fill the row. Signed in to Plex (Plex.java), what Plex has in progress comes first, in Plex's
- * order, and the Plex Watchlist last.
+ * so one show doesn't fill the row. Signed in to Plex (Plex.java), what Plex has in progress joins in by when it was
+ * last watched, and the Plex Watchlist comes last.
  */
 final class WatchNext {
     private WatchNext() {}
@@ -41,6 +41,8 @@ final class WatchNext {
         String intent;
         final Uri pictureUri;
         final String pictureKey, bannerKey;
+        /** Read from Plex itself (Plex.java), not from what Plex shares on the TV: its own limit per app. */
+        boolean fromPlex;
         private final String picture;
 
         Item(String pkg, String poster, String thumbnail) {
@@ -64,6 +66,7 @@ final class WatchNext {
 
         private Item(String image, String server) {
             pkg = Plex.PKG;
+            fromPlex = true;
             picture = image.isEmpty() ? null : image;
             pictureUri = null;
             pictureKey = image.isEmpty() ? null : Plex.PICTURE + server + "|" + image;
@@ -108,6 +111,8 @@ final class WatchNext {
             // Plex's own list replaces what Plex shares on the TV (Google TV), which would only repeat it. Until it has
             // something (signed out, the first fetch, no server), the TV's Plex rows stay.
             for (java.util.Iterator<Item> i = all.iterator(); i.hasNext(); ) if (Plex.PKG.equals(i.next().pkg)) i.remove();
+            // Mixed in with the other apps' titles by when each was last watched, as theirs are.
+            all.addAll(plex.watching);
         }
         for (java.util.Iterator<Item> i = all.iterator(); i.hasNext(); ) {
             Item it = i.next();
@@ -117,18 +122,11 @@ final class WatchNext {
         List<Item> out = new ArrayList<>();
         Map<String, Integer> perApp = new HashMap<>();
         Set<String> seen = new HashSet<>();
-        if (!off.contains(Plex.PKG)) {
-            String name = appName(c, Plex.PKG);
-            for (Item it : plex.watching) {
-                if (hidden.contains(hideKey(it)) || !seen.add(it.pkg + "|" + it.title) || out.size() >= MAX) continue;
-                it.app = name;
-                out.add(it);
-            }
-        }
         for (Item it : all) {
             String key = it.pkg + "|" + (it.intent != null ? it.intent : it.title);
             int n = perApp.containsKey(it.pkg) ? perApp.get(it.pkg) : 0;
-            if (n >= PER_APP || !seen.add(key)) continue;
+            // Plex's own list is in-progress titles, one per show: more of it than of an app's shared rows.
+            if (n >= (it.fromPlex ? Plex.CONTINUE_MAX : PER_APP) || !seen.add(key)) continue;
             perApp.put(it.pkg, n + 1);
             it.app = appName(c, it.pkg);
             out.add(it);
