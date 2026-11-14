@@ -766,7 +766,7 @@ var Data = (function () {
       traktCheckedAt = Date.now();
       if (err || !L) { done({}, []); return; }
       traktActivity = L.activity;
-      var progress = [], lm = [], ls = [], rm = [], rs = [], few = Math.max(1, Math.floor(TRAKT_MAX * 2 / 5)), perKind = Math.ceil(TRAKT_MAX / 2);
+      var progress = [], lm = [], ls = [], rm = [], rs = [], few = Math.max(1, Math.floor(TRAKT_MAX * 2 / 5));
       var got = {movie: 0, tv: 0}, todo = [];
       for (var i = 0; i < L.progress.length; i++) {
         var pr = L.progress[i];
@@ -778,11 +778,13 @@ var Data = (function () {
       more(L.watchlistShows, tr('On your watchlist'), ls);
       more(L.recommendedMovies, tr('Recommended on Trakt'), rm);
       more(L.recommendedShows, tr('Recommended on Trakt'), rs);
-      // Up to `few` in progress of each kind; the watchlist and the recommendations share `perKind` of each kind.
+      // Up to `few` in progress of each kind; the watchlist and the recommendations then share, per kind, half of what
+      // the titles in progress leave of TRAKT_MAX (Recs.now's `each`). The progress ones come first in `todo`, so their
+      // count is final by then.
       function full(t) {
         var kind = t.key.split(':')[0];
         if (t.mine === 'progress') return got[kind] >= few;
-        return (kind === 'movie' ? lm.length + rm.length : ls.length + rs.length) >= perKind;
+        return (kind === 'movie' ? lm.length + rm.length : ls.length + rs.length) >= Math.floor((TRAKT_MAX - progress.length + 1) / 2);
       }
       each(todo, function (t, next) {
         if (full(t)) { next(); return; }
@@ -794,8 +796,8 @@ var Data = (function () {
       }, function () {
         var ours = [], seen = {};
         for (var j = 0; j < progress.length; j++) if (!seen[keyOf(progress[j])]) { seen[keyOf(progress[j])] = true; ours.push(progress[j]); }
-        alternate(ours, seen, lm, ls, TRAKT_MAX * 2);
-        alternate(ours, seen, rm, rs, TRAKT_MAX * 2);
+        alternate(ours, seen, lm, ls, TRAKT_MAX);
+        alternate(ours, seen, rm, rs, TRAKT_MAX);
         done(L.watched, ours);
       });
     });
