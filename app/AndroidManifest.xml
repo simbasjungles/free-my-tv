@@ -65,6 +65,7 @@
         <package android:name="ru.rt.video.app.tv" />
         <package android:name="in.startv.hotstar" />
         <package android:name="com.crunchyroll.crunchyroid" />
+        <package android:name="fr.anidn" />
         <!-- Sony: Google TV's home app takes its remote's app buttons (Prefs.sonyGoogleTv, #395) -->
         <package android:name="com.google.android.apps.tv.launcherx" />
         <package android:name="net.cme.voyo.cz.tvapp" />
