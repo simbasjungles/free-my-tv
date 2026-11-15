@@ -108,6 +108,8 @@ final class Recs {
         {"apple tv", "appletv", "com.apple.atve.amazon.appletv"},
         {"hotstar", "hotstar", "in.startv.hotstar"},   // TMDB: "JioHotstar" (earlier "Disney Plus Hotstar")
         {"crunchyroll", "crunchyroll", "com.crunchyroll.crunchyroid"},
+        // France and Germany. TMDB: "Animation Digital Network"; its "Anime Digital Network Amazon Channel" is Prime's.
+        {"animation digital network", "adn", "fr.anidn"},
         {"now tv", "now", "com.bskyb.nowtv.beta"},     // UK: Sky's NOW (TMDB: "Now TV", "Now TV Cinema")
         {"oneplay", "oneplay", "net.cme.voyo.cz.tvapp"},    // Czechia: Voyo and O2 TV became Oneplay, same app
         // Germany (TMDB's watch providers for DE)
@@ -154,6 +156,7 @@ final class Recs {
         SERVICE_NAME.put("hotstar", "JioHotstar");
         SERVICE_NAME.put("okko", "Okko");
         SERVICE_NAME.put("crunchyroll", "Crunchyroll");
+        SERVICE_NAME.put("adn", "ADN");
         SERVICE_NAME.put("now", "NOW");
         SERVICE_NAME.put("oneplay", "Oneplay");
         SERVICE_NAME.put("ard", "ARD Mediathek");
