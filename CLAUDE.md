@@ -26,8 +26,12 @@ before you do it, and let them do the taps on the TV.
   switch refuses on both (`HomeMode.BRICKS`, Huawei by brand or by `com.huawei.system.BuildEx.getOsBrand()`), and
   the boot check or an update takes one already in Free My TV mode back to *Original*. On a phone (`HomeMode.phone`:
   telephony, no leanback, not in TV mode) the settings say the APK goes on the TV, and the switch refuses. On Amazon Fire TV (Fire OS: `HomeMode.AMAZON`), Amazon's launcher keeps the Home button (`priority=950`
-  on `CATEGORY_HOME`), so the switch refuses Free My TV mode while *Original* and the watchdog still run, and no
-  `com.amazon.*` package is ever turned off (`mayTurnOff`).
+  on `CATEGORY_HOME`), so Free My TV mode is the accessibility service (`RemoteKeyService`): it watches for Amazon's
+  launcher window and brings Free My TV's own home screen task back on every Home press. The switch turns the service
+  on through the TV's own ADB when it was already allowed; otherwise the settings say where to turn it on (*Settings* >
+  *Accessibility*). *Original* leaves Amazon's launcher alone and gives the Home button back to it; no `com.amazon.*`
+  package is ever turned off (`mayTurnOff`). `FireHomeActivity` answers HOME there and is disabled everywhere else
+  (`App.onCreate`), so no TV ends up with two home activities.
 - Never turn off an app that saved a Wi-Fi network: Android deletes its networks and Original can't bring them
   back (`wifiOwners` in `HomeMode`). When the Wi-Fi service doesn't answer, the switch stops on Wi-Fi, and the boot
   check leaves the setup app and the stock home screen for later.

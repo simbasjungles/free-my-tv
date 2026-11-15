@@ -169,10 +169,12 @@
 
         <!-- Fire TV: the same home screen opened as a regular app (no resumeWhilePausing, which leaves window focus on
              Amazon's paused launcher on Fire OS). It is exported and answers HOME so a launcher helper can start it by
-             name; RemoteKeyService also brings it back to the front on every Home press. -->
+             name; RemoteKeyService also brings it back to the front on every Home press. Disabled by default and
+             enabled in App.onCreate only on Fire OS: elsewhere it would be a second HOME activity (#467). -->
         <activity
             android:name=".FireHomeActivity"
             android:process=":home"
+            android:enabled="false"
             android:exported="true"
             android:label="Free My TV"
             android:launchMode="singleTask"

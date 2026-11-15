@@ -516,7 +516,7 @@ final class HomeMode {
                 : "settings put secure enabled_accessibility_services '" + String.join(":", list) + "'");
         if (on) adb.shell("settings put secure accessibility_enabled 1");
         else if (list.isEmpty() && state(c).optBoolean("accessibilityWasOff")) adb.shell("settings put secure accessibility_enabled 0");
-        AppLog.w("remote buttons service " + (on ? "on" : "off"));
+        AppLog.w("accessibility service " + (on ? "on" : "off"));
     }
 
     private static final String NOW_PLAYING = PKG + "/" + PKG + ".NowPlaying";
@@ -583,8 +583,19 @@ final class HomeMode {
                 s.put("mode", FREE).put("since", System.currentTimeMillis()).put("homeReverted", false).put("error", "");
             } catch (JSONException ignored) {}
             save(c, s);
+            boolean service = fireServiceOn(c);
+            // The switch can turn the service on through the TV's own ADB, as it does for the remote buttons. Only when
+            // ADB was allowed before: otherwise the switch keeps its old, quick path and the settings say where to do it.
+            if (!service && s.optBoolean("adbAuthorized")) {
+                try (Adb adb = connect(c, s)) {
+                    remoteService(c, adb, true);
+                } catch (IOException e) {
+                    AppLog.w("Fire TV accessibility service: " + e.getMessage());
+                }
+                service = fireServiceOn(c);
+            }
             done(c, null);
-            notice(c, fireServiceOn(c)
+            notice(c, service
                     ? Ui.tr("Free My TV is on: the Home button brings it back.")
                     : Ui.tr("Free My TV is on. Turn on Free My TV in Settings > Accessibility, so the Home button brings it back."));
             return;
