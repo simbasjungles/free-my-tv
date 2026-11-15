@@ -29,6 +29,7 @@
  "Bottom right": "右下",
  "COMPARISON": "比較",
  "Cancel": "キャンセル",
+ "Cancel sign-in": "サインインをキャンセル",
  "Cartoons and anime": "アニメ・カートゥーン",
  "Check now": "今すぐ確認",
  "Checking the key with TMDB…": "TMDB でキーを確認中…",
@@ -322,6 +323,8 @@
  "Top left": "左上",
  "Top of the screen": "画面の上部",
  "Top right": "右上",
+ "Turn off": "オフにする",
+ "Turn on": "オンにする",
  "Turn on the Quotes widget to pick its coins.": "コインを選ぶには相場ウィジェットをオンにしてください。",
  "Turned back on {list}: the TV's inputs or remote need it.": "次をオンに戻しました：{list}。テレビの入力やリモコンに必要です。",
  "Turned off what was missing: {list}.": "残っていたものをオフにしました：{list}。",
@@ -462,8 +465,10 @@
  "{n} min left": "残り{n}分",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on}/{total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "残り{time}",
  "{url}, code {code}": "{url}、コード {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} が出ました：もう一度ビルドしてください",
  "← → to move · OK to drop · Back to cancel": "← → 移動 · OK 配置 · 戻る キャンセル"
 }

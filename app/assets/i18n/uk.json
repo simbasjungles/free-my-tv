@@ -29,6 +29,7 @@
  "Bottom right": "Праворуч унизу",
  "COMPARISON": "ПОРІВНЯННЯ",
  "Cancel": "Скасувати",
+ "Cancel sign-in": "Скасувати вхід",
  "Cartoons and anime": "Мультфільми та аніме",
  "Check now": "Перевірити",
  "Checking the key with TMDB…": "Перевірка ключа в TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "Ліворуч угорі",
  "Top of the screen": "Верх екрана",
  "Top right": "Праворуч угорі",
+ "Turn off": "Вимкнути",
+ "Turn on": "Увімкнути",
  "Turn on the Quotes widget to pick its coins.": "Увімкніть віджет курсів, щоб вибрати монети.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Знову увімкнено: {list}. Це потрібно для входів або пульта телевізора.",
  "Turned off what was missing: {list}.": "Вимкнено те, чого бракувало: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "залишилося {n} хв",
  "{n} ms": "{n} мс",
  "{on} of {total}": "{on} з {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "залишилось {time}",
  "{url}, code {code}": "{url}, код {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "Вийшла {version}: зберіть знову",
  "← → to move · OK to drop · Back to cancel": "← → перемістити · OK розмістити · Назад скасувати"
 }

@@ -29,6 +29,7 @@
  "Bottom right": "أسفل اليمين",
  "COMPARISON": "مقارنة",
  "Cancel": "إلغاء",
+ "Cancel sign-in": "إلغاء تسجيل الدخول",
  "Cartoons and anime": "الرسوم المتحركة والأنمي",
  "Check now": "تحقق الآن",
  "Checking the key with TMDB…": "جارٍ التحقق من المفتاح لدى TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "أعلى اليسار",
  "Top of the screen": "أعلى الشاشة",
  "Top right": "أعلى اليمين",
+ "Turn off": "إيقاف",
+ "Turn on": "تشغيل",
  "Turn on the Quotes widget to pick its coins.": "فعّل عنصر الأسعار لاختيار عملاته.",
  "Turned back on {list}: the TV's inputs or remote need it.": "أُعيد تشغيل {list}: يحتاجه التلفزيون لمدخلاته أو ريموته.",
  "Turned off what was missing: {list}.": "تم إيقاف ما كان ناقصًا: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "متبقٍ {n} د",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} من {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "المتبقي {time}",
  "{url}, code {code}": "{url}، الرمز {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "صدر الإصدار {version}: أعد بناء التطبيق",
  "← → to move · OK to drop · Back to cancel": "← → للنقل · OK للإفلات · الرجوع للإلغاء"
 }

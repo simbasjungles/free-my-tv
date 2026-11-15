@@ -29,6 +29,7 @@
  "Bottom right": "Справа снизу",
  "COMPARISON": "СРАВНЕНИЕ",
  "Cancel": "Отмена",
+ "Cancel sign-in": "Отменить вход",
  "Cartoons and anime": "Мультфильмы и аниме",
  "Check now": "Проверить",
  "Checking the key with TMDB…": "Проверка ключа в TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "Слева сверху",
  "Top of the screen": "Верх экрана",
  "Top right": "Справа сверху",
+ "Turn off": "Выключить",
+ "Turn on": "Включить",
  "Turn on the Quotes widget to pick its coins.": "Включите виджет курсов, чтобы выбрать монеты.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Снова включено: {list}. Это нужно для входов или пульта телевизора.",
  "Turned off what was missing: {list}.": "Дополнительно отключены: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "осталось {n} мин",
  "{n} ms": "{n} мс",
  "{on} of {total}": "{on} из {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "осталось {time}",
  "{url}, code {code}": "{url}, код {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "Вышла {version}: соберите заново",
  "← → to move · OK to drop · Back to cancel": "← → — переместить · OK — оставить · Назад — отмена"
 }

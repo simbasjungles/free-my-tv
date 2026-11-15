@@ -29,6 +29,7 @@
  "Bottom right": "Sağ alt",
  "COMPARISON": "KARŞILAŞTIRMA",
  "Cancel": "İptal",
+ "Cancel sign-in": "Girişi iptal et",
  "Cartoons and anime": "Çizgi filmler ve anime",
  "Check now": "Şimdi denetle",
  "Checking the key with TMDB…": "Anahtar TMDB ile doğrulanıyor…",
@@ -322,6 +323,8 @@
  "Top left": "Sol üst",
  "Top of the screen": "Ekranın üstü",
  "Top right": "Sağ üst",
+ "Turn off": "Kapat",
+ "Turn on": "Aç",
  "Turn on the Quotes widget to pick its coins.": "Coinleri seçmek için fiyat widget'ını açın.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Şunlar yeniden açıldı: {list}. TV'nin girişleri veya kumandası bunlara ihtiyaç duyuyor.",
  "Turned off what was missing: {list}.": "Eksik kalanlar kapatıldı: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "{n} dk kaldı",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on}/{total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} kaldı",
  "{url}, code {code}": "{url}, kod {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} çıktı: yeniden derleyin",
  "← → to move · OK to drop · Back to cancel": "← → taşı · OK bırak · Geri iptal"
 }

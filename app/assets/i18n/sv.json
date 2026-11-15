@@ -29,6 +29,7 @@
  "Bottom right": "Nederst till höger",
  "COMPARISON": "JÄMFÖRELSE",
  "Cancel": "Avbryt",
+ "Cancel sign-in": "Avbryt inloggning",
  "Cartoons and anime": "Tecknat och anime",
  "Check now": "Sök nu",
  "Checking the key with TMDB…": "Kontrollerar nyckeln hos TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "Överst till vänster",
  "Top of the screen": "Överst på skärmen",
  "Top right": "Överst till höger",
+ "Turn off": "Stäng av",
+ "Turn on": "Slå på",
  "Turn on the Quotes widget to pick its coins.": "Slå på kurs-widgeten för att välja mynt.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Slog på igen: {list}. Tv:ns ingångar eller fjärrkontroll behöver det.",
  "Turned off what was missing: {list}.": "Stängde av det som saknades: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "{n} min kvar",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} av {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} kvar",
  "{url}, code {code}": "{url}, kod {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} är ute: bygg den igen",
  "← → to move · OK to drop · Back to cancel": "← → flytta · OK släpp · Tillbaka avbryt"
 }

@@ -29,6 +29,7 @@
  "Bottom right": "Κάτω δεξιά",
  "COMPARISON": "ΣΥΓΚΡΙΣΗ",
  "Cancel": "Ακύρωση",
+ "Cancel sign-in": "Ακύρωση σύνδεσης",
  "Cartoons and anime": "Κινούμενα σχέδια και anime",
  "Check now": "Έλεγχος τώρα",
  "Checking the key with TMDB…": "Έλεγχος του κλειδιού στο TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "Πάνω αριστερά",
  "Top of the screen": "Πάνω μέρος οθόνης",
  "Top right": "Πάνω δεξιά",
+ "Turn off": "Απενεργοποίηση",
+ "Turn on": "Ενεργοποίηση",
  "Turn on the Quotes widget to pick its coins.": "Ενεργοποιήστε το widget τιμών για να επιλέξετε νομίσματα.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Ενεργοποιήθηκαν ξανά: {list}. Τα χρειάζονται οι είσοδοι ή το τηλεχειριστήριο της τηλεόρασης.",
  "Turned off what was missing: {list}.": "Απενεργοποιήθηκαν όσα έλειπαν: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "απομένουν {n} λ.",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} από {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "απομένουν {time}",
  "{url}, code {code}": "{url}, κωδικός {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "Βγήκε η {version}: φτιάξτε το ξανά",
  "← → to move · OK to drop · Back to cancel": "← → μετακίνηση · OK τοποθέτηση · Πίσω ακύρωση"
 }

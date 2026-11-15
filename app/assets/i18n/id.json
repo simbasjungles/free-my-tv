@@ -29,6 +29,7 @@
  "Bottom right": "Kanan bawah",
  "COMPARISON": "PERBANDINGAN",
  "Cancel": "Batal",
+ "Cancel sign-in": "Batalkan masuk",
  "Cartoons and anime": "Kartun dan anime",
  "Check now": "Periksa sekarang",
  "Checking the key with TMDB…": "Memeriksa kunci di TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "Kiri atas",
  "Top of the screen": "Bagian atas layar",
  "Top right": "Kanan atas",
+ "Turn off": "Matikan",
+ "Turn on": "Nyalakan",
  "Turn on the Quotes widget to pick its coins.": "Nyalakan widget kurs untuk memilih koinnya.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Dinyalakan lagi: {list}. Input atau remote TV membutuhkannya.",
  "Turned off what was missing: {list}.": "Mematikan yang tersisa: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "sisa {n} mnt",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} dari {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} lagi",
  "{url}, code {code}": "{url}, kode {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} sudah rilis: build ulang",
  "← → to move · OK to drop · Back to cancel": "← → pindahkan · OK letakkan · Kembali batalkan"
 }

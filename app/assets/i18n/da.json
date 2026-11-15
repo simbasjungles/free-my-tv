@@ -29,6 +29,7 @@
  "Bottom right": "Nederst til højre",
  "COMPARISON": "SAMMENLIGNING",
  "Cancel": "Annuller",
+ "Cancel sign-in": "Annullér login",
  "Cartoons and anime": "Tegnefilm og anime",
  "Check now": "Søg nu",
  "Checking the key with TMDB…": "Tjekker nøglen hos TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "Øverst til venstre",
  "Top of the screen": "Øverst på skærmen",
  "Top right": "Øverst til højre",
+ "Turn off": "Slå fra",
+ "Turn on": "Slå til",
  "Turn on the Quotes widget to pick its coins.": "Slå kurs-widgetten til for at vælge dens mønter.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Slog til igen: {list}. Tv'ets indgange eller fjernbetjening har brug for det.",
  "Turned off what was missing: {list}.": "Slog det manglende fra: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "{n} min tilbage",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} af {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} tilbage",
  "{url}, code {code}": "{url}, kode {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} er ude: byg den igen",
  "← → to move · OK to drop · Back to cancel": "← → flyt · OK slip · Tilbage annuller"
 }

@@ -29,6 +29,7 @@
  "Bottom right": "Bottom right",
  "COMPARISON": "COMPARISON",
  "Cancel": "Cancel",
+ "Cancel sign-in": "Cancel sign-in",
  "Cartoons and anime": "Cartoons and anime",
  "Check now": "Check now",
  "Checking the key with TMDB…": "Checking the key with TMDB…",
@@ -322,6 +323,8 @@
  "Top left": "Top left",
  "Top of the screen": "Top of the screen",
  "Top right": "Top right",
+ "Turn off": "Turn off",
+ "Turn on": "Turn on",
  "Turn on the Quotes widget to pick its coins.": "Turn on the Quotes widget to pick its coins.",
  "Turned back on {list}: the TV's inputs or remote need it.": "Turned back on {list}: the TV's inputs or remote need it.",
  "Turned off what was missing: {list}.": "Turned off what was missing: {list}.",
@@ -462,8 +465,10 @@
  "{n} min left": "{n} min left",
  "{n} ms": "{n} ms",
  "{on} of {total}": "{on} of {total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "{time} left",
  "{url}, code {code}": "{url}, code {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} is out: build it again",
  "← → to move · OK to drop · Back to cancel": "← → to move · OK to drop · Back to cancel"
 }

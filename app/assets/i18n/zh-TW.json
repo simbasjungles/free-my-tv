@@ -29,6 +29,7 @@
  "Bottom right": "右下角",
  "COMPARISON": "比較",
  "Cancel": "取消",
+ "Cancel sign-in": "取消登入",
  "Cartoons and anime": "卡通和動漫",
  "Check now": "立即檢查",
  "Checking the key with TMDB…": "正在向 TMDB 驗證金鑰…",
@@ -322,6 +323,8 @@
  "Top left": "左上角",
  "Top of the screen": "畫面頂部",
  "Top right": "右上角",
+ "Turn off": "關閉",
+ "Turn on": "開啟",
  "Turn on the Quotes widget to pick its coins.": "請先開啟加密貨幣行情小工具，才能選擇幣種。",
  "Turned back on {list}: the TV's inputs or remote need it.": "已重新啟用 {list}：電視的輸入源或遙控器需要這些項目。",
  "Turned off what was missing: {list}.": "已停用缺少的項目：{list}。",
@@ -462,8 +465,10 @@
  "{n} min left": "剩餘 {n} 分鐘",
  "{n} ms": "{n} 毫秒",
  "{on} of {total}": "{on}/{total}",
+ "{state} · {account}": "{state} · {account}",
  "{time} left": "剩餘 {time}",
  "{url}, code {code}": "{url}，代碼 {code}",
+ "{user} · {server}": "{user} · {server}",
  "{version} is out: build it again": "{version} 已推出：請重新建置",
  "← → to move · OK to drop · Back to cancel": "按 ← → 移動 · 按 OK 放置 · 按返回取消"
 }
