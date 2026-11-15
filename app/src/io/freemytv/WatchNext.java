@@ -127,6 +127,8 @@ final class WatchNext {
             int n = perApp.containsKey(it.pkg) ? perApp.get(it.pkg) : 0;
             // Plex's own list is in-progress titles, one per show: more of it than of an app's shared rows.
             if (n >= (it.fromPlex ? Plex.CONTINUE_MAX : PER_APP) || !seen.add(key)) continue;
+            // By title too, as the watchlist below is checked: a title in progress isn't shown again from the watchlist.
+            if (it.fromPlex) seen.add(it.pkg + "|" + it.title);
             perApp.put(it.pkg, n + 1);
             it.app = appName(c, it.pkg);
             out.add(it);
