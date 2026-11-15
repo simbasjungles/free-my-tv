@@ -177,6 +177,11 @@ Developer Mode; Samsung's home screen stays. Two ways:
    Manager does it. 2015-2022 TVs take a Tizen certificate (`tizen certificate`, then `tizen security-profiles add`
    and `tizen cli-config "profiles.path=<home>/tizen-studio-data/profile/profiles.xml"`; on macOS the passwords go to
    the login Keychain). Certificate passwords are theirs: they type them in their own terminal, never in the chat. On Linux those passwords live in the GNOME keyring: `tizen package` reads them by running `secret-tool`, which a headless shell (a WSL install, a container) has not, and `security-profiles add` writes no `.pwd` file, so signing stops at `CertificationException: Invaild password` even though `keytool` opens the `.p12` with that same password. Leaving the profile item's `password=""` makes the CLI ask instead, and answering that prompt (a pseudo-terminal, not a pipe: without a console it throws a NullPointerException) signs it.
+   Under a Turkish locale (Java's default follows macOS's language, not `LANG`; `java -XshowSettings:locale -version`),
+   `tizen certificate` makes no `.p12` and still exits 0: its generator, run alone (`java -jar
+   tools/certificate-generator/KeyCertGeneratorApi.jar`), says `Cannot create RSA private key from decrypted stream`
+   (the dotted İ). `export JAVA_TOOL_OPTIONS="-Duser.language=en -Duser.country=US"` before `tizen` and before
+   `tizen/build.py --sign` (macOS, CLI 2.5.25, JDK 17 and 21).
 5. **Settings:** the same `config.properties`; the TMDB key rules above apply.
 6. **Build and sign:** `python3 tizen/build.py --sign <profile>` must end with `Built FreeMyTV-tizen.wgt (...,
    signed with "<profile>")`.
