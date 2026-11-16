@@ -61,23 +61,18 @@ public class RemoteKeyService extends AccessibilityService {
     private void showHome() {
         ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
         List<ActivityManager.AppTask> tasks = am == null ? null : am.getAppTasks();
-        ActivityManager.AppTask any = null;
         if (tasks != null) {
             for (ActivityManager.AppTask task : tasks) {
                 ActivityManager.RecentTaskInfo info = task.getTaskInfo();
                 if (info.id < 0) continue;   // one still being created
                 android.content.ComponentName top = info.topActivity != null ? info.topActivity : info.baseActivity;
                 String cls = top == null ? "" : top.getClassName();
-                // The settings task is ours too: Home must come back to the home screen, never to the settings.
-                if (cls.endsWith("HomeActivity")) {
-                    if (move(task)) return;
-                } else if (any == null) {
-                    any = task;
-                }
+                // The settings task is ours too: Home must come back to the home screen, never to the settings. If no
+                // home task is there yet (the settings were opened first), start one instead of moving any other task.
+                if (cls.endsWith("HomeActivity") && move(task)) return;
             }
-            if (any != null && move(any)) return;
         }
-        AppLog.w("Home: no task of ours, starting the home screen");
+        AppLog.w("Home: no home task of ours, starting the home screen");
         startActivity(new Intent(this, FireHomeActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
     }
