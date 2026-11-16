@@ -50,11 +50,18 @@ import java.util.Set;
  * (HomeMode) and this screen only asks for it and follows the state file.
  */
 public class SettingsActivity extends Activity {
+    /**
+     * Opens these settings on Fire TV: the app's icon and Launcher Manager start the home screen there, so only this
+     * extra (the gear on the home screen) keeps the settings themselves open.
+     */
+    static final String EXTRA_SETTINGS = "io.freemytv.SETTINGS";
+
     private SettingsView view;
     private DreamView preview;   // "Screensaver": the screensaver right here, without changing the system setting
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        HomeMode.ensureFireChoice(this);
         if (openFireHome(getIntent())) return;
         Watchdog.install(this);
         Updates.schedule(this);   // the week's update check, once (a fresh install has had no boot or update yet)
@@ -66,14 +73,13 @@ public class SettingsActivity extends Activity {
     }
 
     /**
-     * Fire TV: Amazon keeps the Home button, so the app's icon opens the home screen (FireHomeActivity) directly;
-     * the gear on the home screen opens these settings (no launcher category).
+     * Fire TV: Amazon keeps the Home button, so the app's icon and Launcher Manager open the home screen
+     * (FireHomeActivity) directly. Launcher Manager may start this activity by name, without a launcher category, so
+     * every launch goes to the home screen unless it comes from our gear (EXTRA_SETTINGS) or asks for the preview.
      */
     private boolean openFireHome(Intent intent) {
-        if (!HomeMode.AMAZON || intent == null || !(intent.hasCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-                || intent.hasCategory(Intent.CATEGORY_LAUNCHER)) || intent.getBooleanExtra("screensaver", false)) {
-            return false;
-        }
+        if (!HomeMode.AMAZON || intent == null) return false;
+        if (intent.getBooleanExtra("screensaver", false) || intent.getBooleanExtra(EXTRA_SETTINGS, false)) return false;
         startActivity(new Intent(this, FireHomeActivity.class));
         finish();
         return true;
@@ -226,6 +232,7 @@ public class SettingsActivity extends Activity {
         private float skySeconds;
         private long requestedAt;   // the switch asked for: its stamp, to tell whether its job ever started
         private boolean stalled;    // it didn't: a TV maker's background blocker (stalledText says what to do)
+        private boolean fireService;   // Fire TV: RemoteKeyService is on, so Home brings Free My TV back
         private final boolean phone;   // installed on a phone: the settings say where it goes (HomeMode.phone)
         private int w, h;
         private float k = 1;
@@ -236,6 +243,7 @@ public class SettingsActivity extends Activity {
             @Override public void run() {
                 if (!running) return;
                 state = HomeMode.state(getContext());
+                fireService = HomeMode.fireServiceOn(getContext());
                 sleepLeft = SleepTimer.minutesLeft(getContext());
                 hasKey = Recs.hasKey(getContext());
                 recs = Recs.status(getContext());
@@ -275,7 +283,7 @@ public class SettingsActivity extends Activity {
                 String stamp = state.toString() + recs.toString() + updates.toString() + ":" + sleepLeft + ":" + whyNow
                         + ":" + hasKey + ":" + pendingAt + ":" + stalled + ":" + busy() + ":" + updatesValue()
                         + ":" + (Trakt.available() ? traktValue() : "") + ":" + System.currentTimeMillis() / 60_000
-                        + ":" + (screen == HOME_SETTINGS ? Photos.files(getContext()).size() : 0);
+                        + ":" + (screen == HOME_SETTINGS ? Photos.files(getContext()).size() : 0) + ":" + fireService;
                 if (!stamp.equals(pollStamp)) invalidate();
                 pollStamp = stamp;
                 handler.postDelayed(this, busy() || updating() ? 500 : 2000);
@@ -289,6 +297,7 @@ public class SettingsActivity extends Activity {
             Shaders.settings(scene.palette);
             scene.setMotion(0.5f, 0.2f);
             phone = HomeMode.phone(a);
+            fireService = HomeMode.fireServiceOn(a);
             scene.applyPalette();
             setFocusable(true);
             setContentDescription("Free My TV");
@@ -769,6 +778,21 @@ public class SettingsActivity extends Activity {
             Paint hint = Ui.text(Ui.regular, 23 * k, 0x8CFFFFFF);
             c.drawText(Ui.tr("Switching takes a few seconds; the screen blinks while it measures."), LIST_X * k + 30 * k,
                     (LIST_TOP + 20 + 2 * (CHOICE_H + ROW_GAP) + 40) * k, hint);
+            // Fire TV: Free My TV mode is only complete with the accessibility service, and that one is turned on by hand
+            // until the switch has ADB. Say it here, where the choice is made, not only in the notice after the switch.
+            if (HomeMode.AMAZON && freeActive() && !fireService) {
+                TextPaint service = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+                service.setTypeface(Ui.regular);
+                service.setTextSize(22 * k);
+                service.setColor(AMBER);
+                String text = Ui.tr("Free My TV is on. Turn on Free My TV in Settings > Accessibility, so the Home button brings it back.");
+                StaticLayout layout = StaticLayout.Builder.obtain(text, 0, text.length(), service,
+                        (int) ((LIST_R - LIST_X - 60) * k)).build();
+                int saved = c.save();
+                c.translate(LIST_X * k + 30 * k, (LIST_TOP + 20 + 2 * (CHOICE_H + ROW_GAP) + 70) * k);
+                layout.draw(c);
+                c.restoreToCount(saved);
+            }
         }
 
         private static int blend(int a, int b, float f) {

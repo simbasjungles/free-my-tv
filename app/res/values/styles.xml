@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The light background already in the window: opening the home screen never flashes another color. -->
-    <color name="home_background">#EBEBF0</color>
+    <!-- The dark theme's colour: when a small Fire TV takes a moment to start :home, the starting window no longer
+         flashes light before the dark home screen (#467). -->
+    <color name="home_background">#333539</color>
 
     <style name="FreeMyTV.Home" parent="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen">
         <item name="android:windowBackground">@color/home_background</item>
