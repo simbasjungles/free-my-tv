@@ -63,6 +63,8 @@ final class HomeApps {
     static final int RECENTS = 8;
     /** A Home Assistant entity in the drawer (HomeAssistant): OK calls its service, nothing opens. */
     static final int HOME_ASSISTANT = 9;
+    /** The "Voice Search" button: the TV's speech recognizer, then the titles your apps have (HomeActivity.listen). */
+    static final int VOICE = 10;
     /** Image size of each card (16:9; on screen it shows up to ~330 px wide). */
     static final int TILE_W = 384, TILE_H = 216;
 
@@ -261,10 +263,11 @@ final class HomeApps {
 
     // MARK: - Top buttons (the round ones at the top right)
 
-    static final String TOP_LIVE = "live", TOP_INPUTS = "inputs", TOP_SETTINGS = "settings", TOP_RECENTS = "recents", TOP_STORE = "store";
+    static final String TOP_LIVE = "live", TOP_INPUTS = "inputs", TOP_SETTINGS = "settings", TOP_RECENTS = "recents", TOP_STORE = "store",
+            TOP_VOICE = "voice";
     static final List<String> TOP_DEFAULT = Collections.unmodifiableList(java.util.Arrays.asList(TOP_LIVE, TOP_INPUTS, TOP_SETTINGS));
-    /** What can be a top button: the default three, and Recent Apps and App Store for whoever adds them. */
-    static final List<String> TOP_ALL = Collections.unmodifiableList(java.util.Arrays.asList(TOP_LIVE, TOP_INPUTS, TOP_SETTINGS, TOP_RECENTS, TOP_STORE));
+    /** What can be a top button: the default three, and Recent Apps, App Store and Voice Search for whoever adds them. */
+    static final List<String> TOP_ALL = Collections.unmodifiableList(java.util.Arrays.asList(TOP_LIVE, TOP_INPUTS, TOP_SETTINGS, TOP_RECENTS, TOP_STORE, TOP_VOICE));
     static final int MAX_TOP = TOP_ALL.size();
 
     /** The keys of the top buttons, in order (Settings > Top Buttons; by default Live TV, HDMI Inputs, Settings). */
@@ -316,12 +319,38 @@ final class HomeApps {
         return launchIntent(pm, second) != null ? second : null;
     }
 
+    /**
+     * Voice Search's speech recognizers to ask first, in order (RecognizerIntent.ACTION_RECOGNIZE_SPEECH): Google's
+     * speech app hands the words back. A TV's own recognizer can join the list.
+     */
+    private static final List<String> RECOGNIZERS = Collections.singletonList("com.google.android.tts");
+    /**
+     * Recognizers that never hand the words back: the Google app's own voice input (katniss) only types them into a
+     * keyboard (TCL Smart TV Pro, Google TV 14). Take one out if a TV proves otherwise.
+     */
+    private static final List<String> NO_ANSWER = Collections.singletonList("com.google.android.katniss");
+
+    /** The package of Voice Search's recognizer on this TV (the listed ones first, then any other), or null for none. */
+    static String speechRecognizer(Context c) {
+        List<ResolveInfo> found = c.getPackageManager().queryIntentActivities(
+                new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH), PackageManager.MATCH_DEFAULT_ONLY);
+        for (String pkg : RECOGNIZERS) {
+            for (ResolveInfo r : found) if (pkg.equals(r.activityInfo.packageName)) return pkg;
+        }
+        for (ResolveInfo r : found) {
+            if (!NO_ANSWER.contains(r.activityInfo.packageName)) return r.activityInfo.packageName;
+        }
+        return null;
+    }
+
     private static Item topButton(String key) {
         switch (key) {
             case TOP_LIVE: return action(LIVE_TV, TOP_LIVE, Ui.tr("light|Live TV"), "live_tv");
             case TOP_INPUTS: return action(INPUTS, TOP_INPUTS, Ui.tr("HDMI Inputs"), "hdmi");
             case TOP_RECENTS: return action(RECENTS, TOP_RECENTS, Ui.tr("Recent Apps"), "recents");
             case TOP_STORE: return action(APP, TOP_STORE, Ui.tr("App Store"), "store");
+            // Some remotes' mic goes straight to the assistant, and no key reaches the app (TCL's RC923): a button instead.
+            case TOP_VOICE: return action(VOICE, TOP_VOICE, Ui.tr("Voice Search"), "search");
             default: return action(SETTINGS, TOP_SETTINGS, Ui.tr("light|Settings"), "settings");
         }
     }

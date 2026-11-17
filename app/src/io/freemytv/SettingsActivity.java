@@ -1191,7 +1191,8 @@ public class SettingsActivity extends Activity {
                     String key = shelfRows.get(pickScroll + i)[0];
                     if (editingInputs || !editingTop || shelfOrder.contains(key)) return null;
                     return HomeApps.TOP_LIVE.equals(key) ? Capabilities.NEED_LIVE_TV
-                            : HomeApps.TOP_STORE.equals(key) ? Capabilities.NEED_APP_STORE : null;
+                            : HomeApps.TOP_STORE.equals(key) ? Capabilities.NEED_APP_STORE
+                            : HomeApps.TOP_VOICE.equals(key) ? Capabilities.NEED_VOICE : null;
                 }
                 default:
                     return null;
@@ -1417,6 +1418,12 @@ public class SettingsActivity extends Activity {
             if (RemoteKeys.HISENSE || RemoteKeys.GOOGLE_STREAMER || RemoteKeys.ONN || RemoteKeys.PHILIPS_GTV) {
                 appPkgs.add(Prefs.ALL_APPS);
                 appLabels.add(Ui.tr("All Apps"));
+            }
+            // Any brand, where the TV has a recognizer: a button that opens the home screen's voice search, also from
+            // inside an app (a remote whose mic goes straight to the assistant gets voice search on an app button).
+            if (HomeApps.speechRecognizer(getContext()) != null) {
+                appPkgs.add(Prefs.VOICE);
+                appLabels.add(Ui.tr("Voice Search"));
             }
             for (String[] f : found) {
                 appPkgs.add(f[0]);

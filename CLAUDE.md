@@ -593,6 +593,17 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   wheel moves like the arrows, and hover moves the focus only when the pointer comes onto another item (a hand's nudge
   doesn't pull it back from the arrows) and never to one that would scroll its row (the next one would slide under the
   pointer).
+- Voice Search (`HomeApps.VOICE`: a top button or a Remote Buttons choice, both off by default) asks
+  `HomeApps.speechRecognizer` for `RecognizerIntent.ACTION_RECOGNIZE_SPEECH`: `RECOGNIZERS` first (Google's
+  `com.google.android.tts`), then any other, never one in `NO_ANSWER`. The Google app's own `VoiceInputActivity`
+  (katniss) resolves it too but only types the words into a keyboard and never answers an app (TCL Smart TV Pro,
+  Google TV 14). A TV's own recognizer joins `RECOGNIZERS`; `<queries>` lists the action so Android 11+ shows them.
+  No RECORD_AUDIO: the recognizer listens. Without one, or without a TMDB key, the row is Unavailable
+  (`Capabilities.NEED_VOICE`). The words go only to TMDB (`Recs.search`, on its own thread, `/search/multi`, a person
+  standing for what they're known for) and never to the log. The results are a 4th tab (`HomeView.tabCount`: the
+  round buttons' indexes come after the tabs, so never a literal 3) until Home. TCL's RC923 remote sends no key
+  for its mic (Google's remote service takes it over Bluetooth), so nothing catches it; its `.kl` maps SEARCH,
+  VOICE_ASSIST and ASSIST, which other remotes may send. Only that TCL has run it so far.
 - HY300 projectors (Hotack, Allwinner H713, Android 11 tested; the build claims to be an `askey`/`adt3`): the stock
   home screen and screensaver are `com.htc.htclauncherhighenglishd08`, which also carries an ad SDK (`com.zeasn.ad`).
   Keystone, zoom and projection mode live in `com.htc.htcsettings` (`action.htcsettings.prjsettings`), and the Miracast

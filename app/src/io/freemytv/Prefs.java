@@ -101,6 +101,8 @@ final class Prefs {
             KEY_ONN_FREE_TV = 297;
     /** A button's value that opens this home screen's All Apps. */
     static final String ALL_APPS = HomeMode.PKG + "#all";
+    /** A button's value that opens this home screen's voice search (HomeActivity.listen). */
+    static final String VOICE = HomeMode.PKG + "#voice";
     /**
      * The JVC G24's (Skyworth) Inputs button, one key here whichever way it comes (BUTTON_16 with scan code 383 or 79,
      * or BUTTON_14 with 240: SkyworthRemote.shortcut), and its gear, NOTIFICATION; TV_SHORTCUTS and QUICK_SETTINGS

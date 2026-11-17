@@ -170,7 +170,7 @@ final class RemoteKeys {
             if (burst) return true;
             // Our own package means the home screen in use (Xiaomi's Mi button): ours, or the TV's own after the
             // watchdog handed it back. Not the settings app our launcher icon opens.
-            Intent intent = pkg.equals(HomeMode.PKG) || pkg.equals(Prefs.ALL_APPS)
+            Intent intent = pkg.equals(HomeMode.PKG) || pkg.equals(Prefs.ALL_APPS) || pkg.equals(Prefs.VOICE)
                     ? new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
                     : JVC_SKYWORTH && pkg.equals(Prefs.QUICK_SETTINGS)
                     ? new Intent(c, QuickSettingsActivity.class)
@@ -183,6 +183,7 @@ final class RemoteKeys {
                     ? new Intent(android.provider.Settings.ACTION_SETTINGS).setPackage(pkg)
                     : launchIntent(c.getPackageManager(), pkg);
             if (pkg.equals(Prefs.ALL_APPS)) intent.putExtra(HomeActivity.EXTRA_ALL_APPS, true);
+            if (pkg.equals(Prefs.VOICE)) intent.putExtra(HomeActivity.EXTRA_VOICE, true);
             AppLog.w("remote key " + e.getKeyCode() + " -> " + pkg + (intent == null ? " (not installed)" : ""));
             // Consumed even when it doesn't open: its key-up is ours too, and a key-down alone would reach the TV.
             if (intent != null) {
