@@ -1102,9 +1102,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     /** Drawer and sheet: the layers' positions and opacity (without redrawing their content). */
     private void updateMotion() {
         float d = drawer.value, dc = Ui.clamp(d), s = Ui.clamp(sheet.value);
-        float home = 1 - s, top = home * (1 - smoothstep(0, 0.32f, dc));
+        // One page: the clock, the buttons and the shelf stay where they are when the drawer (always open) moves.
+        float home = 1 - s, top = home;
         float shift = SHIFT * k;
-        float lift = -d * shift;
+        float lift = 0;
         show(heroLayer, top, lift);
         show(status, top, lift);
         show(platter, home, lift);
@@ -2066,7 +2067,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private void layoutDrawer() {
         int n = drawerItems.size();
         float left = MARGIN * k, right = CONTENT_R * k;
-        float tilesRight = 1000 * k;
+        float tilesRight = 960 * k;
         float gap = 18 * k, groupGap = 56 * k;
         int groups = Math.max(1, (drawerInputs > 0 ? 1 : 0) + (drawerHome > drawerInputs ? 1 : 0) + (n > drawerHome ? 1 : 0));
         float tw = Math.min(230 * k, (tilesRight - left - Math.max(0, n - groups) * gap - (groups - 1) * groupGap) / Math.max(1, n));
@@ -2078,8 +2079,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             x += tw + gap;
         }
         float cardsTop = CARDS_TOP * k;
-        weatherCard.set(1020 * k, cardsTop, 1400 * k, cardsTop + CARDS_H * k);
-        quotesCard.set(1420 * k, cardsTop, right, cardsTop + CARDS_H * k);
+        weatherCard.set(1000 * k, cardsTop, 1380 * k, cardsTop + CARDS_H * k);
+        quotesCard.set(1400 * k, cardsTop, right, cardsTop + CARDS_H * k);
         snap(weatherCard);
         snap(quotesCard);
         // The symbols at their sizes at rest and focused: drawing them never scales one.
