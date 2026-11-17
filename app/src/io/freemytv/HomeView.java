@@ -2270,8 +2270,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         c.drawRoundRect(split - k, r.top + 34 * k, split + k, r.bottom - 34 * k, k, k, fill);
         float hx = split + 30 * k;
         if (textDays) {
-            float hw = (r.right - 30 * k - hx) / 5;
-            for (int i = 0; i < wx.days.size() && i < 5; i++) {
+            // As many days as the column fits (4 in the 640 px card; 5 when there is more room).
+            int days = Math.max(3, Math.min(5, (int) ((r.right - 30 * k - hx) / (70 * k))));
+            float hw = (r.right - 30 * k - hx) / days;
+            for (int i = 0; i < wx.days.size() && i < days; i++) {
                 float hc = hx + hw * (i + 0.5f);
                 c.drawText(dayText[i], hc, r.top + 96 * k, hourPaint);
                 Symbols.draw(getContext(), c, Symbols.weather(wx.dayCode.get(i), true), hc, r.top + 142 * k, 30 * k, drawerInk(0.9f));
@@ -3232,6 +3234,12 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                     int next = Math.max(0, Math.min(drawerItems.size() - 1, drawerIndex + dx));
                     if (next == drawerIndex) return;
                     drawerIndex = next;
+                } else if (dy > 0 && drawerInputs > 0 && drawerIndex < drawerInputs && drawerInputs < drawerItems.size()) {
+                    // Down from the inputs goes to the shortcuts row, in the same column.
+                    drawerIndex = nearestIn(drawerInputs, drawerItems.size(), drawerRects[drawerIndex].centerX());
+                } else if (dy < 0 && drawerInputs > 0 && drawerIndex >= drawerInputs) {
+                    // Up from the shortcuts goes back to the inputs row.
+                    drawerIndex = nearestIn(0, drawerInputs, drawerRects[drawerIndex].centerX());
                 } else if (dy < 0) {
                     closeDrawer();
                 } else if (talkBack() && !widgets().isEmpty()) {
@@ -3245,6 +3253,15 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         }
         retarget(false);
         click.move();
+    }
+
+    /** The drawer item in [from, to) whose centre is nearest to x. */
+    private int nearestIn(int from, int to, float x) {
+        int best = from;
+        for (int i = from; i < to; i++) {
+            if (Math.abs(drawerRects[i].centerX() - x) < Math.abs(drawerRects[best].centerX() - x)) best = i;
+        }
+        return best;
     }
 
     private static int nearest(RectF[] rects, float x) {
