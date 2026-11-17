@@ -101,7 +101,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     // Corner capsule: the height and top offset of the tvOS tab bar (68 and 46).
     private static final float CAPSULE_TOP = 46, CAPSULE_H = 68, BUTTON = 56;
     // Bottom drawer (measured with it open; everything moves up by SHIFT).
-    private static final float SHIFT = 560, ROW_TITLE = 866, ROW_TOP = 894, ROW_H = 126, CARDS_TOP = 720, CARDS_H = 300;
+    private static final float SHIFT = 560, ROW_TITLE_1 = 730, ROW_TOP_1 = 746, ROW_TITLE_2 = 884, ROW_TOP_2 = 900, ROW_H = 104;
+    private static final float CARDS_TOP = 690, CARDS_H = 330;   // the weather and quotes cards, bottom right
     // "All Apps" sheet.
     private static final int COLUMNS = 5, VISIBLE_ROWS = 3;
     private static final float GRID_W = 300, GRID_H = 169, GRID_GAP = 40, GRID_ROW = 239, GRID_TOP = 196, GRID_RADIUS = 22;
@@ -931,7 +932,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         lTip = Ui.text(Ui.semibold, 25 * k, L_INK);
         lTip.setTextAlign(Paint.Align.CENTER);
         lDate = Ui.text(Ui.semibold, 34 * k, L_DIM);
-        lClock = Ui.numbers(Ui.light, 200 * k, L_INK);
+        lClock = Ui.numbers(Ui.light, 150 * k, L_INK);
         lClock.setLetterSpacing(-0.01f);
         lWeather = Ui.text(Ui.medium, 34 * k, L_DIM);
         lClockQuote = Ui.numbers(Ui.medium, 28 * k, L_DIM);
@@ -2067,20 +2068,24 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private void layoutDrawer() {
         int n = drawerItems.size();
         float left = MARGIN * k, right = CONTENT_R * k;
-        float tilesRight = 960 * k;
-        float gap = 18 * k, groupGap = 56 * k;
-        int groups = Math.max(1, (drawerInputs > 0 ? 1 : 0) + (drawerHome > drawerInputs ? 1 : 0) + (n > drawerHome ? 1 : 0));
-        float tw = Math.min(230 * k, (tilesRight - left - Math.max(0, n - groups) * gap - (groups - 1) * groupGap) / Math.max(1, n));
-        float x = left, top = ROW_TOP * k;
+        // The left column: the inputs on the top row, the shortcuts (and Home Assistant) on the row below.
+        float tilesRight = 840 * k;
+        float gap = 18 * k;
+        int perRow = Math.max(1, Math.max(drawerInputs, n - drawerInputs));
+        float tw = Math.min(ROW_H * k, (tilesRight - left - (perRow - 1) * gap) / perRow);   // square tiles
+        float x = left, top = (drawerInputs > 0 ? ROW_TOP_1 : ROW_TOP_2) * k;
         for (int i = 0; i < n; i++) {
-            if ((i == drawerInputs || i == drawerHome) && i > 0) x += groupGap - gap;
+            if (i == drawerInputs && i > 0) {
+                x = left;
+                top = ROW_TOP_2 * k;
+            }
             drawerRects[i].set(x, top, x + tw, top + ROW_H * k);
             snap(drawerRects[i]);
             x += tw + gap;
         }
         float cardsTop = CARDS_TOP * k;
-        weatherCard.set(1000 * k, cardsTop, 1380 * k, cardsTop + CARDS_H * k);
-        quotesCard.set(1400 * k, cardsTop, right, cardsTop + CARDS_H * k);
+        weatherCard.set(880 * k, cardsTop, 1360 * k, cardsTop + CARDS_H * k);
+        quotesCard.set(1380 * k, cardsTop, right, cardsTop + CARDS_H * k);
         snap(weatherCard);
         snap(quotesCard);
         // The symbols at their sizes at rest and focused: drawing them never scales one.
@@ -2186,10 +2191,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         hourTemp.setColor(drawerInk(0.95f));
         dayLow.setColor(tone(L_DIM, 0xADFFFFFF));
         pricePaint.setColor(drawerInk(0.95f));
-        float titleBase = ROW_TITLE * k;
-        if (drawerInputs > 0) c.drawText(Ui.tr("Inputs"), drawerRects[0].left + 4 * k, titleBase, rowTitle);
-        if (drawerInputs < drawerHome) c.drawText(Ui.tr("Shortcuts"), drawerRects[drawerInputs].left + 4 * k, titleBase, rowTitle);
-        if (drawerHome < drawerItems.size()) c.drawText("Home Assistant", drawerRects[drawerHome].left + 4 * k, titleBase, rowTitle);
+        if (drawerInputs > 0) c.drawText(Ui.tr("Inputs"), drawerRects[0].left + 4 * k, ROW_TITLE_1 * k, rowTitle);
+        if (drawerInputs < drawerHome) c.drawText(Ui.tr("Shortcuts"), drawerRects[drawerInputs].left + 4 * k, ROW_TITLE_2 * k, rowTitle);
+        if (drawerHome < drawerItems.size()) c.drawText("Home Assistant", drawerRects[drawerHome].left + 4 * k, ROW_TITLE_2 * k, rowTitle);
         int top = -1;
         for (int i = 0; i < drawerItems.size(); i++) if (drawerFocus[i].value > 0.02f && (top < 0 || drawerFocus[i].value > drawerFocus[top].value)) top = i;
         for (int i = 0; i < drawerItems.size(); i++) if (i != top) drawDrawerTile(c, i);
