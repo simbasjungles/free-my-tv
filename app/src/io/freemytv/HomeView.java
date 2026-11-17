@@ -2069,7 +2069,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         int n = drawerItems.size();
         float left = MARGIN * k, right = CONTENT_R * k;
         // The left column: the inputs on the top row, the shortcuts (and Home Assistant) on the row below.
-        float tilesRight = 840 * k;
+        float tilesRight = 640 * k;
         float gap = 18 * k;
         int perRow = Math.max(1, Math.max(drawerInputs, n - drawerInputs));
         float tw = Math.min(ROW_H * k, (tilesRight - left - (perRow - 1) * gap) / perRow);   // square tiles
@@ -2084,8 +2084,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             x += tw + gap;
         }
         float cardsTop = CARDS_TOP * k;
-        weatherCard.set(880 * k, cardsTop, 1360 * k, cardsTop + CARDS_H * k);
-        quotesCard.set(1380 * k, cardsTop, right, cardsTop + CARDS_H * k);
+        // The weather card sits in the middle; the quotes take what is left on the right.
+        weatherCard.set(660 * k, cardsTop, 1300 * k, cardsTop + CARDS_H * k);
+        quotesCard.set(1320 * k, cardsTop, right, cardsTop + CARDS_H * k);
         snap(weatherCard);
         snap(quotesCard);
         // The symbols at their sizes at rest and focused: drawing them never scales one.
