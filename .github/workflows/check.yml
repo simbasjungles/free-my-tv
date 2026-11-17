@@ -34,10 +34,3 @@ jobs:
           echo "ANDROID_HOME=$RUNNER_TEMP/sdk" >> "$GITHUB_ENV"
       # build.sh makes a throwaway config.properties and signing key: no secrets needed.
       - run: tools/check.sh android
-
-  web:
-    name: Translations, LG and Samsung
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - run: tools/check.sh web

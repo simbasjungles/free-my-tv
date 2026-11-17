@@ -35,13 +35,11 @@ import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "app", "src")
-WEB = os.path.join(ROOT, "web")
 I18N = os.path.join(ROOT, "app", "assets", "i18n")
 CACHE = os.path.join(ROOT, "tools", ".i18n-cache.json")   # translations made with --fill, by hash (not committed)
 DEFAULT_MODEL = "claude-haiku-5-5"
 HAND = {"pt", "es", "de", "ru", "th", "tr"}   # hand translations: --fill leaves them to a person unless --lang names one
 CALL = re.compile(r"\bUi\.(trf?|plural|datePattern)\(")
-WEB_CALL = re.compile(r"(?:(?<![\w.$])|(?<=\bI18N\.))(trf?|plural|formatDate)\(")
 PLURAL_FORM = re.compile(r"^(zero|one|two|few|many|other):")
 PLACEHOLDER = re.compile(r"\{[a-zA-Z_][a-zA-Z_0-9]*\}")
 
@@ -85,7 +83,6 @@ def java_args(text, start):
 
 
 LITERAL = re.compile(r'"((?:[^"\\]|\\.)*)"')
-JS_LITERAL = re.compile(r'"((?:[^"\\]|\\.)*)"|\'((?:[^\'\\]|\\.)*)\'')
 
 
 def java_string(arg, literal=LITERAL):
@@ -109,7 +106,6 @@ def java_string(arg, literal=LITERAL):
 def calls():
     """Every translatable call in the code: yields (file, line, kind, [argument values or None])."""
     yield from java_calls()
-    yield from web_calls()
 
 
 def java_calls():
@@ -126,32 +122,6 @@ def java_calls():
                     continue   # an example in a comment
                 args, _ = java_args(text, m.end())
                 yield os.path.relpath(path, ROOT), line, m.group(1), [java_string(a) for a in args]
-
-
-def web_calls():
-    for name in sorted(os.listdir(WEB)):
-        if not name.endswith(".js") or name == "strings.js":   # strings.js is where the calls are made, not used
-            continue
-        path = os.path.join(WEB, name)
-        text = open(path, encoding="utf-8").read()
-        for m in WEB_CALL.finditer(text):
-            line = text.count("\n", 0, m.start()) + 1
-            prefix = text[text.rfind("\n", 0, m.start()) + 1:m.start()].lstrip()
-            if prefix.startswith(("*", "//", "/*")) or prefix.endswith("function "):
-                continue
-            args, _ = java_args(text, m.end())
-            yield os.path.relpath(path, ROOT), line, m.group(1), [java_string(a, JS_LITERAL) for a in args]
-
-
-def web_keys():
-    """The keys the web app uses, with the plain text of each "context|Text" one (its fallback)."""
-    keys = set()
-    for _, _, _, args in web_calls():
-        if args and args[0] is not None:
-            keys.add(args[0])
-            if "|" in args[0]:
-                keys.add(english_of(args[0]))
-    return keys
 
 
 def english_of(key):
