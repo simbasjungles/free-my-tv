@@ -131,7 +131,7 @@ final class Ui {
         {"el", "GR"}, {"ja", "JP"}, {"ko", "KR"}, {"hi", "IN"}, {"id", "ID"}, {"vi", "VN"}, {"th", "TH"},
     };
     /**
-     * Languages written right to left. The LG and Samsung app mirrors its screen for them (web/strings.js); HomeView
+     * Languages written right to left. HomeView
      * and the settings aren't mirrored yet, so here their catalogues (Arabic's, shared with the web app) aren't
      * offered: not in the settings' list, and "auto" on a TV in one of them stays in English, as before.
      */
