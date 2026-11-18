@@ -490,6 +490,14 @@ var TV = (function () {
       }
       // The antenna: its channel tuned first, or the viewer goes back to whatever it played last (Samsung TV Plus too).
       var tv = type === 'TV';
+      // ECK: preserve the tuner's own last satellite/cable channel. Forcing DIGITAL/ALL's first entry can switch
+      // a satellite household to an empty terrestrial tuner. No channel scan or picture settings are changed.
+      if (tv && window.CONFIG && window.CONFIG.eckHome) {
+        if (!source) { show(true); return; }
+        try { window.tizen.tvwindow.setSource(source, function () { show(true); }, function () { show(true); }); }
+        catch (e) { show(true); }
+        return;
+      }
       if (!source) { if (tv) tuneAntenna(function () { show(true); }); else show(false); return; }
       try {
         window.tizen.tvwindow.setSource(source, function () { if (tv) tuneAntenna(function () { show(true); }); else show(true); },
@@ -698,6 +706,23 @@ var TV = (function () {
 
   return {
     name: webos ? 'webos' : samsung ? 'tizen' : 'browser',
+
+    /** Request a particular YouTube video/search. Success means accepted, not proof that YouTube played it. */
+    youtube: function (id, video, query, done) {
+      var url = video ? 'https://www.youtube.com/watch?v=' + encodeURIComponent(video)
+        : 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+      if (!samsung) { if (done) done(false, url); return; }
+      function open(uri, fallback) {
+        try {
+          var control = new window.tizen.ApplicationControl('http://tizen.org/appcontrol/operation/view', uri);
+          window.tizen.application.launchAppControl(control, id, function () { if (done) done(true, uri); }, fallback);
+        } catch (e) { fallback(); }
+      }
+      open(url, function () {
+        if (video) open('https://www.youtube.com/results?search_query=' + encodeURIComponent(query), function () { if (done) done(false, url); });
+        else if (done) done(false, url);
+      });
+    },
 
     /**
      * Whether an app can open the TV's settings. Not on Tizen 2 (a 2016 KU6300): the "settings" request and

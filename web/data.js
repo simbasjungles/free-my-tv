@@ -838,7 +838,10 @@ var Data = (function () {
     titleLink: titleLink,
     usable: usable,
     services: services,
-    refresh: function () { refreshWeather(); refreshAir(); refreshPrices(); refreshRecs(); },
+    refresh: function () {
+      refreshWeather();
+      if (!CONFIG.eckHome) { refreshAir(); refreshPrices(); refreshRecs(); }
+    },
     settingsChanged: function () { pricesAt = 0; refreshPrices(); changed(); },
     findCity: findCity,
     /** Another city picked: its weather now (none shown until it comes). */

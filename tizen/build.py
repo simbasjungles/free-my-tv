@@ -87,6 +87,7 @@ def manifest_for(config):
 
 
 def build(preview, config, profile):
+    config = dict(config, eckHome=True)
     manifest = manifest_for(config)
     app_id = re.search(r'<tizen:application id="([^"]+)"', manifest).group(1)
     version = re.search(r'<widget [^>]*version="([^"]+)"', manifest).group(1)

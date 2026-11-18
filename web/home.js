@@ -9,6 +9,7 @@
  */
 (function () {
   'use strict';
+  if (window.CONFIG && CONFIG.eckHome) return;
 
   function $(id) { return document.getElementById(id); }
 

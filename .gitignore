@@ -1,6 +1,14 @@
 # Your settings and signing key stay on your machine
 config.properties
 *.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+profiles.xml
+.env
+.env.*
+*.local.json
 *.idsig
 # An LG TV's app list and icons (webos/apps.py)
 webos-apps.local.json
