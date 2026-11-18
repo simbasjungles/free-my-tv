@@ -196,6 +196,8 @@ final class Recs {
     private final Context context;
     private final SharedPreferences cache;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
+    /** Voice searches, apart from io: an hour's new list or its images can keep that busy for a while. */
+    private final ExecutorService searchIo = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
     private final List<Listener> listeners = new ArrayList<>();
     private final Map<String, Poster> posters = new LinkedHashMap<>();   // narrow-card portraits, same keys as images
@@ -698,6 +700,64 @@ final class Recs {
         return p.kind + ":" + p.id;
     }
 
+    // MARK: - Voice search (HomeView.search)
+
+    /**
+     * Titles for what was said ("dune", "tom hanks"): TMDB's search, a person standing for what they're known for, and
+     * only what one of the TV's services has, Prefs.cards() at most in TMDB's order. Cartoons too, even with them
+     * hidden from the picks: they were asked for. `done` gets them on the main thread. The words go only to TMDB, and
+     * never to the log.
+     */
+    void search(String words, java.util.function.Consumer<List<Pick>> done) {
+        searchIo.execute(() -> {
+            List<Pick> out = new ArrayList<>();
+            try {
+                JSONArray results = get("/search/multi?include_adult=false&language=" + lang() + "&query="
+                        + URLEncoder.encode(words, "UTF-8")).getJSONArray("results");
+                List<Pick> todo = new ArrayList<>();
+                for (int i = 0; i < results.length() && todo.size() < 20; i++) {
+                    JSONObject o = results.getJSONObject(i);
+                    String type = o.optString("media_type");
+                    if (type.equals("movie") || type.equals("tv")) found(todo, o, type);
+                    JSONArray known = type.equals("person") ? o.optJSONArray("known_for") : null;
+                    for (int j = 0; known != null && j < known.length(); j++) {
+                        JSONObject k = known.getJSONObject(j);
+                        String kind = k.optString("media_type");
+                        if (kind.equals("movie") || kind.equals("tv")) found(todo, k, kind);
+                    }
+                }
+                Set<String> seen = new HashSet<>();
+                int max = Math.min(MAX_CARDS, Prefs.cards());
+                for (int i = 0; i < todo.size() && out.size() < max; i++) {
+                    Pick p = todo.get(i);
+                    if (!seen.add(key(p))) continue;
+                    try {
+                        fetchDetails(p);
+                    } catch (Exception e) {
+                        continue;
+                    }
+                    if (p.pkg != null) out.add(p);
+                }
+            } catch (Exception e) {
+                AppLog.w("voice search: " + e.getClass().getSimpleName());   // not the message: it can hold the words
+            }
+            main.post(() -> done.accept(out));
+        });
+    }
+
+    /** A search result as a pick (only with a picture to show). */
+    private static void found(List<Pick> list, JSONObject o, String kind) {
+        String backdrop = o.optString("backdrop_path", "");
+        if (backdrop.isEmpty() || "null".equals(backdrop)) return;
+        Pick p = new Pick();
+        p.id = o.optInt("id");
+        p.kind = kind;
+        p.title = o.optString(kind.equals("movie") ? "title" : "name");
+        p.backdrop = backdrop;
+        p.poster = o.isNull("poster_path") ? "" : o.optString("poster_path");
+        list.add(p);
+    }
+
     private void notifyListeners() {
         main.post(() -> { for (Listener l : new ArrayList<>(listeners)) l.onRecs(); });
     }
@@ -950,16 +1010,8 @@ final class Recs {
     }
 
     private static void add(List<Pick> list, JSONObject o, String kind) {
-        String backdrop = o.optString("backdrop_path", "");
-        if (backdrop.isEmpty() || "null".equals(backdrop)) return;
         if (Prefs.hideAnimation() && animated(o)) return;
-        Pick p = new Pick();
-        p.id = o.optInt("id");
-        p.kind = kind;
-        p.title = o.optString(kind.equals("movie") ? "title" : "name");
-        p.backdrop = backdrop;
-        p.poster = o.isNull("poster_path") ? "" : o.optString("poster_path");
-        list.add(p);
+        found(list, o, kind);
     }
 
     private static boolean animated(JSONObject o) {

@@ -96,6 +96,10 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="content" android:host="android.media.tv" />
         </intent>
+        <!-- Voice Search: the TV's speech recognizers (HomeApps.speechRecognizer). -->
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
     </queries>
 
     <uses-feature android:name="android.software.leanback" android:required="false" />

@@ -1,12 +1,14 @@
 package io.freemytv;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
 import android.os.SystemClock;
+import android.speech.RecognizerIntent;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -22,6 +24,11 @@ public class HomeActivity extends Activity {
     static final String EXTRA_ALL_APPS = "io.freemytv.ALL_APPS";
     /** Opens the inputs drawer (the remote's Input key while the stock inputs panel is off, RemoteKeys). */
     static final String EXTRA_INPUTS = "io.freemytv.INPUTS";
+    /** Opens the voice search (a remote button set to Voice Search, RemoteKeys). */
+    static final String EXTRA_VOICE = "io.freemytv.VOICE";
+    private static final int VOICE = 1;
+    /** The voice search waits for the home screen to be in front (a remote button pressed in another app). */
+    private boolean voiceOnResume;
 
     /** The Apps key reaches us as ACTION_ALL_APPS (the system's way) or as our extra (RemoteKeys). */
     private static boolean wantsAllApps(Intent intent) {
@@ -54,10 +61,12 @@ public class HomeActivity extends Activity {
         getWindow().setBackgroundDrawable(null);
         if (wantsAllApps(getIntent())) home.showAllApps();
         else if (getIntent().getBooleanExtra(EXTRA_INPUTS, false)) home.showInputs();
+        voiceOnResume = getIntent().getBooleanExtra(EXTRA_VOICE, false);
+        getIntent().removeExtra(EXTRA_VOICE);   // recreate() reuses this intent: listen once, not after every settings change
         // At power-on "Live TV" (#346): the first time the home screen comes up after a full start, in Free My TV mode.
         if (HomeMode.noteHomeShown(this) && SystemClock.elapsedRealtime() < 240_000 && "live".equals(Prefs.powerOn())) {
             org.json.JSONObject s = HomeMode.state(this);
-            liveWaits = HomeMode.FREE.equals(s.optString("mode")) && !s.optBoolean("homeReverted");
+            liveWaits = HomeMode.FREE.equals(s.optString("mode")) && !s.optBoolean("homeReverted") && !voiceOnResume;
             if (liveWaits) {
                 AppLog.w("at power-on: Live TV in 10 s, unless a key comes first");
                 home.postDelayed(powerOnLive, 10_000);
@@ -99,6 +108,7 @@ public class HomeActivity extends Activity {
         if (prefsVersion != Prefs.version) {
             prefsVersion = Prefs.version;
             HomeData.get(this).settingsChanged();
+            if (voiceOnResume) getIntent().putExtra(EXTRA_VOICE, true);   // the button's press survives it
             recreate();   // a new language or city: draw everything again
             return;
         }
@@ -109,6 +119,10 @@ public class HomeActivity extends Activity {
             home.postDelayed(powerOnLive, 10_000);
         }
         Updates.tellOnce(this);   // an update the week's check got ready: said once
+        if (voiceOnResume && home != null) {
+            voiceOnResume = false;
+            listen();
+        }
     }
 
     @Override protected void onPause() {
@@ -137,11 +151,46 @@ public class HomeActivity extends Activity {
             home.showInputs();
             return;
         }
+        if (intent.getBooleanExtra(EXTRA_VOICE, false)) {
+            liveWaits = false;   // a remote button chose voice search: no Live TV over its results at power-on
+            home.reset(false);
+            voiceOnResume = true;   // once resumed: the listening screen, over a home screen ready for the results
+            return;
+        }
         long now = SystemClock.uptimeMillis();
         boolean twice = Prefs.recents().equals("home") && lastHome != 0 && now - lastHome < TWICE_MS;
         lastHome = twice ? 0 : now;
         if (twice) home.showRecents();
         else home.reset(true);
+    }
+
+    /** The TV's speech recognizer (HomeApps.speechRecognizer), for the words only; HomeView.search looks them up. */
+    void listen() {
+        if (home == null || !home.canSearch()) return;
+        String recognizer = HomeApps.speechRecognizer(this);
+        if (recognizer == null) {
+            home.showToast(Ui.tr("This TV has no voice input."));
+            return;
+        }
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).setPackage(recognizer)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
+                .putExtra(RecognizerIntent.EXTRA_PROMPT, Ui.tr("Say a movie, a show or a name"))
+                .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+        try {
+            startActivityForResult(intent, VOICE);
+        } catch (ActivityNotFoundException | SecurityException e) {
+            AppLog.w("voice search: " + recognizer + " didn't open");
+            home.showToast(Ui.tr("This TV has no voice input."));
+        }
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != VOICE) return;
+        java.util.List<String> words = data == null ? null : data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+        AppLog.w("voice search: result " + resultCode + ", " + (words == null ? "no words" : words.size() + " results"));
+        if (resultCode != RESULT_OK || home == null) return;
+        if (words != null && !words.isEmpty()) home.search(words.get(0));
     }
 
     /** When Home was last pressed, and how soon the second press counts (Settings > Home Settings). */
