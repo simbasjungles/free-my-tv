@@ -36,8 +36,8 @@ import javax.crypto.Cipher;
 /**
  * ADB client that talks to the TV itself (127.0.0.1:5555, open while debugging is on). It's what lets the app switch
  * the home screen and the screensaver, and turn off apps, without a computer. The first time, the TV asks
- * "Allow USB debugging?" and you accept with "Always allow". Only HomeMode uses it, and only with its own fixed
- * commands (nothing from outside).
+ * "Allow USB debugging?" and you accept with "Always allow". Only HomeMode and AppUpdates use it, with their own
+ * fixed commands (nothing from outside); AppUpdates also streams the APKs it checked to the package manager.
  * Protocol: https://android.googlesource.com/platform/packages/modules/adb/+/refs/heads/main/protocol.txt
  */
 final class Adb implements Closeable {
@@ -60,6 +60,8 @@ final class Adb implements Closeable {
     private final DataInputStream in;
     private final OutputStream out;
     private int nextLocalId = 1;
+    /** The largest message the TV takes (its CNXN says; older adbd only take 4 KB). */
+    private int maxPayload = 4096;
 
     private Adb(Socket socket) throws IOException {
         this.socket = socket;
@@ -97,6 +99,7 @@ final class Adb implements Closeable {
                 }
                 if (m.command == CNXN) {
                     s.setSoTimeout(20_000);
+                    adb.connected(m);
                     return adb;
                 }
                 if (m.command == STLS) throw new IOException(Ui.tr("the TV asked for TLS (wireless debugging); use USB debugging"));
@@ -138,6 +141,20 @@ final class Adb implements Closeable {
         }
     }
 
+    /**
+     * Connects only if the TV already allowed the app's key (Free My TV mode): it never offers the key, so nothing
+     * asks "Allow USB debugging?" on the screen. For work in the background (AppUpdates).
+     */
+    static Adb connectAllowed(Context c) throws IOException {
+        Adb adb = signedIn(keys(c));
+        if (adb == null) throw new IOException(Ui.tr("the TV doesn't allow the app's debugging key"));
+        return adb;
+    }
+
+    private void connected(Message cnxn) {
+        if (cnxn.arg1 >= 4096) maxPayload = Math.min(cnxn.arg1, MAX_DATA);
+    }
+
     /** A new connection that only signs (it never offers the key, so no second prompt); null while the TV doesn't know it. */
     private static Adb signedIn(KeyPair keys) {
         Socket s = new Socket();
@@ -153,6 +170,7 @@ final class Adb implements Closeable {
             }
             if (m.command == CNXN) {
                 s.setSoTimeout(20_000);
+                adb.connected(m);
                 return adb;
             }
         } catch (IOException | RuntimeException ignored) {
@@ -180,6 +198,61 @@ final class Adb implements Closeable {
                 send(CLSE, local, m.arg0, null);
                 return result.toString("UTF-8");
             }
+        }
+    }
+
+    /**
+     * Installs an APK over the app already installed, as `adb install` does: streams it to `cmd package install -r -S`
+     * (Android 7 and newer), which keeps the app's data. Returns what the package manager printed ("Success" when it
+     * took it).
+     */
+    String install(File apk) throws IOException {
+        int local = nextLocalId++;
+        send(OPEN, local, 0, ("exec:cmd package install -r -S " + apk.length() + "\0").getBytes(StandardCharsets.UTF_8));
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        int remote = 0;
+        while (remote == 0) {
+            Message m = read();
+            if (m.arg1 != local) continue;
+            if (m.command == OKAY) remote = m.arg0;
+            else if (m.command == CLSE) throw new IOException(Ui.tr("ADB refused the command"));
+        }
+        int timeout = socket.getSoTimeout();
+        socket.setSoTimeout(180_000);   // checking and optimizing a large APK takes a while on a slow TV
+        try {
+            byte[] buffer = new byte[maxPayload];
+            try (FileInputStream in = new FileInputStream(apk)) {
+                int n;
+                while ((n = in.read(buffer)) > 0) {
+                    send(WRTE, local, remote, java.util.Arrays.copyOf(buffer, n));
+                    // One message at a time: the next one goes once the TV said OKAY to this one.
+                    while (true) {
+                        Message m = read();
+                        if (m.arg1 != local) continue;
+                        if (m.command == OKAY) break;
+                        if (m.command == WRTE) {
+                            result.write(m.data);
+                            send(OKAY, local, remote, null);
+                        } else if (m.command == CLSE) {
+                            send(CLSE, local, remote, null);
+                            return result.toString("UTF-8");   // it stopped early: what it printed says why
+                        }
+                    }
+                }
+            }
+            while (true) {
+                Message m = read();
+                if (m.arg1 != local) continue;
+                if (m.command == WRTE) {
+                    result.write(m.data);
+                    send(OKAY, local, remote, null);
+                } else if (m.command == CLSE) {
+                    send(CLSE, local, remote, null);
+                    return result.toString("UTF-8");
+                }
+            }
+        } finally {
+            socket.setSoTimeout(timeout);
         }
     }
 

@@ -165,6 +165,12 @@
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
+        <!-- App Updates' checks (AppUpdates), in the main process. -->
+        <service
+            android:name=".UpdateJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <!-- The remote's app buttons from inside any app (Settings > Remote Buttons). Its own process: the system waits for it on
              every key, so the home screen must never be able to slow it down. -->
         <service
