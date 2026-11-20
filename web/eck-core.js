@@ -125,6 +125,28 @@ var ECK = (function () {
     return {load: preload, size: function () { return pool.length; }};
   }
   function selectMode(value) { write('mode', value === 'genres' ? 'genres' : 'popular'); refresh(false); }
+  /** Fixed shelf; keep the installed id, never guess an app id when a service is absent. */
+  function launcherApps(installed) {
+    var definitions = [
+      ['youtube', 'YouTube', /youtube/i, /kids/i, 'youtube.png', '#182139'],
+      ['netflix', 'Netflix', /netflix/i, null, 'eck-netflix.png', '#111111'],
+      ['disney', 'Disney+', /disney/i, null, 'eck-disney.png', '#002a35'],
+      ['prime', 'Prime Video', /prime.?video|amazonignitionlauncher|amazon_video|amazon instant video|amazon video|^amazon /i, null, 'eck-prime.png', '#086ba0'],
+      ['hbo', 'HBO Max', /hbo|max|wbd/i, null, 'eck-hbo-max.jpg', '#000000'],
+      ['internet', 'İnternet', /browser|internet|taray.c./i, /knox|win365/i, 'eck-internet.svg', '#233258'],
+      ['apple', 'Apple TV', /apple.?tv|appletv/i, null, 'eck-apple-tv.jpg', '#000000'],
+      ['spotify', 'Spotify', /spotify/i, null, 'eck-spotify.png', '#101513']
+    ];
+    return definitions.map(function (d) {
+      var matches = installed.filter(function (a) {
+        var s = a.id + ' ' + a.title;
+        if (d[0] === 'hbo') return /^(hbo\s*)?max$|^hbo\s*go$/i.test(a.title) || /hbo|wbd|\.max(?:\.|$)/i.test(a.id);
+        return d[2].test(s) && (!d[3] || !d[3].test(s));
+      });
+      var a = matches[0];
+      return {id: a ? a.id : null, key: d[0], title: d[1], icon: 'icons/' + d[4], color: d[5], available: !!a};
+    });
+  }
   function sceneStart(list, last, random) {
     var choices = [];
     for (var i = 0; i < list.length; i++) if (list[i].url !== last) choices.push(i);
@@ -147,6 +169,7 @@ var ECK = (function () {
     resetHidden: function () { write('hidden', []); emit(); },
     read: function (key, fallback) { return read(key, fallback); }, write: write,
     sceneStart: sceneStart,
+    launcherApps: launcherApps,
     bestTrailer: bestTrailer, searchQuery: searchQuery, trailer: trailer, request: request, imagePool: imagePool
   };
 })();

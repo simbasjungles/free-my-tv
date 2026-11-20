@@ -69,3 +69,15 @@ assert.strictEqual(e.sceneStart(sceneList,'c',function(){return 0.999;}),1);
 assert.strictEqual(e.sceneStart([{url:'a'}],'a',function(){return 0;}),0);
 assert.strictEqual(e.sceneStart([],'a',function(){return 0;}),0);
 console.log('EckCoreTest: immediate genre discovery, missing key and non-repeating ambient start passed.');
+var shelf = e.launcherApps([
+  {id:'music',title:'Amazon Music'}, {id:'kids',title:'YouTube Kids'},
+  {id:'b',title:'Web Browser'}, {id:'s',title:'Spotify'}, {id:'n',title:'Netflix'},
+  {id:'yt',title:'YouTube'}, {id:'p',title:'Prime Video'}, {id:'d',title:'Disney+'},
+  {id:'NvZ26VG9Yw.HBOGOLAG',title:'Max'}, {id:'a',title:'Apple TV'}, {id:'plex',title:'Plex'}
+]);
+assert.strictEqual(shelf.map(function(a){return a.key;}).join(','),'youtube,netflix,disney,prime,hbo,internet,apple,spotify');
+assert.strictEqual(shelf[0].id,'yt');assert.strictEqual(shelf[4].id,'NvZ26VG9Yw.HBOGOLAG');assert.strictEqual(shelf[5].id,'b');
+assert.strictEqual(shelf.length,8);assert(shelf.every(function(a){return a.available;}));
+var missing=e.launcherApps([{id:'k',title:'YouTube Kids'},{id:'m',title:'Amazon Music'},{id:'c',title:'Cinemax'}]);
+assert(missing.every(function(a){return a.id===null && !a.available;}));
+console.log('EckCoreTest: fixed eight-app shelf, legacy ids, exclusions and missing-app handling passed.');

@@ -142,15 +142,14 @@
   function renderApps() {
     appsBox.innerHTML = ''; var pages = Math.max(1, Math.ceil(apps.length / 8)); appPage = Math.min(appPage, pages - 1);
     apps.slice(appPage * 8, appPage * 8 + 8).forEach(function (a, i) {
-      var b = button(appsBox, 'eck-app' + (a.icon ? '' : ' no-icon'), '', function () { row = 3; col = i; focus(); launchApp(a); });
+      var b = button(appsBox, 'eck-app app-' + a.key + (a.icon ? '' : ' no-icon') + (a.available === false ? ' unavailable' : ''), '', function () { row = 3; col = i; focus(); launchApp(a); });
       b.style.left = (i * 220 + 5) + 'px'; b.style.top = '5px';
       b.setAttribute('data-focus', '3:' + i);
       b.setAttribute('aria-label', a.title);
-      var colours = {netflix:'#ffffff',youtube:'#182139',primevideo:'#0876ae','disney+':'#122650',
-        max:'#5125ba',appletv:'#111218',spotify:'#168844',plex:'#202b3c',crunchyroll:'#e46c19'};
-      if (a.icon) b.style.backgroundColor = colours[a.title.toLowerCase().replace(/\s/g, '')] || a.color || '#202a42';
+      if (a.icon) b.style.backgroundColor = a.color || '#202a42';
       if (a.icon) { var img = el('img', '', b); img.src = a.icon; img.alt = ''; img.onerror = function () { b.className += ' no-icon'; img.style.display = 'none'; }; }
       el('span', '', b, a.title);
+      if (a.available === false) el('small', 'eck-unavailable', b, 'Yüklü değil');
     });
     if (!apps.length) el('p', '', appsBox, 'Uygulamalar yükleniyor…');
     if (pages > 1) el('div', 'eck-app-page', appsBox, 'Sayfa ' + (appPage + 1) + ' / ' + pages + ' · satır sonunda →');
@@ -192,13 +191,15 @@
     focus();
   }
   function launchApp(a) {
-    if (!a) return; savePosition();
+    if (!a) return;
+    if (a.available === false || !a.id) { toast(a.title + ' TV’de yüklü değil. Samsung Apps üzerinden yükledikten sonra ECK TV’yi tekrar aç.'); return; }
+    savePosition();
     TV.launch(a.id, null, function (ok) { if (!ok || TV.name === 'browser') toast(TV.name === 'browser' ? 'Önizleme: ' + a.title : 'Uygulama açılamadı.'); });
   }
   function play(searchOnly) {
     var m = selectedMovie(); if (!m) return;
     var youtube = apps.filter(function (a) { return /youtube/i.test(a.title) && !/kids/i.test(a.title); })[0];
-    if (!youtube) { toast('YouTube uygulaması bulunamadı.'); return; }
+    if (!youtube || !youtube.id) { toast('YouTube uygulaması bulunamadı.'); return; }
     savePosition(); var mine = ++trailerGeneration; toast(searchOnly ? 'YouTube araması hazırlanıyor…' : 'Türkçe fragman aranıyor…');
     function open(video, query) {
       if (mine !== trailerGeneration || document.hidden) return;
@@ -424,12 +425,7 @@
     TV.apps(function (list) {
       var hide = (CONFIG.hideApps || []).map(function (s) { return s.toLowerCase(); });
       apps = list.filter(function (a) { return !hide.some(function (s) { return (a.id + ' ' + a.title).toLowerCase().indexOf(s) >= 0; }); });
-      var logos = {netflix: 'netflix.svg', youtube: 'youtube.png', primevideo: 'prime.png',
-        max: 'max.svg', appletv: 'appletv.svg', spotify: 'spotify.svg', plex: 'plex.svg', crunchyroll: 'crunchyroll.svg'};
-      apps.forEach(function (a) {
-        var name = a.title.toLowerCase().replace(/\s/g, '');
-        if (!a.icon && logos[name]) a.icon = 'icons/' + logos[name];
-      });
+      apps = ECK.launcherApps(apps);
       renderApps(); focus();
     });
   }
