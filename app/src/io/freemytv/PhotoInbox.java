@@ -15,9 +15,9 @@ import java.io.IOException;
 
 /**
  * Where tools/photos.py writes a photo when the TV doesn't let adb into the app's external folder (Android 11, and
- * Fire OS 8 on it): `adb exec-in content write --uri content://io.freemytv.photos/<name>?size=<bytes>`. Only adb's
- * shell (or root) may write; the photo lands in Photos' private inbox and is imported (and deleted) the next time the
- * home screen, the screensaver or the settings open.
+ * Fire OS 8 on it): `content write --uri content://io.freemytv.photos/<name>?size=<bytes>`, fed from a copy it pushed
+ * to /data/local/tmp. Only adb's shell (or root) may write; the photo lands in Photos' private inbox and is imported
+ * (and deleted) the next time the home screen, the screensaver or the settings open.
  */
 public class PhotoInbox extends ContentProvider {
     /** adb's shell (Process.SHELL_UID, which the SDK only names from Android 10). */
@@ -27,7 +27,7 @@ public class PhotoInbox extends ContentProvider {
         return true;
     }
 
-    /** What tools/photos.py says it sends (?size=), or -1 (then any clean close keeps it). */
+    /** What tools/photos.py says it sends (?size=), or -1 (then only a clean close keeps it). */
     private static long size(Uri uri) {
         try {
             return Long.parseLong(uri.getQueryParameter("size"));
@@ -53,7 +53,15 @@ public class PhotoInbox extends ContentProvider {
         try {
             return ParcelFileDescriptor.open(part, ParcelFileDescriptor.MODE_WRITE_ONLY | ParcelFileDescriptor.MODE_CREATE
                     | ParcelFileDescriptor.MODE_TRUNCATE, new Handler(Looper.getMainLooper()), e -> {
-                        boolean whole = e == null && (expected < 0 || part.length() == expected);
+                        // With a size, all of it came when the length matches, whatever the close says: an older
+                        // photos.py's `adb exec-in` can end the sender before its close reaches us ("Remote side is
+                        // dead"), and the photo was dropped while the computer said Sent (#380).
+                        long got = part.length();
+                        boolean whole = expected >= 0 ? got == expected : e == null;
+                        if (!whole) {
+                            AppLog.w("photos: dropped " + name + ", " + got + (expected >= 0 ? " of " + expected : "")
+                                    + " bytes" + (e == null ? "" : " (" + e.getMessage() + ")"));
+                        }
                         if (!whole || !part.renameTo(done)) part.delete();
                     });
         } catch (IOException e) {

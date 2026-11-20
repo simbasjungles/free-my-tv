@@ -6,11 +6,11 @@
 
 The photos go, in the order given (a folder's in name order), to the app's own folder on the TV
 (Android/data/io.freemytv/files/photos: adb can write there, and the app needs no permission); where the TV keeps adb
-out of it (Android 11, Fire OS 8), they go through the app itself (`content write` to its PhotoInbox, which only adb
-may use). The next time the home screen, the screensaver or Free My TV's settings open, the app imports each one
-(upright, cropped to 16:9, at the screensaver's size, without its GPS and other tags) and deletes what was sent. Up to
-100 photos in all; remove them on the TV: Home Settings > My Photos > OK. JPEG, PNG and WebP; HEIC on Android 9 and
-newer.
+out of it (Android 11, Fire OS 8), they go through the app itself (pushed to /data/local/tmp, then `content write` to
+its PhotoInbox, which only adb may use). The next time the home screen, the screensaver or Free My TV's settings
+open, the app imports each one (upright, whole, at the screensaver's size, without its GPS and other tags)
+and deletes what was sent. Up to 100 photos in all; remove them on the TV: Home Settings > My Photos > OK. JPEG, PNG
+and WebP; HEIC on Android 9 and newer.
 """
 import os
 import shutil
@@ -19,6 +19,7 @@ import sys
 import urllib.parse
 
 INBOX = '/sdcard/Android/data/io.freemytv/files/photos'
+STAGED = '/data/local/tmp/freemytv-photo'   # each photo on its way to PhotoInbox (adb's shell can always write here)
 KINDS = ('.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif')
 SERIAL = []   # -s <ip>:5555 once connected, so a phone or another TV on adb doesn't get in the way
 
@@ -72,7 +73,7 @@ def main():
     # Android 11 (Fire OS 8 too) keeps adb out of other apps' Android/data folders: then through the app itself.
     direct = adb('shell', 'mkdir', '-p', INBOX).returncode == 0
     if not direct:
-        # exec-in brings back nothing the TV prints: check once that its Free My TV has the way in.
+        # Check once that its Free My TV has the way in.
         probe = adb('shell', 'content', 'query', '--uri', 'content://io.freemytv.photos/')
         if 'Could not find provider' in probe.stdout + probe.stderr:
             print('This TV keeps adb out of the app\'s folder, and the Free My TV on it is too old for the other way '
@@ -84,11 +85,15 @@ def main():
         if direct:
             r = adb('push', path, f'{INBOX}/{name}')
         else:
-            # Encoded (a # or ? would cut the name), and with its size, so the app drops a send cut short.
+            # Encoded (a # or ? would cut the name; quote leaves no ' for the shell), and with its size, so the app
+            # drops a send cut short. Read from a file on the TV: fed by `adb exec-in`, `content write` read a terminal
+            # that adb hangs up as soon as this side is done, and the photo could be lost while this said Sent (#380).
             uri = f'content://io.freemytv.photos/{urllib.parse.quote(name)}?size={os.path.getsize(path)}'
-            with open(path, 'rb') as f:
-                r = subprocess.run(['adb', *SERIAL, 'exec-in', 'content', 'write', '--uri', uri], stdin=f,
-                                   capture_output=True, text=True)
+            r = adb('push', path, STAGED)
+            if r.returncode == 0:
+                r = adb('shell', f"content write --uri '{uri}' < {STAGED}; rm -f {STAGED}")
+                if 'Exception' in r.stdout + r.stderr:   # `content` prints what went wrong, and exits with 0
+                    r.returncode = 1
         if r.returncode != 0:
             print(f'Could not send {path}: {(r.stdout + r.stderr).strip()}')
             return 1

@@ -11,7 +11,8 @@ restart the TV.
 It speaks SDB (Samsung's ADB, port 26101) itself, so it needs only Python 3: no Tizen Studio, and no Rosetta on Apple
 Silicon, where Samsung's sdb (an Intel binary) doesn't run. Like Samsung's tools it pushes the package to the folder
 the TV names in its capabilities and installs it with `0 vd_appinstall`, the command TizenBrew Installer uses on
-every Tizen; `0 was_execute` opens it. Tested on a 2017 UN50MU6100 (Tizen 3.0) and a 2019 UN55RU7100 (Tizen 5.0).
+every Tizen; `0 was_execute` opens it. Tested on a 2017 UN50MU6100 (Tizen 3.0), a 2019 UN55RU7100 (Tizen 5.0) and a
+2024 QA75Q60D (Tizen 9.0).
 """
 import os
 import re
@@ -163,8 +164,18 @@ def main():
     try:
         sdb = Sdb(ip)
     except (OSError, ConnectionError) as e:
-        sys.exit('Couldn\'t reach the TV on port %d (%s). On the TV: Apps, 1 2 3 4 5, Developer mode on with Host PC '
-                 'IP %s, then restart the TV.' % (PORT, e, this_computer(ip)))
+        # A 2024 QA75Q60D (Tizen 9) closed the connection like this for a while, across restarts, with the right Host
+        # PC IP, then took the same install without a change: what it waited for is unknown.
+        dropped = isinstance(e, ConnectionResetError) or 'closed the connection' in str(e)
+        mine = this_computer(ip)
+        # The Developer mode screen asks for the computer's IP, so that's the one that gets typed here too (#490).
+        own = (' %s is this computer\'s address: give the TV\'s (on the TV: Settings, General, Network, Network Status, '
+               'IP Settings).' % ip if ip == mine
+               else ' Check that %s is the TV\'s address, not this computer\'s.' % ip if isinstance(e, ConnectionRefusedError)
+               else '')
+        sys.exit('Couldn\'t reach the TV on port %d (%s).%s On the TV: Apps, 1 2 3 4 5, Developer mode on with Host PC '
+                 'IP %s, then restart the TV.%s' % (PORT, e, own, mine,
+                 ' If it already is, wait a minute after the TV restarts and try again.' if dropped else ''))
     caps = sdb.capabilities()
     print('Connected: %s, Tizen %s.' % (sdb.banner.split(':')[2] if sdb.banner.count(':') >= 2 else sdb.banner,
                                          caps.get('platform_version', '?')))
@@ -177,7 +188,9 @@ def main():
         print('Removed.')
         return
 
-    remote = caps.get('sdk_toolpath', '/home/owner/share/tmp/sdk_tools').rstrip('/') + '/FreeMyTV-tizen.wgt'
+    # Tizen 2.4's sdbd names no sdk_toolpath and has no /home/owner: its tools' folder is /opt/usr/apps/tmp.
+    default_path = '/opt/usr/apps/tmp' if caps.get('platform_version', '').startswith('2.') else '/home/owner/share/tmp/sdk_tools'
+    remote = caps.get('sdk_toolpath', default_path).rstrip('/') + '/FreeMyTV-tizen.wgt'
     with open(WGT, 'rb') as f:
         data = f.read()
     print('Copying the app to the TV ...')
@@ -189,11 +202,26 @@ def main():
         if 'different certificate' in out:
             hint = ('\nThe Free My TV on the TV was signed with another certificate, and the TV only updates it with the '
                     'same one. Remove it on the TV (' + ON_TV + '), then run this again.')
+        elif 'failed[118]' in out:
+            # Tizen 2.4 gives no reason: a 2016 KU6640 answered this to every build after an install that failed
+            # half-way, with nothing to see on the TV, until vd_appuninstall removed what was left (#349).
+            hint = ('\nThe TV may still hold a Free My TV signed with another certificate, even one that doesn\'t show '
+                    '(a failed install can leave one). Remove it, then run this again:\n    python3 tizen/install.py %s '
+                    '--uninstall\n(That also clears what Free My TV keeps on the TV, such as a TMDB key typed there.) '
+                    'Still failed[118] after that? Some models refuse developer installs altogether (a 2016 Full HD '
+                    'K5670 did, #349): a Google TV streamer on HDMI runs Free My TV there.' % ip)
+        elif 'failed[116]' in out:
+            # "download failed[116]" comes within milliseconds, before any certificate check, and for any package: a
+            # 2020 UE55TU7020 answered it even to a minimal app, and installed once ~70 MB were free (#490). The same
+            # on a UE55NU7305 and a UE32N5300 (jellyfin-tizen issue 10).
+            hint = ('\nThe TV stopped before installing anything. That usually means it has too little free storage '
+                    'left for apps: delete some you don\'t use (Settings, Support, Device Care, Manage Storage on 2020 '
+                    'and newer TVs; Apps, Settings on older ones), restart the TV, then run this again.')
         sys.exit('The TV didn\'t finish installing. It said:\n' + out.strip() + hint)
     sdb.shell('0 was_execute ' + app_id, r'launched|spend time', 20)
     print('Installed and open on the TV.')
     print('Tip: turn on Autorun Last App in the TV\'s settings (General, Smart Features; where it is changes by year) '
-          'and the TV turns on into Free My TV.')
+          'and the TV turns on into Free My TV; on 2019 and 2020 TVs, move it to the first place in the Home bar instead.')
 
 
 if __name__ == '__main__':

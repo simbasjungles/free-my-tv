@@ -17,9 +17,14 @@ final class Capabilities {
     /** Drawing over other apps (SleepOverlay): Android TV has no screen to allow it, so it's allowed through ADB. */
     static final String OVERLAY = "overlay";
 
+    /** Reading what apps play (NowPlaying): Android hands media sessions only to an allowed notification listener. */
+    static final String LISTENER = "listener";
+
     /** An option's needs. */
     static final String NEED_ADB = "adb", NEED_REMOTE_BUTTONS = "remote-buttons", NEED_OVERLAY = OVERLAY,
-            NEED_LIVE_TV = "live-tv";
+            NEED_LIVE_TV = "live-tv", NEED_LISTENER = LISTENER, NEED_SWITCH = "switch",
+            NEED_HOME_ASSISTANT = "home-assistant", NEED_APP_STORE = "app-store", NEED_SCREENSAVER = "screensaver",
+            NEED_INPUTS = "inputs", NEED_HDMI = "hdmi";
 
     /** null where this TV has what `need` names; else why not, and what would change it, for the person to read. */
     static String missing(Context c, String need) {
@@ -30,8 +35,26 @@ final class Capabilities {
                 return remoteButtons() ? null : Ui.tr("This TV's remote has no app buttons that Free My TV knows.");
             case NEED_OVERLAY:
                 return overlay(c) ? null : Ui.tr("This TV doesn't let apps show over other apps: the time left shows on the home screen.");
+            case NEED_LISTENER:
+                return !adb(c) ? Ui.tr("Needs Free My TV mode: turn it on in Home Screen.")
+                        : refused(c, LISTENER) ? Ui.tr("This TV doesn't let apps see what's playing.") : null;
+            case NEED_HOME_ASSISTANT:
+                return !HomeAssistant.hasEntities()
+                        ? Ui.tr("None of home_assistant_entities can be a button (see the README).")
+                        : !HomeAssistant.hasToken(c) ? Ui.tr("Send Home Assistant's token from a computer (see the README).") : null;
             case NEED_LIVE_TV:
                 return HomeApps.liveTv(c) != null ? null : Ui.tr("This TV has no live TV (antenna or cable) to open.");
+            case NEED_INPUTS:   // a streaming stick or box: no Live TV and no HDMI port, so Settings > Inputs has no rows
+                return HomeApps.allInputs(c).isEmpty() ? Ui.tr("No inputs") : null;
+            case NEED_HDMI:   // Home Settings > Live TV button: a port for the button to open instead of Live TV
+                for (HomeApps.Item it : HomeApps.allInputs(c)) if (it.kind == HomeApps.INPUT) return null;
+                return Ui.tr("No inputs");
+            case NEED_APP_STORE:
+                return HomeApps.storePackage(c) != null ? null : Ui.tr("This TV has no supported app store to open.");
+            case NEED_SCREENSAVER:
+                return screensaver(c) ? null : Ui.tr("This TV stays awake, so no screensaver starts.");
+            case NEED_SWITCH:   // where the switch must not run; a TV already in Free My TV mode can still go back
+                return HomeMode.phone(c) ? HomeMode.phoneText() : HomeMode.BRICKS && !adb(c) ? HomeMode.bricksText() : null;
             default:
                 return null;
         }
@@ -58,6 +81,21 @@ final class Capabilities {
     /** The remote's app buttons, on the brands whose key codes RemoteKeys knows. */
     static boolean remoteButtons() {
         return RemoteKeys.supported();
+    }
+
+    private static Boolean screensaverNow;
+
+    /**
+     * Android can start our screensaver here. A TV kept awake (stay_on_while_plugged_in) never idles, so none starts:
+     * a Philips TPM171E (Android 8) is set so, and runs its own from its system UI (#451). Read once, as the settings
+     * ask on every frame.
+     */
+    static synchronized boolean screensaver(Context c) {
+        if (screensaverNow == null) {
+            screensaverNow = Config.SCREENSAVER && android.provider.Settings.Global.getInt(c.getContentResolver(),
+                    android.provider.Settings.Global.STAY_ON_WHILE_PLUGGED_IN, 0) == 0;
+        }
+        return screensaverNow;
     }
 
     /** Over other apps: allowed, or ADB can allow it and hasn't been refused on this TV. */

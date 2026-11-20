@@ -15,6 +15,8 @@ import android.os.Build;
 
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -22,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -38,8 +41,26 @@ import java.util.function.Supplier;
 final class Ui {
     private Ui() {}
 
-    /** Android 8 to 11: older TVs and boxes, whose GPUs need the cheaper drawing paths (Shadows, rounded images). */
-    static final boolean LEGACY = Build.VERSION.SDK_INT < 31;
+    /**
+     * Android 8 to 11, and any Android short on memory: their GPUs need the cheaper drawing paths (rounded images,
+     * the drawer cards kept as bitmaps) and can't afford the off-screen layers (a 2 GB TCL on Android 12 spent 156 MB
+     * of GPU memory on them). The shadows' cached masks are for every TV (Shadows).
+     * Measured on a 1.9 GB Google TV on Android 14 (Mali-G52, 1080p UI on a 4K panel): with these paths the 90th
+     * percentile frame went from 40 to 32 ms, as fast as the TV's own Settings app, and the look is the same.
+     */
+    static final boolean LEGACY = Build.VERSION.SDK_INT < 31 || smallMemory();
+
+    /** Under 3 GB of RAM, read from /proc: LEGACY is read before Ui.init, so there is no Context yet. */
+    private static boolean smallMemory() {
+        try (BufferedReader r = new BufferedReader(new FileReader("/proc/meminfo"))) {
+            String line = r.readLine();                         // "MemTotal:        1957140 kB"
+            if (line != null && line.startsWith("MemTotal:")) {
+                return Long.parseLong(line.replaceAll("\\D+", "")) < 3L * 1024 * 1024;
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
     /**
      * The language in use: "en" or one with a catalogue in assets/i18n (pt, es, de, fr, zh-CN…), picked in the settings
      * or, with "auto", the TV's own (English when there is no catalogue for it).
@@ -106,9 +127,15 @@ final class Ui {
     /** The usual country for each language's dates and numbers, when the TV itself is in another language. */
     private static final String[][] REGIONS = {
         {"pt", "BR"}, {"es", "ES"}, {"de", "DE"}, {"fr", "FR"}, {"it", "IT"}, {"nl", "NL"}, {"pl", "PL"}, {"sv", "SE"},
-        {"da", "DK"}, {"nb", "NO"}, {"fi", "FI"}, {"cs", "CZ"}, {"ro", "RO"}, {"tr", "TR"}, {"ru", "RU"}, {"uk", "UA"},
+        {"da", "DK"}, {"nb", "NO"}, {"fi", "FI"}, {"cs", "CZ"}, {"sk", "SK"}, {"ro", "RO"}, {"tr", "TR"}, {"ru", "RU"}, {"uk", "UA"},
         {"el", "GR"}, {"ja", "JP"}, {"ko", "KR"}, {"hi", "IN"}, {"id", "ID"}, {"vi", "VN"}, {"th", "TH"},
     };
+    /**
+     * Languages written right to left. The LG and Samsung app mirrors its screen for them (web/strings.js); HomeView
+     * and the settings aren't mirrored yet, so here their catalogues (Arabic's, shared with the web app) aren't
+     * offered: not in the settings' list, and "auto" on a TV in one of them stays in English, as before.
+     */
+    private static final List<String> RTL = Arrays.asList("ar", "he", "fa", "ur");
 
     /** The text for this English key in the current language (the English itself when there is none). */
     static String tr(String english) {
@@ -180,7 +207,7 @@ final class Ui {
         return locale;
     }
 
-    /** "en" and every language with a catalogue, sorted by code. */
+    /** "en" and every language with a catalogue that this app can lay out (not the right-to-left ones), sorted by code. */
     static String[] languages() {
         String[] l = languages;
         if (l != null) return l;
@@ -190,7 +217,10 @@ final class Ui {
         try {
             String[] files = c == null ? null : c.getAssets().list("i18n");
             for (String f : files == null ? new String[0] : files) {
-                if (f.endsWith(".json") && !f.equals("en.json")) found.add(f.substring(0, f.length() - 5));
+                if (!f.endsWith(".json") || f.equals("en.json")) continue;
+                String code = f.substring(0, f.length() - 5);
+                int dash = code.indexOf('-');
+                if (!RTL.contains(base(dash < 0 ? code : code.substring(0, dash)))) found.add(code);
             }
         } catch (IOException e) {
             AppLog.w("i18n: " + e.getMessage());
@@ -233,7 +263,7 @@ final class Ui {
         plurals = PluralRules.forLocale(locale);
         language = lang;
         DATE_PATTERNS.clear();
-        DATE_PATTERNS_24.clear();
+        TIME_PATTERNS.clear();
         generation++;
     }
 
@@ -279,7 +309,10 @@ final class Ui {
         if (lang.equals("pt")) return new Locale("pt", "BR");
         if (lang.indexOf('-') > 0) return Locale.forLanguageTag(lang);
         Locale tv = Locale.getDefault();
-        if (lang.equals(base(tv.getLanguage()))) return tv;   // the TV's own Spanish (es-MX, es-AR…), German (de-AT)…
+        // The TV's own Spanish (es-MX, es-AR…), German (de-AT)…; a TV in Nynorsk gets the Bokmål text, so Bokmål dates.
+        if (lang.equals(base(tv.getLanguage()))) {
+            return lang.equals(tv.getLanguage()) ? tv : new Locale(lang, tv.getCountry());
+        }
         for (String[] r : REGIONS) if (r[0].equals(lang)) return new Locale(lang, r[1]);
         return new Locale(lang);
     }
@@ -408,21 +441,16 @@ final class Ui {
         return new BitmapShader(b, Shader.TileMode.REPEAT, Shader.TileMode.CLAMP);
     }
 
-    private static final Map<String, DatePattern> DATE_PATTERNS = new HashMap<>(), DATE_PATTERNS_24 = new HashMap<>();
-    /** English follows the TV's 12/24-hour setting (Settings → System → Date & time); other languages have their own. */
-    private static final String[][] TWENTY_FOUR = {{"format|h:mm", "HH:mm"}, {"format|h:mm a", "HH:mm"}, {"format|h a", "HH:mm"}};
+    private static final Map<String, DatePattern> DATE_PATTERNS = new HashMap<>();
 
     /**
      * The catalogue's SimpleDateFormat pattern for a "format|..." key and its locale, checked once per language: a pattern
      * SimpleDateFormat rejects falls back to the English one, so a bad catalogue can't crash the screens drawing the date.
      */
     static synchronized DatePattern datePattern(String key) {
-        boolean h24 = language.equals("en") && Prefs.clock24();
-        Map<String, DatePattern> patterns = h24 ? DATE_PATTERNS_24 : DATE_PATTERNS;
-        DatePattern pattern = patterns.get(key);
+        DatePattern pattern = DATE_PATTERNS.get(key);
         if (pattern == null) {
             String text = tr(key);
-            if (h24) for (String[] f : TWENTY_FOUR) if (f[0].equals(key)) text = f[1];
             Locale loc = locale();
             try {
                 new SimpleDateFormat(text, loc);
@@ -432,7 +460,7 @@ final class Ui {
                 loc = Locale.US;
             }
             pattern = new DatePattern(text, loc);
-            patterns.put(key, pattern);
+            DATE_PATTERNS.put(key, pattern);
         }
         return pattern;
     }
@@ -451,14 +479,60 @@ final class Ui {
         }
     }
 
-    /** "21:47" (in 12-hour English, "9:47", like the iPhone in the US). */
-    static String clock(long now) {
-        return Ui.datePattern("format|h:mm").format(now);
+    /** The clock's patterns, by ICU skeleton ("Hm", "hmma", "H", "ha"): each language keeps its own order. */
+    private static final Map<String, DatePattern> TIME_PATTERNS = new HashMap<>();
+
+    /**
+     * The locale's own pattern for a time skeleton, made once: "hmma" is "h:mm a" in English, "a h:mm" in Chinese and
+     * Japanese, "h:mm a" in French (the "a" keeps the AM/PM the person asked for).
+     */
+    static synchronized DatePattern timePattern(String skeleton) {
+        DatePattern pattern = TIME_PATTERNS.get(skeleton);
+        if (pattern == null) {
+            String text = android.text.format.DateFormat.getBestDateTimePattern(locale, skeleton);
+            try {
+                new SimpleDateFormat(text, locale);
+            } catch (IllegalArgumentException e) {
+                AppLog.w("time pattern " + skeleton + " in " + language + ": " + e.getMessage());
+                text = skeleton.equals("Hm") ? "HH:mm" : skeleton.equals("H") ? "HH" : skeleton.equals("ha") ? "h a" : "h:mm a";
+            }
+            pattern = new DatePattern(text, locale);
+            TIME_PATTERNS.put(skeleton, pattern);
+        }
+        return pattern;
     }
 
-    /** "5:21" (sunrise and sunset; in 12-hour English, "5:21 AM", in 24-hour English, "05:21"). */
+    /** 24-hour: "24" or "12" as chosen in the settings, or the TV's own setting for "auto". */
+    static boolean h24() {
+        String format = Prefs.clockFormat();
+        return format.equals("24") || (format.equals("auto") && Prefs.clock24());
+    }
+
+    /**
+     * The catalogue's pattern for a clock key when it already writes the chosen clock (24-hour without "a", or 12-hour),
+     * so each language keeps its own form ("20h", "20 Uhr", "오후 8시"); else the locale's pattern for the other one.
+     * Automatic keeps each language's own clock, as before the Clock row: only English follows the TV's setting (#250).
+     */
+    private static DatePattern clockPattern(String key, String skeleton24, String skeleton12) {
+        if (Prefs.clockFormat().equals("auto") && !language.equals("en")) return datePattern(key);
+        boolean h24 = h24();
+        boolean catalogue24 = tr(key).replaceAll("'[^']*'", "").matches(".*[Hk].*");
+        return catalogue24 == h24 ? datePattern(key) : timePattern(h24 ? skeleton24 : skeleton12);
+    }
+
+    /** "21:47" (Portuguese), "9:47" (English in 12 hours) or "9:47 PM", as chosen in the settings. */
+    static String clock(long now) {
+        return clockPattern("format|h:mm", "Hm", "hmma").format(now);
+    }
+
+    /** "5:21 PM" (sunrise and sunset), following the clock's 12/24-hour choice. */
     static String time(long at) {
-        return once(Prefs.clock24() ? "time24" : "time", at, () -> Ui.datePattern("format|h:mm a").format(at));
+        return once(h24() ? "time24" : "time", at, () -> clockPattern("format|h:mm a", "Hm", "hmma").format(at));
+    }
+
+    /** An hourly forecast label ("8 PM", "20h"), following the clock's 12/24-hour choice. */
+    static String hour(long at) {
+        return once(h24() ? "hour24" : "hour", at, () -> clockPattern("format|h a", "Hm", "ha").format(at));
     }
 
     private static final HashMap<String, String> FORMATTED = new HashMap<>();

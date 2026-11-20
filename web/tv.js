@@ -11,6 +11,30 @@ var TV = (function () {
   var webos = typeof window.PalmServiceBridge !== 'undefined';
   var samsung = !webos && typeof window.tizen !== 'undefined' && !!window.tizen.application;
   var calls = [];   // a bridge is collected if nothing holds it before its reply arrives
+  var tizen2 = samsung && /Tizen 2\./.test(navigator.userAgent);
+  // 2017 and 2018 Samsungs (Tizen 3 and 4) freeze opening their settings from an app (MU6100, MU6122, NU7400, #257).
+  var tizen34 = samsung && /Tizen [34]\./.test(navigator.userAgent);
+  // Tizen 2 (2016 TVs, WebKit 538) repaints every shadow on every frame of a focus animation: home.css turns them off.
+  // So do LGs under 2 GB: an LG on webOS TV Lite 10 (MT5889, 1.3 GB, ratio 2) ran the shelf at 23-28 fps, 60 with lite
+  // and 45 with only the shadows off (#318); a 43LR6700PSA on webOS TV Lite 8.5 (1.5 GB, ratio 1) at 45-50, 59 with
+  // lite and 55 with only the shadows off (#383). Samsungs at that memory too: a 2021 UN50AU7700 (Tizen 6, 1.5 GB, ratio
+  // 1) still stutters at each move with flat alone (#461). deviceMemory (webOS 5+, Tizen 5+) is the nearest power of two,
+  // so it reads 1 up to about 1.5 GB.
+  var lowMemory = navigator.deviceMemory && navigator.deviceMemory <= 1;
+  // webOS 1 to 3 (2014-2017, Chromium 38) have no deviceMemory, and their sets have 1 to 1.5 GB: lite too.
+  var chrome = /Chrome\/(\d+)/.exec(navigator.userAgent);
+  var oldWebos = webos && !navigator.deviceMemory && chrome && parseInt(chrome[1], 10) < 53;
+  if (tizen2 || oldWebos || ((webos || samsung) && lowMemory)) {
+    // webOS 3 on a 4K set (UH6150) re-rasterized ~300 ms of tiles at each move; with each tile and pick on its own
+    // compositor layer that fell to ~8 ms, and the focus can animate again (`layered` in home.css).
+    document.documentElement.className += oldWebos ? ' lite layered' : ' lite';
+  } else if (samsung && navigator.deviceMemory && navigator.deviceMemory <= 2) {
+    // Samsungs up to 2 GB keep the animations but not the soft shadows of the parts that move (home.css): a 2021 Frame
+    // (QE55LS03A, Tizen 6, 2 GB, ratio 1) froze for up to 360 ms on each move along the picks and dropped 78 frames in
+    // 8 moves along the shelf; with flat, at most 75 ms and 13 frames. Not with lite, which has no shadows or
+    // animations to spare, and where the layers flat asks for would only take memory.
+    document.documentElement.className += ' flat';
+  }
 
   /** One Luna call; done(result) with null on failure. */
   function luna(uri, params, done) {
@@ -35,6 +59,9 @@ var TV = (function () {
 
   // LG's own screensaver asks every subscribed app first. While Free My TV is on screen and its own screensaver will
   // take over (`hold`, from home.js), it says no; otherwise, and in the background, the TV's runs as before.
+  // Only where the TV lets the app subscribe: webOS 3.4 denies the call to Developer Mode apps (getPowerState too), so
+  // there the one reply is that refusal, with no timestamp: nothing is held, and saverBridge stays set, so it isn't
+  // tried again. A 60UH6150 didn't start its own screensaver over Free My TV anyway (#478).
   var saverBridge = null;
 
   function holdScreenSaver(hold) {
@@ -53,7 +80,9 @@ var TV = (function () {
 
   // webOS 6 gives Developer Mode apps only the "public" group, which leaves out listLaunchPoints. There the list comes
   // from the TV's remote control API on 127.0.0.1:3000 (the one LG's phone app uses), which takes file:// pages.
-  // The TV asks once to allow it; the key it gives back is kept.
+  // The TV asks once to allow it; the key it gives back is kept. Newer firmware gives the page its own origin
+  // (file://<app id>-webos), which the API refuses with 1008 "invalid origin": there our JS service (webos/service)
+  // makes the call.
   var SSAP_KEY = 'fmtv.ssapKey', SSAP_REFUSED = 'fmtv.ssapRefused';
 
   /** One call to the remote control API; done(result) with null on failure. */
@@ -89,7 +118,23 @@ var TV = (function () {
         finish(m.type !== 'error' && m.payload && m.payload.returnValue !== false ? m.payload : null);
       }
     };
-    ws.onerror = ws.onclose = function () { finish(null); };
+    ws.onerror = function () { finish(null); };
+    ws.onclose = function (event) {
+      if (event.code === 1008 && !finished) viaService(); else finish(null);
+    };
+    function viaService() {
+      clearTimeout(timer);
+      timer = setTimeout(function () { finish(null); }, 100000);   // the service waits 90 s for the prompt
+      luna('luna://' + self + '.service/ssap', {uri: uri, clientKey: key}, function (res) {
+        if (res && res.clientKey) {
+          try { localStorage.setItem(SSAP_KEY, res.clientKey); } catch (e) {}
+        }
+        if (res && res.refused) {
+          try { localStorage.setItem(SSAP_REFUSED, '1'); } catch (e) {}   // the person said no on the TV
+        }
+        finish(res && res.payload && res.payload.returnValue !== false ? res.payload : null);
+      });
+    }
   }
 
   // LG inputs: the antenna and the four HDMI ports, with the apps LG opens for them.
@@ -110,11 +155,17 @@ var TV = (function () {
   // Bixby, search, previews, the weather and notification popups, Apple TV's stand-in and engine.
   // A 2020 TU8000 (Tizen 5.5) ships Prime Video as org.tizen.primevideo, next to a -dummy and a _companionapp.
   // A 2023 Q60C (Tizen 9 in Brazil) ships Globoplay as org.tizen.globoplayapp.
+  // A 2023 CU7700 (Tizen 9) leaves `show` unset on ~500 apps: Samsung's system namespaces go, but for the store,
+  // SmartThings, Apple TV (aria-video), TV Plus, Gaming Hub and Windows 365.
   var SAMSUNG_HIDDEN = new RegExp('^(org\\.volt\\.|org\\.tizen\\.(?!browser$|netflix|primevideo$|globoplay)|org\\.tizen\\.netflixlowmem$|ise-|ug-|d75857a5-)' +
       '|[Ss]ervice$|[Dd]aemon|Preview$|syspopup|[Hh]elper$|AdPlayer|AdSuite|[Kk]eyboard|\\.OTApp$' +
-      '|^com\\.samsung\\.(calendar-account-manager|tv\\.(cobalt-|aria-(dummy|engine)|airplay-app|ambient-support|' +
-      'built-in-app-info-viewer|commonsearch|searchall|preview-|tv-scheduler|csfs|notification-app|mycontents|' +
-      'safLaunchBridge|shortcut|remote-workspace|voiceassistant|mybixby|weather-viewer))');
+      '|^com\\.samsung\\.calendar-account-manager' +
+      '|^com\\.samsung\\.tv\\.(?!store$|SmartThingsApp$|aria-video$|knox-browser-win365$|tvplus$|gaminghub$)' +
+      '|^com\\.samsung\\.tizen\\.' +
+      '|^com\\.samsung\\.(ep[-.]|rdm[-.]|SelfDiagnosis$|mtm-banner$|hitcomp$|video-test$)' +
+      '|^com\\.sausng\\.' +
+      '|^adplatform\\.' +
+      '|^(unified-drm-|lib-|p2p-asm|mobilebff$|comss$|acm-watcher$|dmr_service_app$|aifw-|csapi-|capi-|ep-|test-|emergency-log-transmitter$|samsung-easy-support$)');
 
   // Samsung apps whose iconPath is Tizen's generic pinwheel (a valid image, so onerror never fires): our own icons.
   // Seen on a 2018 NU7675 (Tizen 4); Smart Hub draws their real icons from a folder apps can't read. On a 2017
@@ -135,7 +186,23 @@ var TV = (function () {
     'QizQxC7CUf.PlayMovies': 'icons/googleplay.svg',
     'vIutycUzou.SteamLink': 'icons/steam.svg',
     'geUOM7qimf.FOXPlay': 'icons/fox.svg',
-    'AprZAARz4r.Jellyfin': 'icons/jellyfin.svg'
+    'AprZAARz4r.Jellyfin': 'icons/jellyfin.svg',
+    // ITVX's own background is in the SVG, so the tile takes ITVX's yellow-green (lift() and showLogo() in home.js).
+    'OEvCiupaFR.ITVHub': 'icons/itvx.svg'
+  };
+
+  // The same logos by name (lowercase letters and digits only), for app ids the list above doesn't know: older TVs
+  // (a 2016 KU6300, Tizen 2.4) can carry other ids for the same apps.
+  // On a 2025 LS03F (Tizen 9), BBC iPlayer's iconPath is Tizen's pinwheel and Channel 4's a build-stamped
+  // placeholder: both logos from Wikipedia, public domain in the US as text and simple shapes (PD-textlogo).
+  var SAMSUNG_ICON_NAMES = {
+    youtube: 'icons/youtube.png', primevideo: 'icons/prime.png', amazonprimevideo: 'icons/prime.png',
+    netflix: 'icons/netflix.svg', max: 'icons/max.svg', spotify: 'icons/spotify.svg',
+    deezer: 'icons/deezer.svg', youtubekids: 'icons/youtubekids.svg', redbulltv: 'icons/redbull.svg', ted: 'icons/ted.svg',
+    steamlink: 'icons/steam.svg', jellyfin: 'icons/jellyfin.svg', paramount: 'icons/paramountplus.svg',
+    paramountplus: 'icons/paramountplus.svg', crunchyroll: 'icons/crunchyroll.svg', twitch: 'icons/twitch.svg',
+    plex: 'icons/plex.svg', appletv: 'icons/appletv.svg',
+    bbciplayer: 'icons/bbciplayer.svg', channel4: 'icons/channel4.svg'
   };
 
   // Names Smart Hub gets wrong: HBO's app has none (so it never reached the shelf), others are long or old.
@@ -143,7 +210,8 @@ var TV = (function () {
     'NvZ26VG9Yw.HBOGOLAG': 'Max',
     'rJeHak5zRg.Spotify': 'Spotify',
     'evKhCgZelL.AmazonIgnitionLauncher2': 'Prime Video',
-    'org.tizen.globoplayapp': 'Globoplay'
+    'org.tizen.globoplayapp': 'Globoplay',
+    'OEvCiupaFR.ITVHub': 'ITVX'   // "ITVX - fresh, free streaming." on a 2025 LS03F (Tizen 9)
   };
 
   // Samsung's settings menu on Tizen 3, which answers no "settings" app control.
@@ -171,7 +239,7 @@ var TV = (function () {
     ['globoplaywebos', 'Globoplay'], ['spotify-beehive', 'Spotify', 'icons/spotify.svg'],
     ['tv.twitch.tv.starshot.lg', 'Twitch', '', '#9146FF'], ['cdp-30', 'Plex', '', '#E5A00D'],
     ['org.jellyfin.webos', 'Jellyfin', 'icons/jellyfin.svg'], ['com.crunchyroll.webapp', 'Crunchyroll', '', '#F47521'],
-    ['com.webos.app.browser', 'Web Browser', '', '#3A7BD5']
+    ['com.webos.app.browser', 'Web Browser', '', '#3A7BD5'], ['space.nuvio.webos', 'Nuvio TV', '', '#0E0F12']
   ];
 
   function knownApps(done) {
@@ -230,16 +298,94 @@ var TV = (function () {
   function samsungApp(a) {
     var icon = a.iconPath || '';
     if (icon && icon.indexOf('://') < 0) icon = 'file://' + icon;
-    if (SAMSUNG_ICONS[a.id]) icon = SAMSUNG_ICONS[a.id];
-    return {id: a.id, title: SAMSUNG_TITLES[a.id] || a.name || a.id, icon: icon, color: ''};
+    var title = SAMSUNG_TITLES[a.id] || a.name || a.id;
+    // Older Smart Hubs (a 2015 JU6075) still list Amazon's app under its old name, with another id.
+    if (/^Amazon( Instant)? Video$/i.test(title)) title = 'Prime Video';
+    var key = String(title).toLowerCase().replace(/[^a-z0-9]/g, '');
+    var byName = Object.prototype.hasOwnProperty.call(SAMSUNG_ICON_NAMES, key) ? SAMSUNG_ICON_NAMES[key] : '';
+    if (SAMSUNG_ICONS[a.id] || byName) icon = SAMSUNG_ICONS[a.id] || byName;
+    var dial = key === 'netflix' ? 'Netflix' : key === 'youtube' ? 'YouTube' : /^(amazon)?primevideo$/.test(key) ? 'Amazon' : '';
+    if (dial) samsungDial[a.id] = dial;
+    return {id: a.id, title: title, icon: icon, color: ''};
+  }
+
+  /**
+   * Built-in apps whose id starts with a number (11101200001.Netflix, 111299001912.YouTube and
+   * 111299001578.Amazon_Video on a 2015 JU6075, Tizen 2.3) are native, and tizen.application.launch doesn't open them;
+   * the TV's own DIAL server, which phones cast through, does.
+   */
+  var samsungDial = {}, NATIVE = /^\d+(\.|$)/;
+  /**
+   * Netflix on 2017 and 2018 Samsungs (Tizen 3 and 4): launch answers success and Netflix stays black, Back and all
+   * (MU6100, MU6122, NU7400, #257). Smart Hub's own number for it, through the TV's REST API, opens it normally, as
+   * phones do; the TV may ask once whether to allow it, so that call waits for the person.
+   */
+  var NETFLIX_HUB = '11101200001';
+
+  function dialLaunch(name, done) {
+    post('/ws/apps/' + name, 8000, done);
+  }
+
+  function hubLaunch(hubId, done) {
+    post('/api/v2/applications/' + hubId, 30000, done);
+  }
+
+  /** A POST to the TV's own server on port 8001 (DIAL and its REST API); done(ok). */
+  function post(path, timeout, done) {
+    var x = new XMLHttpRequest(), over = false;
+    x.open('POST', 'http://127.0.0.1:8001' + path, true);
+    x.timeout = timeout;
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4 || over) return;
+      over = true;
+      if (done) done(x.status === 200 || x.status === 201);
+    };
+    x.ontimeout = x.onerror = function () { if (!over) { over = true; if (done) done(false); } };
+    x.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
+    x.send('');
+  }
+
+  /**
+   * A pick opened on its title (Watchmode's web address of it). Only Prime Video takes one on Samsung: Smart Hub's own
+   * shortcuts open its titles with the eden_resume operation and {"values": "<GTI>"} under PAYLOAD (#483; Tizen 3 and
+   * 9). Disney+, Netflix and HBO Max take the request and open at home whatever the address, the id or the operation
+   * (tried on Tizen 9, the app running or not), so the rest are opened plainly, and not looked up.
+   */
+  var TITLE_LINKS = {prime: function (link) { var m = /gti=(amzn1\.dv\.gti\.[0-9a-f-]+)/.exec(link); return m ? m[1] : ''; }};
+
+  function samsungDeepLink(id, service, link, done) {
+    var value = TITLE_LINKS[service] ? TITLE_LINKS[service](link) : '';
+    if (!value) { samsungLaunch(id, done); return; }
+    try {
+      var control = new window.tizen.ApplicationControl('http://samsung.com/appcontrol/operation/eden_resume', null, null, null,
+          [new window.tizen.ApplicationControlData('PAYLOAD', [JSON.stringify({values: value})])]);
+      window.tizen.application.launchAppControl(control, id, function () { if (done) done(true); },
+          function () { samsungLaunch(id, done); });
+    } catch (e) {
+      samsungLaunch(id, done);
+    }
   }
 
   function samsungLaunch(id, done) {
-    try {
-      window.tizen.application.launch(id, function () { if (done) done(true); }, function () { if (done) done(false); });
-    } catch (e) {
-      if (done) done(false);
+    var dial = samsungDial[id];
+    function launch(otherwise) {
+      try {
+        window.tizen.application.launch(id, function () { if (done) done(true); }, otherwise);
+      } catch (e) {
+        otherwise();
+      }
     }
+    function failed() { if (done) done(false); }
+    if (tizen34 && dial === 'Netflix') {
+      hubLaunch(NETFLIX_HUB, function (ok) { if (ok) { if (done) done(true); } else launch(function () { dialLaunch(dial, done); }); });
+      return;
+    }
+    // A native id: DIAL first (launch doesn't open those on Tizen 2.3), and launch where DIAL doesn't answer.
+    if (dial && NATIVE.test(id)) {
+      dialLaunch(dial, function (ok) { if (ok) { if (done) done(true); } else launch(failed); });
+      return;
+    }
+    launch(dial ? function () { dialLaunch(dial, done); } : failed);
   }
 
   /**
@@ -255,6 +401,74 @@ var TV = (function () {
     } catch (e) {
       done(null);
     }
+  }
+
+  // MARK: - The antenna
+
+  // The last antenna channel seen on screen (the viewer keeps Samsung TV Plus's too, and goes back to it).
+  var CHANNEL_KEY = 'fmtv.channel';
+  // The antenna's channels as last listed, by channelKey: noteChannel runs at every return to the home screen, and a
+  // satellite list is up to 2,000 channels to read each time. Live TV reads it again, so a new scan is seen there.
+  var antenna = null;
+
+  function channelKey(c) { return c.major + '.' + c.minor + '.' + c.ptc; }
+
+  /** The broadcast channels the TV has tuned in (the antenna's, not TV Plus's), or [] where it won't tell. */
+  function broadcastChannels(done) {
+    function got(l) {
+      antenna = null;
+      if (l.length) {
+        antenna = {};
+        for (var i = 0; i < l.length; i++) antenna[channelKey(l[i])] = true;
+      }
+      done(l);
+    }
+    function list(mode, next) {
+      try {
+        window.tizen.tvchannel.getChannelList(function (l) { if (l && l.length) got(l); else next(); }, next, mode, 0, 2000);
+      } catch (e) {
+        next();
+      }
+    }
+    if (!window.tizen || !window.tizen.tvchannel) { done([]); return; }
+    list('DIGITAL', function () { list('ALL', function () { got([]); }); });
+  }
+
+  /** Called when the home screen comes back: what the viewer last played, kept if it's one of the antenna's. */
+  function noteChannel() {
+    if (!samsung || !window.tizen || !window.tizen.tvchannel) return;
+    var now;
+    try { now = window.tizen.tvchannel.getCurrentChannel(); } catch (e) { return; }
+    if (!now) return;
+    function keep() {
+      if (!antenna || !antenna[channelKey(now)]) return;
+      try { localStorage.setItem(CHANNEL_KEY, JSON.stringify({major: now.major, minor: now.minor, ptc: now.ptc})); } catch (e) {}
+    }
+    if (antenna) keep(); else broadcastChannels(keep);
+  }
+
+  /** Tunes the antenna (its last channel, else the first), then done(); done() alone where the TV won't. */
+  function tuneAntenna(done) {
+    var sent = false;
+    function finish() { if (!sent) { sent = true; done(); } }
+    // A list or a tuner that never answers doesn't hold the viewer: 2.5 s for both.
+    setTimeout(finish, 2500);
+    broadcastChannels(function (l) {
+      if (sent) return;   // too late: the viewer is up, and tuning now would change the channel under it
+      if (!l.length) { finish(); return; }
+      var last = null, pick = l[0];
+      try { last = JSON.parse(localStorage.getItem(CHANNEL_KEY) || 'null'); } catch (e) {}
+      for (var i = 0; last && i < l.length; i++) if (channelKey(l[i]) === channelKey(last)) pick = l[i];
+      var option = {major: pick.major, minor: pick.minor};
+      if (pick.ptc) option.ptc = pick.ptc;
+      if (pick.sourceID) option.sourceID = pick.sourceID;
+      if (pick.programNumber) option.programNumber = pick.programNumber;
+      try {
+        window.tizen.tvchannel.tune(option, {onsuccess: finish, onnosignal: finish, onprograminforeceived: function () {}}, finish);
+      } catch (e) {
+        finish();
+      }
+    });
   }
 
   /** Puts the TV on a source ("source:HDMI:2"), then brings the TV's viewer up to show it. */
@@ -274,9 +488,12 @@ var TV = (function () {
       for (var i = 0; sources && i < sources.length; i++) {
         if (sources[i].type === type && sources[i].number === number) source = sources[i];
       }
-      if (!source) { show(type === 'TV'); return; }   // the antenna: the viewer alone brings it up
+      // The antenna: its channel tuned first, or the viewer goes back to whatever it played last (Samsung TV Plus too).
+      var tv = type === 'TV';
+      if (!source) { if (tv) tuneAntenna(function () { show(true); }); else show(false); return; }
       try {
-        window.tizen.tvwindow.setSource(source, function () { show(true); }, function () { show(false); });
+        window.tizen.tvwindow.setSource(source, function () { if (tv) tuneAntenna(function () { show(true); }); else show(true); },
+          function () { if (tv) tuneAntenna(function () { show(true); }); else show(false); });
       } catch (e) {
         show(false);
       }
@@ -309,10 +526,192 @@ var TV = (function () {
     }
   }
 
+  // MARK: - About this TV
+
+  /** done({model, firmware, system, version, ip}), with '' for what the TV doesn't tell. */
+  function about(done) {
+    var out = {model: '', firmware: '', system: '', version: '', ip: ''}, left = 1, sent = false;
+    function wait() { left++; }
+    function finish() {
+      if (--left > 0 || sent) return;
+      sent = true;
+      clearTimeout(timer);
+      done(out);
+    }
+    var timer = setTimeout(function () { left = 1; finish(); }, 4000);   // a service that never answers doesn't hold the rest
+
+    if (webos) {
+      // The services LG's webOSTV.js reads for webOS.deviceInfo, and its public connection manager.
+      wait();
+      luna('luna://com.webos.service.tv.systemproperty/getSystemInfo', {keys: ['modelName', 'firmwareVersion', 'sdkVersion']}, function (res) {
+        if (res) {
+          out.model = res.modelName || '';
+          out.firmware = res.firmwareVersion || '';
+          if (!out.system && res.sdkVersion) out.system = 'webOS ' + res.sdkVersion;
+        }
+        finish();
+      });
+      wait();
+      luna('luna://com.webos.service.systemservice/osInfo/query', {parameters: ['webos_release']}, function (res) {
+        if (res && res.webos_release) out.system = 'webOS ' + res.webos_release;
+        finish();
+      });
+      wait();
+      luna('luna://com.palm.connectionmanager/getStatus', {}, function (res) {
+        if (res) {
+          var wired = res.wired || {}, wifi = res.wifi || {};
+          if (wired.state === 'connected' && wired.ipAddress) out.ip = wired.ipAddress;
+          else if (wifi.state === 'connected' && wifi.ipAddress) out.ip = wifi.ipAddress;
+        }
+        finish();
+      });
+      wait();
+      // The app's own version: its appinfo.json, beside index.html.
+      var x = new XMLHttpRequest();
+      x.onreadystatechange = function () {
+        if (x.readyState !== 4) return;
+        try { out.version = JSON.parse(x.responseText).version || ''; } catch (e) {}
+        finish();
+      };
+      try { x.open('GET', 'appinfo.json', true); x.send(); } catch (e) { finish(); }
+    } else if (samsung) {
+      var info = window.tizen.systeminfo;
+      try { out.model = info.getCapability('http://tizen.org/system/model_name') || ''; } catch (e) {}
+      try { out.system = 'Tizen ' + info.getCapability('http://tizen.org/feature/platform.version'); } catch (e) {}
+      try { out.version = window.tizen.application.getCurrentApplication().appInfo.version || ''; } catch (e) {}
+      var property = function (name, got) {
+        wait();
+        try {
+          info.getPropertyValue(name, function (v) { got(v); finish(); }, function () { finish(); });
+        } catch (e) {
+          finish();
+        }
+      };
+      // BUILD's buildVersion is the firmware (T-KTMDEUC-1250.4); its model is the panel's (UN55NU7100) where model_name is a code.
+      property('BUILD', function (v) {
+        if (v.buildVersion) out.firmware = v.buildVersion;
+        if (v.model) out.model = v.model;
+      });
+      property('ETHERNET_NETWORK', function (v) {
+        if (v.status === 'ON' && v.ipAddress) out.ip = v.ipAddress;
+      });
+      property('WIFI_NETWORK', function (v) {
+        if (v.status === 'ON' && v.ipAddress && !out.ip) out.ip = v.ipAddress;
+      });
+    } else {
+      out = {model: 'OLED55C1', firmware: '03.33.85', system: 'webOS 6.0', version: 'preview', ip: '192.168.1.50'};
+    }
+    finish();
+  }
+
+  // MARK: - Home, back here (Samsung)
+
+  /*
+   * Samsung's Home button always opens Smart Hub, and no app may take it (registerKey refuses it). With Home Settings >
+   * Home button > Free My TV, while an app opened from here is in front, the TV's own server on port 8001 is asked every
+   * 0.4 s whether it still shows it (GET /api/v2/applications/<id> answers {running, visible}); once it doesn't (Home,
+   * or the app closed), Free My TV comes to the front again. Home pressed in Free My TV itself still opens Smart Hub,
+   * and nothing is asked while no app opened from here is in front.
+   */
+  var back = {timer: null, ids: [], seen: false, away: false, asks: 0, waits: 0, gone: 0, asking: false, on: false};
+  // Only a build made with samsung_home_button=true has the manifest for it (tizen/build.py); not Tizen 2.
+  var canReturn = samsung && !tizen2 && (window.CONFIG || {}).homeButton === true;
+
+  // The server answers by an app's Smart Hub number (YouTube's 111299001912), which the app's own APIs never tell. By its
+  // Tizen id it answers too, but for some apps (YouTube, which runs as com.samsung.tv.cobalt-yt) it says "not visible"
+  // even in front, and the built-in ones it doesn't know at all: the number goes first where it's known. `0 vd_applist`
+  // over SDB lists every app's (app_id).
+  var HUB_IDS = {
+    'org.tizen.netflix-app': '3201907018807', 'org.tizen.primevideo': '3201910019365', 'com.samsung.tv.aria-video': '3201807016597',
+    'org.tizen.globoplayapp': '3202007021424', '9Ur5IzDKqV.TizenYouTube': '111299001912', 'MCmYXNxgcu.DisneyPlus': '3201901017640',
+    'rJeHak5zRg.Spotify': '3201606009684', 'GHI3a0zMSx.XboxGamePass': '3202203026799', 'IkWsFHtOY9.Stremio': '3202306031311',
+    'OGLLvqej7u.CrunchyrollWebApp': '3202302030097', '5b8c3eb16b.BeamCTVDev': '3202301029760'
+  };
+
+  function stopWatch() {
+    if (back.timer) clearInterval(back.timer);
+    back.timer = null;
+  }
+
+  /** done(true | false) for the first of ids the server knows, done(null) if it knows none, done(undefined) if no answer. */
+  function visible(ids, done) {
+    var i = 0;
+    function next() {
+      if (i >= ids.length) { done(null); return; }
+      var x = new XMLHttpRequest(), over = false, id = ids[i++];
+      x.open('GET', 'http://127.0.0.1:8001/api/v2/applications/' + encodeURIComponent(id), true);
+      x.timeout = 1500;
+      x.onreadystatechange = function () {
+        if (x.readyState !== 4 || over) return;
+        over = true;
+        var r = null;
+        try { r = JSON.parse(x.responseText); } catch (e) {}
+        if (x.status === 200 && r && typeof r.visible === 'boolean') { ids.length = 0; ids.push(id); done(r.visible); }
+        else next();   // that id unknown there: the next one
+      };
+      x.ontimeout = x.onerror = function () { if (!over) { over = true; done(undefined); } };   // asked again next time
+      x.send();
+    }
+    next();
+  }
+
+  /** Brings Free My TV to the front. As an app control (the manifest's reload="disable"), the page isn't loaded again. */
+  function comeBack() {
+    function launch() { try { window.tizen.application.launch(self); } catch (e) {} }
+    try {
+      var control = new window.tizen.ApplicationControl('http://tizen.org/appcontrol/operation/default', null, null, null, []);
+      window.tizen.application.launchAppControl(control, self, null, launch);
+    } catch (e) {
+      launch();
+    }
+  }
+
+  function watchBack(id) {
+    stopWatch();
+    if (!back.on || !id) return;
+    back.ids = HUB_IDS[id] ? [HUB_IDS[id]] : [id];
+    back.seen = false;
+    back.away = false;
+    back.asks = 0;
+    back.waits = 0;
+    back.gone = 0;
+    back.asking = false;
+    back.timer = setInterval(function () {
+      // Back here, or the app never came to the front (20 s): nothing to watch. Until then it may still be opening.
+      if (!document.hidden) { if (back.away || ++back.waits > 50) stopWatch(); return; }
+      back.away = true;
+      if (back.asking) return;   // one question at a time: the TV is slow to answer while Smart Hub opens
+      if (++back.asks > 50 && !back.seen) { stopWatch(); return; }   // it never showed (20 s): nothing to watch
+      back.asking = true;
+      visible(back.ids, function (on) {
+        back.asking = false;
+        if (!back.timer) return;
+        if (on === null) { stopWatch(); return; }   // the server doesn't know it: left alone
+        if (on === true) { back.seen = true; back.gone = 0; return; }
+        // Twice in a row: one "not visible" in the middle of a film must not bring the home screen over it.
+        if (on === false && back.seen && document.hidden && ++back.gone >= 2) { stopWatch(); comeBack(); }
+      });
+    }, 400);
+  }
+
   // MARK: - The TV, whichever it is
 
   return {
     name: webos ? 'webos' : samsung ? 'tizen' : 'browser',
+
+    /**
+     * Whether an app can open the TV's settings. Not on Tizen 2 (a 2016 KU6300): the "settings" request and
+     * org.tizen.menu both answer success and nothing shows, and the remote API ignores MENU and HOME. Nor on Tizen 3
+     * and 4, where org.tizen.menu freezes the TV (#257): the remote's own Settings button still works there.
+     */
+    canOpenSettings: !tizen2 && !tizen34,
+
+    /** Whether a pick of this service ("prime") can open on its title here: Watchmode is asked only then. */
+    takesTitle: function (service) { return samsung && !!TITLE_LINKS[service]; },
+
+    /** Samsung: Home pressed in an app opened from here can bring Free My TV back (Home Settings > Home button). */
+    canReturnHome: canReturn,
+    returnHome: function (on) { back.on = canReturn && !!on; if (!back.on) stopWatch(); },
 
     /** Installed apps, as the TV's launcher lists them: [{id, title, icon, color}]. */
     apps: function (done) {
@@ -336,6 +735,13 @@ var TV = (function () {
         // Denied to Developer Mode apps (webOS 6 and newer): once the TV has allowed the remote control API, it lists
         // every app with its icon; until then, the known apps the TV says it has, while the TV asks once (an answer
         // only counts from the next load on, and a "no" isn't asked again).
+        // webOS 3 has neither getAppLoadStatus nor a remote control API that takes file:// pages ("invalid origin"):
+        // there the list comes from the computer (webos/apps.py), built into the LG package.
+        var built = (window.CONFIG && CONFIG.installedApps) || [];
+        if (built.length) {
+          done(built.filter(function (a) { return a.id !== self && !HIDDEN.test(a.id); }));
+          return;
+        }
         var paired = false, refused = false;
         try { paired = !!localStorage.getItem(SSAP_KEY); refused = !!localStorage.getItem(SSAP_REFUSED); } catch (e) {}
         if (paired) {
@@ -349,11 +755,19 @@ var TV = (function () {
       });
     },
 
+    /** Samsung: keeps the antenna channel on screen, which Live TV goes back to. */
+    noteChannel: noteChannel,
+
     /** Opens an app (or an input); done(ok). */
     launch: function (id, params, done) {
       if (samsung) {
+        stopWatch();
         if (id.indexOf('source:') === 0) samsungSource(id, done);
-        else samsungLaunch(id, done);
+        else {
+          var opened = function (ok) { if (ok) watchBack(id); if (done) done(ok); };
+          if (params && params.link) samsungDeepLink(id, params.service, params.link, opened);
+          else samsungLaunch(id, opened);
+        }
         return;
       }
       if (!webos) {
@@ -398,6 +812,9 @@ var TV = (function () {
       if (samsung) samsungSettings(done);
       else this.launch('com.palm.app.settings', null, done);
     },
+
+    /** The TV's model, firmware, system, IP address and this app's version, for About this TV. */
+    about: about,
 
     /** LG: keeps the TV's screensaver away while ours will take over (`hold` says when). */
     holdScreenSaver: holdScreenSaver,

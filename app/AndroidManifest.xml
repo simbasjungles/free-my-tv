@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.freemytv"
-    android:versionCode="3"
-    android:versionName="1.2">
+    android:versionCode="6"
+    android:versionName="1.5">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -15,11 +15,22 @@
     <!-- The sleep timer on time: from Android 12, windows under 10 minutes stretch to 10. No prompt for either. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- Updates from GitHub's releases (Updates): Android's installer still asks before each one. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- "Continue watching": what you left half-way in your apps, from Android TV's own Watch Next list. -->
+    <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
+    <!-- The Bluetooth status icon: whether headphones or a speaker are connected. Before Android 12 the permission is
+         granted at install; from 12 it is asked for when Status icons is turned on (and only the icon needs it). -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- Android 11+: without this list the app can't "see" the other apps (getLeanbackLaunchIntentForPackage
          returns null). The shelf and streaming apps, the live TV apps and, through the <intent>, every TV app
          (for "All Apps"). -->
     <queries>
+        <!-- Optional App Store top button: Google Play or Amazon Appstore. -->
+        <package android:name="com.android.vending" />
+        <package android:name="com.amazon.venezia" />
         <package android:name="com.netflix.ninja" />
         <package android:name="com.google.android.youtube.tv" />
         <package android:name="com.amazon.firetv.youtube" />
@@ -37,20 +48,41 @@
         <package android:name="com.cbs.ott" />
         <package android:name="com.cbs.ca" />
         <package android:name="com.bskyb.nowtv.beta" />
+        <package android:name="de.swr.avp.ard.tv" />
+        <package android:name="com.zdf.android.mediathek" />
+        <package android:name="tv.arte.plus7" />
+        <package android:name="de.prosiebensat1digital.seventv" />
+        <package android:name="de.rtli.tvnow" />
+        <package android:name="de.sky.online" />
+        <package android:name="de.telekom.magentatv.tv" />
         <package android:name="com.peacocktv.peacockandroid" />
         <package android:name="com.peacock.peacockfiretv" />
         <package android:name="com.globo.globotv" />
+        <package android:name="ru.kinopoisk.tv" />
+        <package android:name="ru.more.play" />
+        <package android:name="gpm.tnt_premier" />
+        <package android:name="ru.amediateka" />
+        <package android:name="ru.rt.video.app.tv" />
+        <package android:name="in.startv.hotstar" />
+        <package android:name="com.crunchyroll.crunchyroid" />
+        <!-- Sony: Google TV's home app takes its remote's app buttons (Prefs.sonyGoogleTv, #395) -->
+        <package android:name="com.google.android.apps.tv.launcherx" />
+        <package android:name="net.cme.voyo.cz.tvapp" />
         <package android:name="com.spotify.tv.android" />
         <package android:name="com.tcl.tv" />
         <package android:name="com.google.android.tv" />
         <package android:name="com.mediatek.wwtv.tvcenter" />
         <package android:name="com.sony.dtv.tvx" />
+        <package android:name="com.smartdevice.livetv" />
+        <package android:name="com.mediatek.tv.oneworld.tvcenter" />
         <!-- HY300 projectors: keystone and Miracast (drawer shortcuts), Allwinner's player for HDMI; MIUI TV's source player -->
         <package android:name="com.htc.htcsettings" />
+        <package android:name="com.softwinner.tcorrection" />
         <package android:name="com.softwinner.miracastReceiver" />
         <package android:name="com.softwinner.awlivetv" />
         <package android:name="com.xiaomi.mitv.tvplayer" />
         <package android:name="com.amazon.tv.livetv" />
+        <package android:name="com.amazon.tv.inputpreference.service" />
         <package android:name="com.amazon.mediatek.livetv" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -75,7 +107,7 @@
         android:icon="@drawable/icon"
         android:banner="@drawable/banner"
         android:allowBackup="false"
-        android:usesCleartextTraffic="false">
+        android:networkSecurityConfig="@xml/network_security_config">
 
         <!-- The app's icon opens the settings (switch between Free My TV and the original home screen). -->
         <activity
@@ -95,6 +127,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".QuickSettingsActivity"
+            android:process=":home"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity="io.freemytv.quick"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:screenOrientation="landscape"
+            android:theme="@style/FreeMyTV.QuickSettings" />
 
         <!-- The home screen. Its own process (:home): if it ever crashes, the safety net in the main process still
              works. It only becomes the TV's home screen in Free My TV mode (cmd package set-home-activity). -->
@@ -117,6 +160,11 @@
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <!-- The remote's Apps button: the system sends ACTION_ALL_APPS to the home app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.ALL_APPS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <!-- Fire TV: the same home screen opened as a regular app (no resumeWhilePausing, which leaves window focus on
@@ -132,6 +180,18 @@
             android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
             android:theme="@style/FreeMyTV.Home" />
+
+        <!-- The quick settings panel the remote's Settings button opens in Free My TV mode (RemoteKeys), over what's
+             playing: a window on the left of the screen, not the whole screen. -->
+        <activity
+            android:name=".QuickPanelActivity"
+            android:process=":home"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity="io.freemytv.panel"
+            android:excludeFromRecents="true"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/FreeMyTV.Panel" />
 
         <service
             android:name=".Screensaver"
@@ -194,12 +254,31 @@
             android:authorities="io.freemytv.photos"
             android:exported="true" />
 
+        <!-- tools/send_key.py writes keys that stay out of the APK here (the Immich key, Home Assistant's token); only
+             adb's shell may write (Secrets checks). -->
+        <provider
+            android:name=".Secrets"
+            android:authorities="io.freemytv.secrets"
+            android:exported="true" />
+
         <!-- The sleep timer's minutes left over any app, while the timer runs. A process of its own: a foreground
              service in :home would keep the whole home screen in memory under the app in front. -->
         <service
             android:name=".SleepOverlay"
             android:process=":sleep"
             android:exported="false" />
+
+        <!-- Lets the home screen and the screensaver read what apps are playing (their media sessions); it unbinds itself
+             at once, so no process stays up for it. -->
+        <service
+            android:name=".NowPlaying"
+            android:exported="true"
+            android:label="Free My TV"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
         <receiver
             android:name=".HomeReceiver"

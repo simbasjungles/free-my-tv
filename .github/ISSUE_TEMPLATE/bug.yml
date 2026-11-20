@@ -1,0 +1,61 @@
+name: Something doesn't work on my TV
+description: A problem on a Google TV, Android TV, Fire TV, LG or Samsung TV, or a streamer or projector.
+body:
+  - type: markdown
+    attributes:
+      value: Write in your own language. Español y português, también.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Which kind of TV?
+      options:
+        - Google TV / Android TV
+        - Fire TV
+        - LG (webOS)
+        - Samsung (Tizen)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Brand and model
+      description: |
+        LG and Samsung: Home Settings → About this TV shows it.
+        Google TV / Android TV: the TV's Settings → System → About, or `adb shell getprop ro.product.model`.
+        Fire TV: Settings → My Fire TV → About.
+        If Free My TV didn't install: the label on the back of the TV.
+      placeholder: Samsung UE55TU7020
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System version (Android, Fire OS, webOS or Tizen), and firmware if you can find it
+      placeholder: Tizen 5.5
+  - type: input
+    id: version
+    attributes:
+      label: Free My TV version
+      description: |
+        LG and Samsung: the last line of Home Settings → About this TV.
+        Google TV / Android TV / Fire TV: on the Free My TV settings screen, on the left under the name.
+      placeholder: "1.5"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      placeholder: |
+        1. Turn the TV on from standby
+        2. Press Home
+        3. ...
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else (error text, a photo of the screen, adb output)

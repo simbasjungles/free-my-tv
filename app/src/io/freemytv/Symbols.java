@@ -57,6 +57,12 @@ final class Symbols {
         return b == null ? 0 : b.getWidth() * pointSize / PX_PER_POINT;
     }
 
+    /** The point size that draws the symbol's bitmap at the given height. */
+    static float pointSizeForHeight(Context c, String name, float height) {
+        Bitmap b = get(c, name);
+        return b == null ? 0 : height * PX_PER_POINT / b.getHeight();
+    }
+
     /** Draws centered at (cx, cy) in the given color (lighter, translucent parts of the symbol stay lighter). */
     static void draw(Context c, Canvas canvas, String name, float cx, float cy, float pointSize, int color) {
         Bitmap b = get(c, name);

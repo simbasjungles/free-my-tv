@@ -1,0 +1,13 @@
+name: An idea
+description: Something you'd like Free My TV to do.
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like it to do?
+    validations:
+      required: true
+  - type: input
+    id: tv
+    attributes:
+      label: On which TV? (brand and model, if it matters)

@@ -15,7 +15,7 @@ import translate  # noqa: E402  (the catalogues and the keys the web app uses)
 
 GENERIC = {'tmdbKey': '', 'tmdbRegion': '', 'latitude': '', 'longitude': '', 'city': '', 'language': 'auto',
            'currency': '', 'temperature': 'auto', 'theme': 'auto', 'showCrypto': True, 'hideAnimation': False, 'hideApps': [],
-           'shelfApps': []}
+           'shelfApps': [], 'drawerFirst': False, 'openPicksIn': 'apps', 'clockFormat': 'auto'}
 
 
 def config_from_args(args):
@@ -33,13 +33,17 @@ def read_config(path):
         shutil.copy(os.path.join(ROOT, 'config.example.properties'), path)
         print('Created config.properties: add your TMDB key and your city there (optional), then build again.')
     values = {}
-    with open(path, encoding='utf-8') as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith('#') or '=' not in line:
-                continue
-            key, value = line.split('=', 1)
-            values[key.strip()] = value.strip().strip('"')
+    try:
+        with open(path, encoding='utf-8-sig') as f:
+            lines = f.readlines()
+    except UnicodeDecodeError:   # Notepad's "Unicode" is UTF-16
+        sys.exit('config.properties is saved as UTF-16 (Notepad\'s "Unicode"). Save it as UTF-8 and build again.')
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, value = line.split('=', 1)
+        values[key.strip()] = value.strip().strip('"')
 
     def number(key, default):
         v = values.get(key, '') or default
@@ -60,7 +64,18 @@ def read_config(path):
         'showCrypto': values.get('show_crypto', 'true').lower() != 'false',
         'hideAnimation': values.get('hide_animation', 'false').lower() == 'true',
         'hideApps': [s.strip() for s in values.get('hide_apps', '').split(',') if s.strip()],
+        # Where Home Settings' Picks from switches start, as on Android (Prefs.offServices): netflix, prime, disney...
+        'hideServices': [s.strip().lower() for s in values.get('hide_services', '').split(',') if s.strip()],
+        # Samsung: a pick opens its title's page in its app (Watchmode's free plan: 2,500 requests a month).
+        'watchmodeKey': values.get('watchmode_key', '').strip(),
         'shelfApps': [s.strip() for s in values.get('shelf_apps', '').split(',') if s.strip()],
+        'drawerFirst': values.get('drawer_first', 'false').lower() == 'true',
+        # Samsung: Home pressed in an app opened from here brings Free My TV back. It changes the package's manifest
+        # (tizen/build.py), so only a build that asks for it carries it; the release doesn't.
+        'homeButton': values.get('samsung_home_button', 'false').lower() == 'true',
+        'openPicksIn': 'nuvio' if values.get('open_picks_in', '').strip().lower() == 'nuvio' else 'apps',
+        # 24 or 12 forces the clock; auto follows the language's catalogue.
+        'clockFormat': values.get('clock_format', '').strip() if values.get('clock_format', '').strip() in ('24', '12') else 'auto',
     }
 
 
@@ -105,6 +120,13 @@ def files(config, made_by):
     for name in ('InterVariable.ttf', 'OFL.txt'):
         with open(os.path.join(ROOT, 'app', 'assets', 'fonts', name), 'rb') as f:
             out['fonts/' + name] = f.read()
+    # Inter in fixed weights for Chromium before 62 (home.css's @font-face); the variable font above stays for WOFF2-less
+    # Tizen 2.4. Same family, same OFL licence.
+    fonts = os.path.join(web, 'fonts')
+    for name in sorted(os.listdir(fonts)):
+        if name.endswith('.woff2'):
+            with open(os.path.join(fonts, name), 'rb') as f:
+                out['fonts/' + name] = f.read()
     return out
 
 

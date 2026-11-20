@@ -342,6 +342,15 @@ final class Shaders {
         out.set(NIGHT[0], NIGHT[1], NIGHT[2]);
     }
 
+    /**
+     * Settings: dark and nearly neutral at any hour, like the home screen's plain background at night (the day's sky
+     * read as a flat bright blue there, above all without AGSL, where it's a plain gradient); a trace of violet moves in
+     * the aurora.
+     */
+    static void settings(Palette out) {
+        out.set(0x08090C, 0x141519, 0x2B2838);
+    }
+
     private static int mix(int a, int b, float f) {
         int r = Math.round(((a >> 16) & 255) * (1 - f) + ((b >> 16) & 255) * f);
         int g = Math.round(((a >> 8) & 255) * (1 - f) + ((b >> 8) & 255) * f);

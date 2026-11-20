@@ -1298,6 +1298,11 @@ h2 {
     font-size: 14px;
     white-space: nowrap;
   }
+
+  /* An odd last tab takes the whole row. */
+  .tabs button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 560px) {
@@ -1372,4 +1377,21 @@ h2 {
   .feature .tv {
     transition: none;
   }
+}
+
+/* ---------- More ---------- */
+
+.extras .step h4 {
+  margin-top: 0;
+}
+
+.where {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
 }

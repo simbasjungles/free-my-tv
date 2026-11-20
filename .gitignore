@@ -2,6 +2,9 @@
 config.properties
 *.keystore
 *.idsig
+# An LG TV's app list and icons (webos/apps.py)
+webos-apps.local.json
+webos-icons.local/
 
 # Build output
 out/

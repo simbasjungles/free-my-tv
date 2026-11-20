@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 final class Place {
     private Place() {}
 
-    private static final Pattern EURO = Pattern.compile("AT|BE|CY|DE|EE|ES|FI|FR|GR|HR|IE|IT|LT|LU|LV|MT|NL|PT|SI|SK");
+    private static final Pattern EURO = Pattern.compile("AT|BE|BG|CY|DE|EE|ES|FI|FR|GR|HR|IE|IT|LT|LU|LV|MT|NL|PT|SI|SK");
 
     private static Context app;
     private static boolean loaded;

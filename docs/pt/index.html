@@ -120,7 +120,7 @@
         <div class="copy">
           <p class="kicker">Destaques</p>
           <h3>Em alta, não patrocinado.</h3>
-          <p>Três destaques novos a cada hora, entre o que está em alta na semana e os lançamentos, só dos apps que você já tem. Filmes e séries têm abas próprias. Com dados do TMDB.</p>
+          <p>Destaques novos a cada hora, entre o que está em alta na semana e os lançamentos, só dos apps que você já tem. O que está em foco abre largo e os outros mostram o pôster, até seis por aba, dos serviços que você escolher. Filmes e séries têm abas próprias, e no Google TV a sua biblioteca do Plex entra junto. Com dados do TMDB.</p>
         </div>
         <div class="tv"><div class="screen"><video data-src="../assets/tabs.mp4" poster="../assets/tabs-poster.webp" muted loop playsinline preload="none" aria-label="Trocando entre as abas de destaques, filmes e séries"></video></div></div>
       </article>
@@ -129,11 +129,51 @@
         <div class="copy">
           <p class="kicker">Velocidade</p>
           <h3>Clima e cotações a um toque.</h3>
-          <p>Aperte para baixo e veja a previsão hora a hora, o nascer e o pôr do sol e as cotações de cripto ao vivo. A gaveta desliza a 60 quadros por segundo, todos no tempo certo, no chip modesto da própria TV.</p>
+          <p>Aperte para baixo e veja a previsão, hora a hora ou dos próximos 5 dias, o nascer e o pôr do sol e as cotações de cripto ao vivo na sua moeda. A gaveta desliza a 60 quadros por segundo, todos no tempo certo, no chip modesto da própria TV.</p>
           <div class="hud" aria-hidden="true"><i></i><b>60 FPS</b><svg viewBox="0 0 120 24" preserveAspectRatio="none"><polyline id="spark" fill="none" points=""/></svg><span>16,6 ms</span></div>
         </div>
         <div class="tv"><div class="screen"><video data-src="../assets/drawer.mp4" poster="../assets/drawer-poster.webp" muted loop playsinline preload="none" aria-label="A gaveta com o clima e as cotações de cripto abrindo"></video></div></div>
       </article>
+    </section>
+
+    <!-- More -->
+    <section class="section extras" id="more">
+      <div class="head" data-reveal>
+        <p class="kicker">E mais</p>
+        <h2>Todos os detalhes.</h2>
+      </div>
+      <ul class="steps">
+        <li class="step" data-reveal>
+          <h4>Continuar assistindo</h4>
+          <p>Escolha o que fica no topo da tela inicial: os destaques, um relógio grande ou o que você parou no meio, com o progresso. O OK continua no app.</p>
+          <span class="where">Google TV e Android TV</span>
+        </li>
+        <li class="step" data-reveal>
+          <h4>Tocando agora</h4>
+          <p>A música, o podcast ou a rádio tocando ao fundo aparecem na tela inicial e no protetor de tela: o título, o artista e o app. Ative nos Ajustes do Início.</p>
+          <span class="where">Google TV e Android TV</span>
+        </li>
+        <li class="step" data-reveal>
+          <h4>A chave pelo celular</h4>
+          <p><em>Ajustes do Início</em> → <em>Chave do TMDB</em> mostra um QR code: escaneie, cole a sua chave grátis e os destaques aparecem. Na LG e na Samsung, digite com o controle.</p>
+          <span class="where">Todas as TVs</span>
+        </li>
+        <li class="step" data-reveal>
+          <h4>Atualiza sozinho</h4>
+          <p>O APK pronto procura versão nova toda semana, e <em>Ajustes do Início</em> → <em>Atualizações</em> instala quando você der o OK.</p>
+          <span class="where">Google TV e Android TV</span>
+        </li>
+        <li class="step" data-reveal>
+          <h4>Um protetor de tela à altura</h4>
+          <p>Fotos em tela cheia dos destaques, ou até 100 suas no Google TV, com um relógio grande de vidro.</p>
+          <span class="where">Todas as TVs</span>
+        </li>
+        <li class="step" data-reveal>
+          <h4>Timer e botões do controle</h4>
+          <p>Desligue a TV em 5 minutos a 4 horas, por cima de qualquer app, e escolha o que os botões de apps do controle abrem na TCL, Sony, Xiaomi, Hisense e outras.</p>
+          <span class="where">Google TV e Android TV</span>
+        </li>
+      </ul>
     </section>
 
     <!-- Sunset: scroll to go from day to night -->
@@ -205,6 +245,7 @@
       <div class="panel" data-reveal>
         <div class="tabs" role="tablist" aria-label="Forma de instalar">
           <button role="tab" aria-selected="true" aria-controls="tab-claude" id="t-claude">Com IA</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-apk" id="t-apk">APK pronto</button>
           <button role="tab" aria-selected="false" aria-controls="tab-manual" id="t-manual">Manual</button>
           <button role="tab" aria-selected="false" aria-controls="tab-lg" id="t-lg">TVs LG</button>
           <button role="tab" aria-selected="false" aria-controls="tab-samsung" id="t-samsung">TVs Samsung</button>
@@ -221,6 +262,19 @@
           </ol>
         </div>
 
+        <div class="tabpanel" id="tab-apk" role="tabpanel" aria-labelledby="t-apk" hidden>
+          <ol class="howto">
+            <li><b>Na TV:</b> ative as <em>Opções do desenvolvedor</em> e a <em>Depuração USB</em> (como na primeira aba) e anote o IP dela.</li>
+            <li><b>No computador:</b> baixe o <em>FreeMyTV.apk</em> da <a href="https://github.com/simbasjungles/free-my-tv/releases/latest" rel="noopener">última versão</a> e instale com o adb (no Mac, <em>brew install android-platform-tools</em>):
+              <div class="code"><code>adb connect 192.168.1.50:5555 &amp;&amp; adb install -r FreeMyTV.apk</code><button class="copy-btn" type="button" aria-label="Copiar comando">Copiar</button></div>
+              No Android 14, se o Play Protect segurar, escolha <em>Mais detalhes</em> → <em>Instalar assim mesmo</em>. Nas TVs TCL, libere também o funcionamento em segundo plano (a TCL bloqueia por padrão):
+              <div class="code"><code>adb shell &quot;appops set io.freemytv AUTO_START allow || appops set io.freemytv APP_AUTO_START allow&quot;</code><button class="copy-btn" type="button" aria-label="Copiar comando">Copiar</button></div>
+            </li>
+            <li><b>Na TV:</b> abra <em>Free My TV</em> → <em>Início</em> → <em>Free My TV</em> e, quando a TV perguntar <em>Permitir a depuração USB?</em>, marque <em>Sempre permitir</em> e aceite.</li>
+            <li><b>Os destaques:</b> <em>Ajustes do Início</em> → <em>Chave do TMDB</em> mostra um QR code: escaneie com o celular e cole a sua <a href="https://www.themoviedb.org/settings/api" rel="noopener">chave grátis do TMDB</a>. A cidade vem do fuso da TV, e as versões novas se instalam em <em>Ajustes do Início</em> → <em>Atualizações</em>.</li>
+          </ol>
+        </div>
+
         <div class="tabpanel" id="tab-manual" role="tabpanel" aria-labelledby="t-manual" hidden>
           <ol class="howto">
             <li><b>Na TV:</b> ative as <em>Opções do desenvolvedor</em> e a <em>Depuração USB</em> (como na outra aba) e anote o IP dela.</li>
@@ -229,7 +283,6 @@
             </li>
             <li><b>Compilar:</b> a primeira execução cria o <em>config.properties</em>. Coloque sua cidade lá (e <em>currency=BRL</em> para as cotações em reais) e, para os destaques, uma <a href="https://www.themoviedb.org/settings/api" rel="noopener">chave grátis do TMDB</a>. Depois compile de novo.
               <div class="code"><code>git clone https://github.com/simbasjungles/free-my-tv &amp;&amp; cd free-my-tv &amp;&amp; ./build.sh</code><button class="copy-btn" type="button" aria-label="Copiar comando">Copiar</button></div>
-              Ou pule essa parte: o <em>FreeMyTV.apk</em> da <a href="https://github.com/simbasjungles/free-my-tv/releases/latest" rel="noopener">última versão</a> instala como está, com a sua cidade pelo fuso da TV (os destaques pedem a sua própria compilação).
             </li>
             <li><b>Instalar:</b>
               <div class="code"><code>adb connect 192.168.1.50:5555 &amp;&amp; adb install -r FreeMyTV.apk</code><button class="copy-btn" type="button" aria-label="Copiar comando">Copiar</button></div>
@@ -243,10 +296,13 @@
         <div class="tabpanel" id="tab-lg" role="tabpanel" aria-labelledby="t-lg" hidden>
           <ol class="howto">
             <li><b>Na TV:</b> na LG Content Store, instale o <em>Developer Mode</em>. Entre com uma <a href="https://webostv.developer.lge.com" rel="noopener">conta grátis de desenvolvedor LG</a>, ative o <em>Dev Mode Status</em> (a TV reinicia) e depois o <em>Key Server</em>. Anote o IP e a senha (passphrase) que aparecem.</li>
-            <li><b>No computador:</b> baixe o código e compile o app da LG. Coloque sua cidade no <em>config.properties</em> (e <em>currency=BRL</em> para as cotações em reais), como na Google TV.
+            <li><b>Com o webOS Homebrew Channel:</b> adicione este repositório nos ajustes do Channel e instale o Free My TV pela lista dele (as atualizações também vêm por lá). Ele pega a sua cidade pelo fuso da TV; para os destaques, digite a sua chave grátis do TMDB em <em>Ajustes do Início</em> → <em>Chave do TMDB</em>.
+              <div class="code"><code>https://freemytv.io/webos/apps.json</code><button class="copy-btn" type="button" aria-label="Copiar endereço">Copiar</button></div>
+            </li>
+            <li><b>Ou compile no computador</b> com a sua cidade no <em>config.properties</em> (e <em>currency=BRL</em> para as cotações em reais), como na Google TV:
               <div class="code"><code>git clone https://github.com/simbasjungles/free-my-tv &amp;&amp; cd free-my-tv &amp;&amp; python3 webos/build.py</code><button class="copy-btn" type="button" aria-label="Copiar comando">Copiar</button></div>
             </li>
-            <li><b>Instalar:</b> digite a senha da TV quando ele pedir. O Free My TV abre na TV.
+            <li><b>Instalar o que você compilou:</b> digite a senha da TV quando ele pedir. O Free My TV abre na TV.
               <div class="code"><code>python3 webos/install.py 192.168.1.50</code><button class="copy-btn" type="button" aria-label="Copiar comando">Copiar</button></div>
             </li>
             <li><b>A um botão:</b> com ele aberto, segure uma tecla numérica do controle. Daí em diante, essa tecla abre o Free My TV de qualquer lugar. Aperte <em>EXTEND</em> no Developer Mode uma vez por mês para mantê-lo.</li>
@@ -260,7 +316,10 @@
             <li><b>Instale pelo GitHub:</b> digite isto. Nas TVs de 2023 em diante, ele pede para entrar na sua conta Samsung uma vez, para assinar o app para a sua TV.
               <div class="code"><code>simbasjungles/free-my-tv</code><button class="copy-btn" type="button" aria-label="Copiar">Copiar</button></div>
             </li>
-            <li><b>Direto nele:</b> nas configurações da TV (Opções da Tela Inicial ou Funções Smart), ative a <em>Execução Automática do Último Aplicativo</em>: a TV já liga no Free My TV. Ele pega a sua cidade pelo fuso da TV; para a cidade exata e os destaques, o Claude Code compila com as suas configurações.</li>
+            <li><b>Direto nele:</b> nas configurações da TV (Opções da Tela Inicial ou Funções Smart), ative a <em>Execução Automática do Último Aplicativo</em>: a TV já liga no Free My TV (nas TVs de 2019 e 2020, coloque-o em primeiro na barra do Início). Ele pega a sua cidade pelo fuso da TV (dá para trocar em <em>Ajustes do Início</em> → <em>Cidade</em>); para os destaques, digite a sua chave grátis do TMDB em <em>Ajustes do Início</em> → <em>Chave do TMDB</em>.</li>
+            <li><b>TV de 2015 ou 2016?</b> O TizenBrew começa em 2017, então deixe o seu assistente de IA compilar para você (com o Developer mode do passo 1):
+              <div class="code prompt"><code>Instale o Free My TV (github.com/simbasjungles/free-my-tv) na minha TV Samsung em 192.168.1.50. Eu moro em São Paulo.</code><button class="copy-btn" type="button" aria-label="Copiar pedido">Copiar</button></div>
+            </li>
           </ol>
         </div>
       </div>
@@ -271,12 +330,13 @@
       <div class="head" data-reveal>
         <p class="kicker">Compatibilidade</p>
         <h2>Funciona com qualquer TV.</h2>
-        <p class="sub">Roda direto nas TVs com Google TV e Android TV, e nas TVs LG e Samsung. Qualquer outra TV ganha o Free My TV com um aparelho Google TV ligado no HDMI.</p>
+        <p class="sub">Roda direto nas TVs com Google TV e Android TV, nas TVs LG a partir do webOS 3 e nas Samsung de 2015 em diante. Qualquer outra TV ganha o Free My TV com um aparelho Google TV ligado no HDMI.</p>
       </div>
       <div class="chips" data-reveal>
         <span class="chip ok">Google TV</span><span class="chip ok">Android TV</span><span class="chip ok">LG webOS</span><span class="chip ok">Samsung Tizen</span><span class="chip ok">TCL</span><span class="chip ok">Sony</span>
-        <span class="chip ok">Hisense</span><span class="chip ok">Philips</span><span class="chip ok">Xiaomi</span><span class="chip ok">Chromecast with Google TV</span>
-        <span class="chip ok">Google TV Streamer</span><span class="chip ok">NVIDIA Shield</span><span class="chip ok">onn 4K</span>
+        <span class="chip ok">Hisense</span><span class="chip ok">Philips</span><span class="chip ok">Xiaomi</span><span class="chip ok">Vestel</span><span class="chip ok">NextStar</span><span class="chip ok">Philco</span><span class="chip ok">Multilaser</span>
+        <span class="chip ok">Chromecast with Google TV</span><span class="chip ok">Google TV Streamer</span><span class="chip ok">NVIDIA Shield</span><span class="chip ok">onn 4K</span><span class="chip ok">Mi TV Stick</span>
+        <span class="chip ok">Projetores HY300</span><span class="chip ok">Projetores Wanbo</span>
       </div>
       <p class="note" data-reveal>Outra marca ou modelo? Peça ao Claude: ele lê a sua TV e adapta o Free My TV a ela, da tela inicial que ele troca aos apps que ele arruma.</p>
     </section>
@@ -289,14 +349,16 @@
       </div>
       <div class="qs" data-reveal>
         <details><summary>É seguro?</summary><p>Ele usa os mesmos comandos das ferramentas de desenvolvedor do próprio Android, de dentro da TV. Nada de root, nada desinstalado: os apps só são desligados e voltam com um botão. Imagem, som, entradas, controle remoto, serviços do Google e Play Store ficam numa lista que ele nunca toca.</p></details>
+        <details><summary>Em quais TVs funciona?</summary><p>Google TV e Android TV do Android 8 em diante: TCL, Sony, Hisense, Philips, Xiaomi e outras, aparelhos como o Chromecast com Google TV e o onn 4K, e TVs LG e Samsung como app. O APK vai na TV, não no celular. Nas TVs Huawei (HarmonyOS) e no Fire TV ele fica como um app que você abre, e a TV mantém a tela inicial dela: numa Huawei, não troque.</p></details>
         <details><summary>Como eu volto ao original?</summary><p>Abra Free My TV → Início → Original. A tela inicial de fábrica, o protetor de tela e todos os apps voltam exatamente como estavam. Se a tela nova travar três vezes em cinco minutos, ele volta sozinho.</p></details>
         <details><summary>Muda a qualidade da imagem?</summary><p>Não. Os ajustes de imagem não são tocados e os vídeos passam pelo mesmo caminho no hardware. Medimos a mesma resolução e a mesma fonte de vídeo nos dois modos.</p></details>
-        <details><summary>O que é desligado?</summary><p>A tela inicial e o protetor de tela de fábrica (substituídos), a tela de recuperação do Google TV, Play Games e YouTube Music e, nas TVs TCL, o TCL Channel, as mensagens, a demonstração de loja, o menu de hotel, os manuais e os apps de espelhamento e de registros. O Google Assistente só se você pedir no config.</p></details>
-        <details><summary>Funciona em TV LG?</summary><p>Funciona. Na LG ele é instalado pelo próprio Developer Mode da LG, sem root e sem mudar nada na TV, e abre com um toque numa tecla numérica. A mesma tela inicial, com destaques, clima e cotações. Aperte EXTEND no app Developer Mode uma vez por mês para mantê-lo.</p></details>
-        <details><summary>Funciona em TV Samsung?</summary><p>Funciona, nas TVs Samsung de 2017 em diante. Ele é instalado pelo próprio Developer Mode da Samsung com o TizenBrew Installer, o instalador da comunidade, sem root e sem mudar nada na TV. A mesma tela inicial, clima e cotações, com a sua cidade pelo fuso da TV. Para os destaques, o Claude Code compila com a sua chave grátis do TMDB.</p></details>
+        <details><summary>O que é desligado?</summary><p>A tela inicial e o protetor de tela de fábrica (substituídos), a tela de recuperação do Google TV, Play Games e YouTube Music e, nas TVs TCL, as mensagens, a demonstração de loja, o menu de hotel, os manuais e os apps de espelhamento e de registros (e os parecidos nas TVs Philco, Multilaser e NextStar). O Google Assistente só se você pedir no config.</p></details>
+        <details><summary>Funciona em TV LG?</summary><p>Funciona, do webOS 3 em diante. Ele é instalado pelo próprio Developer Mode da LG, ou pelo webOS Homebrew Channel, sem root e sem mudar nada na TV, e abre com um toque numa tecla numérica. A mesma tela inicial, com destaques, clima e cotações; para os destaques, digite a sua chave grátis do TMDB nos Ajustes do Início. Aperte EXTEND no app Developer Mode uma vez por mês para mantê-lo.</p></details>
+        <details><summary>Funciona em TV Samsung?</summary><p>Funciona, nas TVs Samsung de 2015 em diante. Ele é instalado pelo próprio Developer Mode da Samsung com o TizenBrew Installer, o instalador da comunidade (2017 em diante), ou compilado por você, sem root e sem mudar nada na TV. A mesma tela inicial, clima e cotações, com a sua cidade pelo fuso da TV. Para os destaques, digite a sua chave grátis do TMDB nos Ajustes do Início.</p></details>
         <details><summary>Dá para deixar do meu jeito?</summary><p>Essa é a ideia. Abra a pasta no Claude Code e é só pedir: "coloque o Crunchyroll na prateleira", "mostre as cotações em reais", "configure para a minha Sony". Ele muda o código, compila o app e coloca na sua TV.</p></details>
         <details><summary>Fica em português?</summary><p>Fica. O app segue o idioma da TV (português, inglês, espanhol, russo, alemão, francês, italiano, japonês e mais 18), ou o que você escolher nos ajustes dele. Quer outro idioma? Peça ao Claude.</p></details>
-        <details><summary>Ele coleta algum dado?</summary><p>Não. Sem contas, sem análises, sem rastreamento. Ele só fala com o TMDB (destaques), o Open-Meteo (clima, da sua cidade) e a Binance (cotações), e o Watchmode (links dos títulos) só se você colocar a chave dele.</p></details>
+        <details><summary>Ele se atualiza sozinho?</summary><p>No Google TV e no Android TV, o APK pronto procura versão nova uma vez por semana e instala quando você der o OK, em <em>Ajustes do Início</em> → <em>Atualizações</em>. Na LG, o Homebrew Channel traz a versão nova; na Samsung, o TizenBrew Installer instala a última versão por cima da que você tem.</p></details>
+        <details><summary>Ele coleta algum dado?</summary><p>Não. Sem contas, sem análises, sem rastreamento. Ele só fala com o TMDB (destaques), o Open-Meteo (clima, da sua cidade) e a Binance (cotações), e com o Watchmode (links dos títulos), o seu servidor do Plex, o seu servidor Immich (suas fotos) e o Trakt (o que você está assistindo, no Google TV) só se você configurar; o login do Trakt fica na TV. O seu próprio Home Assistant só se você colocar o endereço dele e ligar os botões. No Google TV e no Android TV, o APK pronto também pergunta ao GitHub uma vez por semana se há versão nova, e enquanto <em>Ajustes do Início</em> → <em>Chave do TMDB</em> mostra o QR code, a TV responde ao seu celular na rede de casa (uma chave, 5 minutos no máximo).</p></details>
         <details><summary>É grátis?</summary><p>Sim. Licença MIT, e a chave do TMDB também é grátis.</p></details>
       </div>
     </section>
