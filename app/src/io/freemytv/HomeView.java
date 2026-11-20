@@ -355,18 +355,13 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tileFill = new Paint(Paint.ANTI_ALIAS_FLAG);
     // An app being updated (AppUpdates.Progress): its tile in grey, the colour coming back clockwise from the top, like
-    // a clock's hand, as the update goes. Greying alone barely shows on a dark tile, so, as other systems do, marks
-    // that don't depend on the tile's colours: a mid-grey veil over the part not done (black turns dark grey, white
-    // light grey) and a fine ring inside the tile's edge that ends where the colour does.
+    // a clock's hand, as the update goes. Greying alone barely shows on a dark tile, so the part not done also gets a
+    // mid-grey veil (black turns dark grey, white light grey): the edge between the veil and the colour reads on any tile.
     private final RectF updOval = new RectF(), updLayer = new RectF();
-    private final android.graphics.Path updSector = new android.graphics.Path(), updEdge = new android.graphics.Path(),
-            updPart = new android.graphics.Path();
+    private final android.graphics.Path updSector = new android.graphics.Path(), updPart = new android.graphics.Path();
     private final Paint updGrey = new Paint();
-    private final Paint updVeil = new Paint(Paint.ANTI_ALIAS_FLAG), updRing = new Paint(Paint.ANTI_ALIAS_FLAG);
-    {
-        updVeil.setColor(0x8C8A8A8A);
-        updRing.setStyle(Paint.Style.STROKE);
-    }
+    private final Paint updVeil = new Paint(Paint.ANTI_ALIAS_FLAG);
+    { updVeil.setColor(0x8C8A8A8A); }
     private float bodyR;   // the corner radius the last tile body drew with
     {
         android.graphics.ColorMatrix grey = new android.graphics.ColorMatrix();
@@ -1954,7 +1949,6 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         sweep(c, cell, bodyR, p);
         drawShelfTileBody(c, i);
         c.restore();
-        updateRing(c, cell, bodyR, p);
     }
 
     private void drawShelfTileBody(Canvas c, int i) {
@@ -2034,32 +2028,6 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         updPart.addRoundRect(cell, r, r, android.graphics.Path.Direction.CW);
         c.clipPath(updPart);
         if (done < 0.999f) c.clipPath(updSector);   // a whole turn: arcTo takes 360° as 0°, so no sector at all
-    }
-
-    /**
-     * Over an updating tile, a fine ring just inside its edge (corner radius `r`) over a faint track, cut by the sector
-     * `sweep` left in `updSector`: it ends where the colour does. White on a faint dark halo, so it reads on a dark tile
-     * and on a white one. No allocation.
-     */
-    private void updateRing(Canvas c, RectF cell, float r, float done) {
-        float in = 3 * k, w = 1.5f * k;
-        updOval.set(cell);
-        updOval.inset(in, in);
-        float ir = Math.max(0, r - in);
-        updEdge.rewind();
-        updEdge.addRoundRect(updOval, ir, ir, android.graphics.Path.Direction.CW);
-        updRing.setStrokeWidth(w);
-        updRing.setColor(0x40FFFFFF);
-        c.drawPath(updEdge, updRing);   // the track
-        c.save();
-        if (done < 0.999f) c.clipPath(updSector);
-        updRing.setColor(0x2E000000);
-        updRing.setStrokeWidth(w + 1.5f * k);
-        c.drawPath(updEdge, updRing);
-        updRing.setColor(0xFFFFFFFF);
-        updRing.setStrokeWidth(w);
-        c.drawPath(updEdge, updRing);
-        c.restore();
     }
 
     /**
@@ -2707,7 +2675,6 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         sweep(c, cell, bodyR, p);
         drawCardBody(c, it, base, radius, f, grow);
         c.restore();
-        updateRing(c, cell, bodyR, p);
     }
 
     private void drawCardBody(Canvas c, HomeApps.Item it, RectF base, float radius, float f, float grow) {
