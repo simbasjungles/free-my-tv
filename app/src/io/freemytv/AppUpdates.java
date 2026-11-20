@@ -69,15 +69,23 @@ final class AppUpdates {
      * newer and signed with the same key as the copy on the TV, or nothing is installed.
      */
     static final Source[] KNOWN = {
-        new Source("com.teamsmart.videomanager.tv", "SmartTube", "yuliskov/SmartTube", false,
+        // Its releases since 32.56 are org.smarttube.*: the older com.teamsmart.* copies can't take them.
+        new Source("org.smarttube.stable", "SmartTube", "yuliskov/SmartTube", false,
                 "SmartTube_stable_[0-9.]+_{abi}\\.apk", "SmartTube_stable_[0-9.]+_universal\\.apk"),
-        new Source("com.liskovsoft.smarttubetv.beta", "SmartTube Beta", "yuliskov/SmartTube", true,
+        new Source("org.smarttube.beta", "SmartTube Beta", "yuliskov/SmartTube", true,
                 "SmartTube_beta_[0-9.]+_{abi}\\.apk", "SmartTube_beta_[0-9.]+_universal\\.apk"),
         // Its Android builds come as an archive (plezy.apk inside), one per ABI.
         new Source("com.edde746.plezy", "Plezy", "edde746/plezy", false, "plezy-android-{abi}\\.tar\\.gz"),
         new Source("com.fgl27.twitch", "SmartTwitchTV", "fgl27/SmartTwitchTV", false, "(?i)(?!.*debug).*\\.apk"),
         new Source("org.jellyfin.androidtv", "Jellyfin", "jellyfin/jellyfin-androidtv", false,
                 "(?i)(?!.*debug).*{abi}.*\\.apk", "(?i)(?!.*debug)(?!.*(arm|x86)).*\\.apk"),
+        new Source("nl.giejay.android.tv.immich", "Immich", "giejay/Immich-Android-TV", false, "ImmichTV-[0-9.]+\\.apk"),
+        // Home Assistant's phone app, in its two flavors (minimal: without Google Play services).
+        new Source("io.homeassistant.companion.android", "Home Assistant", "home-assistant/android", false,
+                "app-full-release\\.apk"),
+        new Source("io.homeassistant.companion.android.minimal", "Home Assistant (minimal)", "home-assistant/android",
+                false, "app-minimal-release\\.apk"),
+        // Not Free My TV itself: Updates does that (Home Settings > Updates).
     };
 
     private static final Object LOCK = new Object();
@@ -228,9 +236,12 @@ final class AppUpdates {
         }
         String seen = asset.optLong("id") + ":" + asset.optString("updated_at");
         if (seen.equals(app.optString("seen")) && app.optLong("versionCode") <= versionCode(installed)) {
+            // The same file was refused before (another key, another app): say so again, not "Up to date".
+            if (!app.optString("refused").isEmpty()) throw new IOException(app.optString("refused"));
             put(app, "result", Ui.tr("Up to date."));
             return false;
         }
+        app.remove("refused");
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("no cache folder");
         File download = new File(dir, s.pkg + ".download");
         try {
@@ -262,6 +273,7 @@ final class AppUpdates {
             apk.delete();
             put(app, "seen", seen);
             put(app, "versionCode", 0);
+            put(app, "refused", problem);
             throw new IOException(problem);
         }
         put(app, "seen", seen);

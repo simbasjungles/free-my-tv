@@ -977,10 +977,14 @@ public class SettingsActivity extends Activity {
             return !error.isEmpty() ? error : Ui.tr("OK checks now. It also checks every 6 hours.");
         }
 
-        /** The apps it knows how to update, by name (whether this TV has them or not). */
+        /** The apps it knows how to update, by name, once per repository (SmartTube, not also SmartTube Beta). */
         private static String knownNames() {
-            List<String> names = new ArrayList<>();
-            for (AppUpdates.Source app : AppUpdates.KNOWN) names.add(app.name);
+            List<String> names = new ArrayList<>(), repos = new ArrayList<>();
+            for (AppUpdates.Source app : AppUpdates.KNOWN) {
+                if (repos.contains(app.repo)) continue;
+                repos.add(app.repo);
+                names.add(app.name);
+            }
             return TextUtils.join(", ", names);
         }
 
@@ -1391,8 +1395,18 @@ public class SettingsActivity extends Activity {
                 c.drawText(TextUtils.ellipsize(updateHint(), new TextPaint(hint), 820 * k, TextUtils.TruncateAt.END).toString(),
                         LIST_X * k + 30 * k, hy, hint);
                 if (focus == 0) {
-                    c.drawText(TextUtils.ellipsize(Ui.trf("Supported apps: {apps}.", "apps", knownNames()), new TextPaint(hint), 820 * k,
-                            TextUtils.TruncateAt.END).toString(), LIST_X * k + 30 * k, hy + 38 * k, hint);
+                    // The list no longer fits one line: break it after a comma, and only cut the second line.
+                    String apps = Ui.trf("Supported apps: {apps}.", "apps", knownNames());
+                    int cut = hint.breakText(apps, true, 820 * k, null);
+                    if (cut < apps.length()) {
+                        int comma = apps.lastIndexOf(", ", cut);
+                        if (comma > 0) cut = comma + 1;
+                    }
+                    c.drawText(apps.substring(0, cut).trim(), LIST_X * k + 30 * k, hy + 38 * k, hint);
+                    if (cut < apps.length()) {
+                        c.drawText(TextUtils.ellipsize(apps.substring(cut).trim(), new TextPaint(hint), 820 * k,
+                                TextUtils.TruncateAt.END).toString(), LIST_X * k + 30 * k, hy + 76 * k, hint);
+                    }
                 }
                 return;
             }
