@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OK để thêm hoặc bỏ nút. ← → để đổi thứ tự.",
  "OK adds or removes an app. The last one opened comes first.": "OK để thêm hoặc bỏ ứng dụng. Ứng dụng mở gần nhất đứng đầu.",
  "OK adds or removes an app. ← → change the order.": "OK để thêm hoặc bỏ ứng dụng. ← → để đổi thứ tự.",
- "OK checks for a new version.": "OK để kiểm tra phiên bản mới.",
  "OK checks now. It also checks every 6 hours.": "OK kiểm tra ngay. Ứng dụng cũng kiểm tra mỗi 6 giờ.",
  "OK chooses where they come from: default, Immich or an album.": "OK để chọn nguồn ảnh: mặc định, Immich hoặc một album.",
  "OK installs it; Android asks first.": "OK để cài; Android sẽ hỏi trước.",

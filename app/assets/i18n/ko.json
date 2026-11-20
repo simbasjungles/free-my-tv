@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OK로 버튼 추가 또는 제거. ← →로 순서 변경.",
  "OK adds or removes an app. The last one opened comes first.": "OK로 앱 추가 또는 제거. 마지막으로 연 앱이 맨 앞에 옵니다.",
  "OK adds or removes an app. ← → change the order.": "OK로 앱 추가 또는 제거. ← →로 순서 변경.",
- "OK checks for a new version.": "OK로 새 버전을 확인합니다.",
  "OK checks now. It also checks every 6 hours.": "OK를 누르면 지금 확인합니다. 6시간마다도 확인합니다.",
  "OK chooses where they come from: default, Immich or an album.": "OK로 가져올 곳을 고릅니다: 기본값, Immich 또는 앨범.",
  "OK installs it; Android asks first.": "OK로 설치합니다. Android가 먼저 묻습니다.",

@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OK เพิ่มหรือเอาปุ่มออก ← → เปลี่ยนลำดับ",
  "OK adds or removes an app. The last one opened comes first.": "OK เพิ่มหรือเอาแอปออก แอปที่เปิดล่าสุดจะอยู่แรกสุด",
  "OK adds or removes an app. ← → change the order.": "OK เพิ่มหรือเอาแอปออก ← → เปลี่ยนลำดับ",
- "OK checks for a new version.": "กด OK เพื่อตรวจหาเวอร์ชันใหม่",
  "OK checks now. It also checks every 6 hours.": "OK ตรวจสอบตอนนี้ และตรวจสอบทุก 6 ชั่วโมงด้วย",
  "OK chooses where they come from: default, Immich or an album.": "กด OK เพื่อเลือกที่มาของรูป: ค่าเริ่มต้น, Immich หรืออัลบั้ม",
  "OK installs it; Android asks first.": "กด OK เพื่อติดตั้ง Android จะถามก่อน",

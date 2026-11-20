@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OK düğme ekler veya çıkarır. ← → sırayı değiştirir.",
  "OK adds or removes an app. The last one opened comes first.": "OK bir uygulama ekler veya çıkarır. Son açılan en başa gelir.",
  "OK adds or removes an app. ← → change the order.": "OK bir uygulama ekler veya çıkarır. ← → sırayı değiştirir.",
- "OK checks for a new version.": "OK yeni bir sürüm arar.",
  "OK checks now. It also checks every 6 hours.": "OK şimdi denetler. Her 6 saatte bir de denetler.",
  "OK chooses where they come from: default, Immich or an album.": "OK nereden geleceklerini seçer: varsayılan, Immich veya bir albüm.",
  "OK installs it; Android asks first.": "OK yükler; Android önce sorar.",

@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OKでボタンを追加・削除。← → で順番を変更。",
  "OK adds or removes an app. The last one opened comes first.": "OKでアプリを追加・削除。最後に開いたアプリが先頭に来ます。",
  "OK adds or removes an app. ← → change the order.": "OKでアプリを追加・削除。← → で順番を変更。",
- "OK checks for a new version.": "OKで新しいバージョンを確認します。",
  "OK checks now. It also checks every 6 hours.": "OK で今すぐ確認します。6 時間ごとにも確認します。",
  "OK chooses where they come from: default, Immich or an album.": "OKで取得元を選びます：デフォルト、Immich、またはアルバム。",
  "OK installs it; Android asks first.": "OKでインストールします。先にAndroidが確認します。",

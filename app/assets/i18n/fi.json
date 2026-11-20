@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OK lisää tai poistaa painikkeen. ← → muuttavat järjestystä.",
  "OK adds or removes an app. The last one opened comes first.": "OK lisää tai poistaa sovelluksen. Viimeksi avattu tulee ensin.",
  "OK adds or removes an app. ← → change the order.": "OK lisää tai poistaa sovelluksen. ← → muuttavat järjestystä.",
- "OK checks for a new version.": "OK etsii uutta versiota.",
  "OK checks now. It also checks every 6 hours.": "OK tarkistaa nyt. Tarkistus tehdään myös 6 tunnin välein.",
  "OK chooses where they come from: default, Immich or an album.": "OK valitsee, mistä ne tulevat: oletus, Immich tai albumi.",
  "OK installs it; Android asks first.": "OK asentaa sen; Android kysyy ensin.",

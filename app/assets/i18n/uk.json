@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OK додає або прибирає кнопку. ← → змінюють порядок.",
  "OK adds or removes an app. The last one opened comes first.": "OK додає або прибирає застосунок. Останній відкритий іде першим.",
  "OK adds or removes an app. ← → change the order.": "OK додає або прибирає застосунок. ← → змінюють порядок.",
- "OK checks for a new version.": "OK перевіряє, чи є нова версія.",
  "OK checks now. It also checks every 6 hours.": "OK перевіряє зараз. Перевірка також відбувається кожні 6 годин.",
  "OK chooses where they come from: default, Immich or an album.": "OK вибирає, звідки вони беруться: типово, Immich або альбом.",
  "OK installs it; Android asks first.": "OK встановлює її; Android спершу запитає.",

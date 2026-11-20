@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OK adds or removes a button. ← → change the order.",
  "OK adds or removes an app. The last one opened comes first.": "OK adds or removes an app. The last one opened comes first.",
  "OK adds or removes an app. ← → change the order.": "OK adds or removes an app. ← → change the order.",
- "OK checks for a new version.": "OK checks for a new version.",
  "OK checks now. It also checks every 6 hours.": "OK checks now. It also checks every 6 hours.",
  "OK chooses where they come from: default, Immich or an album.": "OK chooses where they come from: default, Immich or an album.",
  "OK installs it; Android asks first.": "OK installs it; Android asks first.",

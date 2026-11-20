@@ -35,8 +35,10 @@ import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
 /**
- * Keeps apps installed from GitHub up to date (Settings > App Updates; off until the person turns it on). Only the apps
- * in KNOWN, each from its own repository and release file. A new release is downloaded, checked (GitHub's SHA-256,
+ * Keeps Free My TV and the apps installed from GitHub up to date (Home Settings > Updates). One setting, one schedule
+ * and one check for all of them; by default only Free My TV is picked, as it updated itself before. Free My TV's own
+ * release goes through Updates (its repository, the project's key), the other apps through KNOWN, each from its own
+ * repository and release file. A new release is downloaded, checked (GitHub's SHA-256,
  * the same package, a higher version, signed by the key of the copy already on the TV) and only then installed through
  * the TV's own ADB, which keeps the app's data and asks nothing on screen. It installs only while Free My TV's own
  * screens are in front, so never under a film; otherwise it waits and tries again. Needs Free My TV mode (ADB allowed).
@@ -97,14 +99,17 @@ final class AppUpdates {
 
     // MARK: - Settings (app-updates.json)
 
+    /** Custom until the person chooses, with Free My TV picked (picked): it updated itself before this setting. */
     static String mode(Context c) {
-        String m = read(c, "app-updates.json").optString("mode", OFF);
+        String m = read(c, "app-updates.json").optString("mode", CUSTOM);
         return ALL.equals(m) || CUSTOM.equals(m) ? m : OFF;
     }
 
     /** In Custom: the apps picked (none until the person picks some). */
     static Set<String> picked(Context c) {
-        return new HashSet<>(HomeMode.stringList(read(c, "app-updates.json"), "apps"));
+        JSONObject s = read(c, "app-updates.json");
+        if (!s.has("apps")) return new HashSet<>(java.util.Collections.singleton(HomeMode.PKG));
+        return new HashSet<>(HomeMode.stringList(s, "apps"));
     }
 
     static void setMode(Context c, String mode) {
@@ -186,6 +191,7 @@ final class AppUpdates {
     static void schedule(Context c) {
         JobScheduler scheduler = c.getSystemService(JobScheduler.class);
         if (scheduler == null) return;
+        scheduler.cancel(Updates.JOB);   // Free My TV's own weekly check, from before: this job checks it now
         if (OFF.equals(mode(c))) {
             scheduler.cancel(JOB_PERIODIC);
             scheduler.cancel(JOB_SOON);
@@ -216,17 +222,21 @@ final class AppUpdates {
             JSONObject status = status(c);
             put(status, "checkedAt", System.currentTimeMillis());
             put(status, "error", "");
-            if (OFF.equals(mode(c))) return;
-            if (!Capabilities.adb(c)) {
-                put(status, "error", Ui.tr("Needs Free My TV mode: turn it on in Home Screen."));
+            if (OFF.equals(mode(c))) {
                 write(c, "app-updates-status.json", status);
                 return;
             }
+            boolean waiting = false, failed = false;
+            // The other apps install through the TV's ADB, which only Free My TV mode allows.
+            List<Source> apps0 = new ArrayList<>();
+            for (Source s : installed(c)) if (enabled(c, s.pkg)) apps0.add(s);
+            if (!apps0.isEmpty() && !Capabilities.adb(c)) {
+                put(status, "error", Ui.tr("Needs Free My TV mode: turn it on in Home Screen."));
+                apps0.clear();
+            }
             JSONObject apps = status.optJSONObject("apps");
             if (apps == null) apps = new JSONObject();
-            boolean waiting = false, failed = false;
-            for (Source s : installed(c)) {
-                if (!enabled(c, s.pkg)) continue;
+            for (Source s : apps0) {
                 JSONObject app = apps.optJSONObject(s.pkg);
                 if (app == null) app = new JSONObject();
                 try {
@@ -243,14 +253,75 @@ final class AppUpdates {
                 write(c, "app-updates-status.json", status);
             }
             put(status, "apps", apps);
+            write(c, "app-updates-status.json", status);
+            // Free My TV last: installing it ends this process.
+            if (enabled(c, HomeMode.PKG)) {
+                try {
+                    int self = updateSelf(c);
+                    waiting |= self == WAIT;
+                    failed |= self == AGAIN;
+                } catch (Exception e) {
+                    AppLog.w("app update " + HomeMode.PKG + ": " + e);
+                }
+            }
             // No network, or GitHub busy or over its hourly limit (an address many homes share): again in 30 minutes,
-            // then 1 hour, 2…, up to the usual 6, as Updates does for Free My TV.
+            // then 1 hour, 2…, up to the usual 6, as Free My TV's own check did.
             int retries = status.optInt("retries");
             long later = failed ? Math.min(PERIOD, (30 * 60_000L) << Math.min(retries, 4)) : 0;
             put(status, "retries", failed ? retries + 1 : 0);
             if (waiting) later = later == 0 ? RETRY : Math.min(later, RETRY);
             write(c, "app-updates-status.json", status);
             if (later > 0) checkSoon(c, later);
+        }
+    }
+
+    private static final int DONE = 0, WAIT = 1, AGAIN = 2;
+    /** Left by Free My TV just before it installs its own update through ADB: the new copy reopens the home screen. */
+    private static final String SELF_UPDATE = "self-update.json";
+
+    /**
+     * Free My TV itself: Updates checks its latest release and downloads it (only on the APK from the releases, only
+     * signed with the project's key). In Free My TV mode a ready one installs as the other apps do, through ADB and
+     * only on the home screen or settings; in Original there's no ADB, so it waits for OK on its row and Android's
+     * installer, which asks. DONE, WAIT (for the home screen) or AGAIN (the check failed on the network or GitHub).
+     */
+    private static int updateSelf(Context c) throws IOException {
+        boolean again = Updates.check(c);
+        JSONObject state = Updates.state(c);
+        if (!Updates.ready(state, Updates.installedVersion(c))) return again ? AGAIN : DONE;
+        if (!Capabilities.adb(c)) return DONE;
+        File apk = Updates.readyFile(c);
+        if (!apk.isFile()) return DONE;
+        try (Adb adb = Adb.connectAllowed(c)) {
+            if (!inFront(adb.shell("dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'"))) return WAIT;
+            // The package manager ends this process once it takes the new copy, often before "Success" comes back.
+            write(c, SELF_UPDATE, new JSONObject());
+            AppLog.w("app update: installing Free My TV " + state.optString("version"));
+            String out = adb.install(apk).trim();
+            if (!out.contains("Success")) throw new IOException(out.isEmpty() ? Ui.tr("the TV didn't install it") : out);
+        } catch (IOException e) {
+            //noinspection ResultOfMethodCallIgnored
+            new File(c.getFilesDir(), SELF_UPDATE).delete();
+            throw e;
+        }
+        return DONE;
+    }
+
+    /**
+     * After Free My TV updated itself through ADB (MY_PACKAGE_REPLACED): the install ended the home screen with the old
+     * process, and nothing starts it again, so the TV stays on a black screen. Home through ADB brings it back.
+     */
+    static void reopenHome(Context c) {
+        File mark = new File(c.getFilesDir(), SELF_UPDATE);
+        if (!mark.exists()) return;
+        boolean recent = System.currentTimeMillis() - mark.lastModified() < 10 * 60_000L;
+        //noinspection ResultOfMethodCallIgnored
+        mark.delete();
+        if (!recent) return;
+        try (Adb adb = Adb.connectAllowed(c)) {
+            adb.shell("input keyevent KEYCODE_HOME");
+        } catch (IOException e) {
+            AppLog.w("home after the update: " + e.getMessage());
         }
     }
 

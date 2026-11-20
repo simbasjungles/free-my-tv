@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OK pridá alebo odoberie tlačidlo. ← → mení poradie.",
  "OK adds or removes an app. The last one opened comes first.": "OK pridá alebo odoberie aplikáciu. Naposledy otvorená je prvá.",
  "OK adds or removes an app. ← → change the order.": "OK pridá alebo odoberie aplikáciu. ← → mení poradie.",
- "OK checks for a new version.": "OK skontroluje, či je nová verzia.",
  "OK checks now. It also checks every 6 hours.": "OK skontroluje teraz. Kontrola prebieha aj každých 6 hodín.",
  "OK chooses where they come from: default, Immich or an album.": "OK vyberie, odkiaľ pochádzajú: predvolené, Immich alebo album.",
  "OK installs it; Android asks first.": "OK ju nainštaluje; Android sa najprv opýta.",

@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "按下 OK 可新增或移除按鈕。按 ← → 可調整順序。",
  "OK adds or removes an app. The last one opened comes first.": "按下 OK 可新增或移除應用程式。最近開啟的排在最前面。",
  "OK adds or removes an app. ← → change the order.": "按下 OK 可新增或移除應用程式。按 ← → 可調整順序。",
- "OK checks for a new version.": "按下 OK 可檢查新版本。",
  "OK checks now. It also checks every 6 hours.": "按 OK 立即檢查。也會每 6 小時檢查一次。",
  "OK chooses where they come from: default, Immich or an album.": "按下 OK 選擇相片來源：預設、Immich 或某個相簿。",
  "OK installs it; Android asks first.": "按下 OK 即可安裝；Android 會先詢問。",

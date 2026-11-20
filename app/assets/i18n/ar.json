@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OK لإضافة زر أو إزالته. ← → لتغيير الترتيب.",
  "OK adds or removes an app. The last one opened comes first.": "موافق يضيف تطبيقًا أو يزيله. آخر ما فُتح يأتي أولًا.",
  "OK adds or removes an app. ← → change the order.": "OK لإضافة تطبيق أو إزالته. ← → لتغيير الترتيب.",
- "OK checks for a new version.": "OK للتحقق من وجود إصدار جديد.",
  "OK checks now. It also checks every 6 hours.": "يتحقق OK الآن. ويتحقق أيضًا كل 6 ساعات.",
  "OK chooses where they come from: default, Immich or an album.": "OK لاختيار مصدرها: الافتراضي أو Immich أو ألبوم.",
  "OK installs it; Android asks first.": "OK للتثبيت؛ سيسألك Android أولًا.",

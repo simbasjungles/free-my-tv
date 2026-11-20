@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OK legger til eller fjerner en knapp. ← → endrer rekkefølgen.",
  "OK adds or removes an app. The last one opened comes first.": "OK legger til eller fjerner en app. Den sist åpnede kommer først.",
  "OK adds or removes an app. ← → change the order.": "OK legger til eller fjerner en app. ← → endrer rekkefølgen.",
- "OK checks for a new version.": "OK ser etter en ny versjon.",
  "OK checks now. It also checks every 6 hours.": "OK ser etter nå. Det sjekkes også hver 6. time.",
  "OK chooses where they come from: default, Immich or an album.": "OK velger hvor de kommer fra: standard, Immich eller et album.",
  "OK installs it; Android asks first.": "OK installerer den; Android spør først.",

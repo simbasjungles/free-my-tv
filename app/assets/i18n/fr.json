@@ -173,7 +173,6 @@
  "OK adds or removes a button. ← → change the order.": "OK ajoute ou retire un bouton. ← → changent l'ordre.",
  "OK adds or removes an app. The last one opened comes first.": "OK ajoute ou retire une appli. La dernière ouverte passe en premier.",
  "OK adds or removes an app. ← → change the order.": "OK ajoute ou retire une appli. ← → changent l'ordre.",
- "OK checks for a new version.": "OK cherche une nouvelle version.",
  "OK checks now. It also checks every 6 hours.": "OK vérifie maintenant. La vérification a aussi lieu toutes les 6 heures.",
  "OK chooses where they come from: default, Immich or an album.": "OK choisit d'où elles viennent : par défaut, Immich ou un album.",
  "OK installs it; Android asks first.": "OK l'installe ; Android demande d'abord.",

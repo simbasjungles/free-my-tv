@@ -13,14 +13,15 @@ public class HomeReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
             HomeMode.bootCheck(context);
-            Updates.schedule(context);
-            AppUpdates.schedule(context);
+            AppUpdates.schedule(context);   // Free My TV's own update with the apps'
         } else if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
             HomeMode.verify(context);   // app updated: complete Free My TV mode if something is missing
             HomeMode.ensureRemoteService(context, 3_000);
-            Updates.schedule(context);
             AppUpdates.schedule(context);   // the periodic job survives restarts, but not always an update of the app
-            later(() -> Updates.cleanUp(context));
+            later(() -> {
+                Updates.cleanUp(context);
+                AppUpdates.reopenHome(context);   // it updated itself through ADB: the home screen went with the old copy
+            });
         } else if (Updates.ACTION.equals(action)) {
             later(() -> Updates.status(context, intent));
         } else if (SleepTimer.ACTION.equals(action)) {
