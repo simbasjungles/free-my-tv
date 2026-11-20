@@ -6,12 +6,12 @@ The large featured area is now a remote-selectable button: it opens the selected
 
 Each genre toggle immediately switches discovery to the genre list and starts a fresh request; generation checks discard earlier responses. Each ambient opening chooses a random first scene excluding the preceding opening's first scene, persisted across app restarts. A one-scene collection necessarily repeats. Trailer playback still uses the existing YouTube adapter and requires confirmation on the real TV; mock launch success is not evidence of actual playback.
 
-ECK TV 1.6 is a Turkish home screen for Samsung Tizen 4.0 and newer, based on Free My TV. The Android and LG home screens retain their existing behavior. Only the Samsung builder enables `CONFIG.eckHome`.
+ECK TV 1.7 is a Turkish home screen for Samsung Tizen 4.0 and newer, based on Free My TV. The Android and LG home screens retain their existing behavior. Only the Samsung builder enables `CONFIG.eckHome`.
 
 ## Behavior
 
 - Three top shortcuts: Live TV, a colored ambient preview, and app settings. Live TV requests the TV source without forcing a terrestrial channel; it preserves the TV viewer's last tuned channel. Satellite, cable and terrestrial behavior still needs device validation.
-- A large selected film, an expanding film card, and two rows of seven app tiles. Additional apps are paged at the left/right edge of a row.
+- A selectable featured film, an expanding recommendation card, and one row of eight compact app tiles. Additional apps are paged at the left/right edge of the row.
 - Two independent recommendation choices in settings: TMDB's popular movies with `region=TR`, or discovery using selected genres (OR). Neither filters by installed streaming service. The first is a region-filtered TMDB popularity list, not measured Turkish audience viewing statistics.
 - OK on a film requests a YouTube trailer. TMDB video metadata is looked up by movie ID, with Turkish trailers preferred, then English. Clips and teasers are excluded. Missing trailers and rejected launch requests fall back to a quoted film-title/year search with Turkish official-trailer keywords. YouTube can accept a request yet ignore the video URI on some firmware: the separate “YouTube’da ara” action is always available. Playback and Return behavior must be checked on the device. No autoplay video is loaded on focus.
 - The selected movie, focused section and app page survive hiding, relaunching and reload. Favorites (80 maximum) and hidden movies (200 maximum) stay in local storage. Two movie-list cache slots expire after six hours; stale data remains available when a request fails.
