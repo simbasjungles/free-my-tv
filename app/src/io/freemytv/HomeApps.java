@@ -712,7 +712,10 @@ final class HomeApps {
         try {
             a.startActivity(intent, options);
             if (it.kind == APP) Recent.note(a, it.pkg);
-            if (it.kind == INPUT) HomeMode.closeSourcePicker(a);
+            if (it.kind == INPUT) {
+                HomeMode.closeSourcePicker(a);
+                HomeMode.keepAudioSystemUnmuted(a, 60_000);   // Amlogic with a soundbar: the TV may mute it (no-op elsewhere)
+            }
             return true;
         } catch (ActivityNotFoundException | SecurityException e) {
             AppLog.w("couldn't open " + it.label + ": " + e.getMessage());

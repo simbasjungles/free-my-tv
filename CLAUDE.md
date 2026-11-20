@@ -637,8 +637,10 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   once-a-minute poll, so any status but 1), with a "Turning on <its CEC name>…" screen over the home screen until then
   (30 s at most; a key stays home). As System Audio comes on at start, its firmware presses Mute on the soundbar
   (`<User Control Pressed> 0x43`, two or three times, about 7 s apart) while its own volume stays unmuted:
-  `HomeMode.keepAudioSystemUnmuted` presses it again for 60 s after each one that leaves the soundbar muted, telling
-  them apart by time, not by count (the CEC history is a ring and old lines leave it). <Standby> from the box
+  `HomeMode.keepAudioSystemUnmuted` runs on every input we open: a fresh `<Give Audio Status>` first (muted already:
+  unmuted at once), then for 60 s each Mute from the TV that leaves the soundbar muted is undone, told apart by time,
+  not by count (the CEC history is a ring and old lines leave it). Unmuting is Volume Up, then Volume Down only if it
+  raised the volume: a Samsung HW-T5 later ignored the Mute toggle and stayed muted. <Standby> from the box
   (its `hdmi_control_auto_device_off_enabled`) left it in a standby that neither its remote nor CEC ended, until it
   was unplugged. `screencap` comes out empty; what the HDMI input receives is in `/sys/class/hdmirx/hdmirx0/info`.
 - Xiaomi's Chinese firmware (MIUI TV; Redmi `MiTV-MFTP0`, Android 9 tested) has no passthrough handler either: its own

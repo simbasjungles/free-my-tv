@@ -462,15 +462,19 @@ final class HomeMode {
     /**
      * At power-on, on Amlogic (/dev/cec open to the shell): a Wanbo T6 Max projector (Android 9) turns System Audio on
      * as it starts, reads the soundbar's status (unmuted), then presses Mute on it over CEC (0x43, a toggle) while its
-     * own volume stays unmuted, so the soundbar ended up muted at every start. For `windowMs`, each such Mute from the
-     * TV that leaves the soundbar muted gets one more Mute press, which unmutes it. Mutes from other remotes (the box's,
-     * the soundbar's) aren't the TV's and are left alone.
+     * own volume stays unmuted, so the soundbar ended up muted at every start. Runs each time we open an input: if the
+     * soundbar is already muted then (asked afresh with <Give Audio Status>), it's unmuted at once; then, for
+     * `windowMs`, each Mute from the TV that leaves it muted is undone. Mutes from other remotes (the box's, the
+     * soundbar's) during the window aren't the TV's and are left alone.
+     * Unmuting is Volume Up (and Volume Down if that raised it): a Samsung HW-T5 later ignored the Mute toggle (0x43)
+     * and stayed muted, while Volume Up unmuted it.
      */
     static void keepAudioSystemUnmuted(Context c, long windowMs) {
         Context app = c.getApplicationContext();
         new Thread(() -> {
             long until = SystemClock.elapsedRealtime() + windowMs;
             String handled = "";   // when the last Mute we undid was pressed ("2026-11-20 02:16:23")
+            boolean first = true;   // the first look: muted already when the input opened
             Adb adb = null;
             // A connection that fails or drops (the input's own ADB work runs at the same moment) is made again: the
             // TV's Mute comes 10 to 20 s after the input opens, and missing it left the soundbar muted.
@@ -479,6 +483,9 @@ final class HomeMode {
                     if (adb == null) {
                         adb = Adb.connect(app, 10_000, null);
                         if (!adb.shell("[ -w /dev/cec ] && echo yes").contains("yes")) break;
+                    }
+                    if (first) {   // a fresh status, not the last one the TV happened to ask for
+                        adb.shell("printf '\\x05\\x71' > /dev/cec; sleep 1.5");
                     }
                     String history = adb.shell("dumpsys hdmi_control | grep -E 'Report Audio Status|User Control Pressed'");
                     // By the time of the TV's last Mute, not by counting them: the history is a ring, and the older
@@ -491,11 +498,13 @@ final class HomeMode {
                         Matcher m = AUDIO_STATUS.matcher(line);
                         if (m.find()) status = Integer.parseInt(m.group(1), 16);
                     }
-                    if (lastMute.compareTo(handled) > 0 && status >= 0x80) {   // the high bit is mute
-                        adb.shell("printf '\\x05\\x44\\x43' > /dev/cec; sleep 0.2; printf '\\x05\\x45' > /dev/cec");
-                        AppLog.w("at power-on: the TV muted the soundbar over CEC (" + lastMute + "); unmuted it");
-                        handled = lastMute;
+                    if (status >= 0x80 && (first || lastMute.compareTo(handled) > 0)) {   // the high bit is mute
+                        unmuteAudioSystem(adb, status & 0x7F);
+                        AppLog.w(first ? "input: the soundbar was muted; unmuted it"
+                                : "input: the TV muted the soundbar over CEC (" + lastMute + "); unmuted it");
                     }
+                    if (first || lastMute.compareTo(handled) > 0) handled = lastMute;
+                    first = false;
                 } catch (IOException | RuntimeException e) {
                     AppLog.w("at power-on: soundbar mute: " + e.getMessage() + "; trying again");
                     if (adb != null) {
@@ -516,6 +525,20 @@ final class HomeMode {
      * the CEC bus (the TV lists it, powered on), so the input opens on its picture instead of on "No signal". The
      * <Set Stream Path> goes again every 5 s while it doesn't answer. False after `timeoutMs` without an answer.
      */
+    /** Volume Up unmutes; Volume Down after it only when it raised the volume (at the top it can't), so it stays put. */
+    private static void unmuteAudioSystem(Adb adb, int volume) throws IOException {
+        adb.shell("printf '\\x05\\x44\\x41' > /dev/cec; sleep 0.15; printf '\\x05\\x45' > /dev/cec; sleep 1;"
+                + " printf '\\x05\\x71' > /dev/cec; sleep 1.5");
+        int now = -1;
+        for (String line : adb.shell("dumpsys hdmi_control | grep 'Report Audio Status'").split("\n")) {
+            Matcher m = AUDIO_STATUS.matcher(line);
+            if (m.find()) now = Integer.parseInt(m.group(1), 16);
+        }
+        if (now >= 0 && (now & 0x7F) > volume) {
+            adb.shell("printf '\\x05\\x44\\x42' > /dev/cec; sleep 0.15; printf '\\x05\\x45' > /dev/cec");
+        }
+    }
+
     private static final Pattern DISPLAY_NAME = Pattern.compile("display_name: (.+?) power_status");
 
     /** The name the box behind cec_wake gave over CEC the last time it answered ("Xiaomi TV Box"), or null. */

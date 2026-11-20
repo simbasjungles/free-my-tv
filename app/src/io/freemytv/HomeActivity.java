@@ -85,7 +85,6 @@ public class HomeActivity extends Activity {
         liveWaits = false;
         AppLog.w("at power-on: Live TV");
         HomeApps.open(this, HomeApps.liveButton(this), null);   // what the Live TV button opens: Live TV or its HDMI input
-        HomeMode.keepAudioSystemUnmuted(this, 60_000);
         if (home != null) home.postDelayed(this::hideSplash, 2_000);   // gone behind the input, not flashed before it
     };
 
