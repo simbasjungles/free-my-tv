@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV 是電視應用程式：請把這個 APK 安裝在 Android TV 或 Google TV 上（freemytv.io），而不是手機上。",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV 已啟用：已套用新的主畫面和螢幕保護程式，並停用 {n} 個應用程式。",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV 已啟用：已套用新的主畫面，並停用 {n} 個應用程式。",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} 已就緒：主畫面設定 > 更新",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Free My TV 的主畫面連續當機 3 次，已切換回原始主畫面。",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Free My TV 的主畫面發生問題。\n正在切換回電視的原始主畫面…",
  "Free TV button": "Free TV 按鈕",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "按 OK 立即檢查。也會每 6 小時檢查一次。",
  "OK chooses where they come from: default, Immich or an album.": "按下 OK 選擇相片來源：預設、Immich 或某個相簿。",
  "OK installs it; Android asks first.": "按下 OK 即可安裝；Android 會先詢問。",
- "OK opens Free My TV's update and your apps' updates.": "按 OK 開啟 Free My TV 的更新和你的應用程式更新。",
  "OK opens the list. ← → change the value.": "按下 OK 可開啟清單。按 ← → 可變更數值。",
  "OK or the arrows change the value.": "按下 OK 或方向鍵可變更數值。",
  "OK picks, Back cancels.": "按下 OK 可選取，按返回可取消。",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "星期二",
  "weekday|Wed": "週三",
  "weekday|Wednesday": "星期三",
+ "{app} is updating: it opens once it's done.": "{app} 正在更新：完成後即可開啟。",
  "{app} updated to {version}.": "{app} 已更新至 {version}。",
  "{h} h {m} min": "{h} 小時 {m} 分鐘",
  "{h} h {m} min left": "剩餘 {h} 小時 {m} 分鐘",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}，代碼 {code}",
  "{version} is out: build it again": "{version} 已推出：請重新建置",
  "{version} is ready: it installs on the home screen.": "{version} 已就緒：將在主畫面上安裝。",
- "← → to move · OK to drop · Back to cancel": "按 ← → 移動 · 按 OK 放置 · 按返回取消"
+ "← → to move · OK to drop · Back to cancel": "按 ← → 移動 · 按 OK 放置 · 按返回取消",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} 已就緒：Free My TV > 更新"
 }

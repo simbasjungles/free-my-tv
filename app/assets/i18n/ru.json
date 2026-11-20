@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV — приложение для телевизора: установите этот APK на Android TV или Google TV (freemytv.io), а не на телефон.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV включён: новый главный экран и заставка; отключено приложений: {n}.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV включён: новый главный экран; отключено приложений: {n}.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} готова: Главный экран > Обновления.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Главный экран Free My TV аварийно завершился 3 раза подряд; восстановлен заводской главный экран.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Ошибка главного экрана Free My TV.\nВозвращаемся к заводскому главному экрану…",
  "Free TV button": "Кнопка Free TV",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK проверяет сейчас. Проверка также идёт каждые 6 часов.",
  "OK chooses where they come from: default, Immich or an album.": "OK выбирает, откуда они берутся: по умолчанию, Immich или альбом.",
  "OK installs it; Android asks first.": "Нажмите OK, чтобы установить: Android сначала спросит.",
- "OK opens Free My TV's update and your apps' updates.": "OK открывает обновление Free My TV и обновления ваших приложений.",
  "OK opens the list. ← → change the value.": "OK открывает список, ← → меняют значение.",
  "OK or the arrows change the value.": "Нажмите OK или стрелки, чтобы изменить значение.",
  "OK picks, Back cancels.": "OK — выбрать, «Назад» — отменить.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "вторник",
  "weekday|Wed": "ср",
  "weekday|Wednesday": "среда",
+ "{app} is updating: it opens once it's done.": "{app} обновляется: откроется, когда обновление завершится.",
  "{app} updated to {version}.": "{app}: обновлено до {version}.",
  "{h} h {m} min": "{h} ч {m} мин",
  "{h} h {m} min left": "осталось {h} ч {m} мин",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, код {code}",
  "{version} is out: build it again": "Вышла {version}: соберите заново",
  "{version} is ready: it installs on the home screen.": "{version} готово: установится на главном экране.",
- "← → to move · OK to drop · Back to cancel": "← → — переместить · OK — оставить · Назад — отмена"
+ "← → to move · OK to drop · Back to cancel": "← → — переместить · OK — оставить · Назад — отмена",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} готова: Free My TV > Обновления."
 }

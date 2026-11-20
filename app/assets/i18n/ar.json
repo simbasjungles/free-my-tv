@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV تطبيق للتلفزيون: ثبّت ملف APK هذا على Android TV أو Google TV (freemytv.io)، لا على الهاتف.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV يعمل: شاشة رئيسية وشاشة توقف جديدتان، وتم إيقاف {n} من التطبيقات.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV يعمل: شاشة رئيسية جديدة، وأُوقف {n} من التطبيقات.",
- "Free My TV {version} is ready: Home Settings > Updates.": "الإصدار {version} من Free My TV جاهز: إعدادات الرئيسية > التحديثات.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "توقفت الشاشة الرئيسية لـ Free My TV ثلاث مرات متتالية، فعدتُ إلى الشاشة الأصلية.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "واجهت الشاشة الرئيسية لـ Free My TV مشكلة.\nجارٍ الرجوع إلى الشاشة الرئيسية الأصلية للتلفزيون…",
  "Free TV button": "زر Free TV",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "يتحقق OK الآن. ويتحقق أيضًا كل 6 ساعات.",
  "OK chooses where they come from: default, Immich or an album.": "OK لاختيار مصدرها: الافتراضي أو Immich أو ألبوم.",
  "OK installs it; Android asks first.": "OK للتثبيت؛ سيسألك Android أولًا.",
- "OK opens Free My TV's update and your apps' updates.": "يفتح OK تحديث Free My TV وتحديثات تطبيقاتك.",
  "OK opens the list. ← → change the value.": "OK لفتح القائمة. ← → لتغيير القيمة.",
  "OK or the arrows change the value.": "OK أو الأسهم لتغيير القيمة.",
  "OK picks, Back cancels.": "OK للاختيار، والرجوع للإلغاء.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "الثلاثاء",
  "weekday|Wed": "الأربعاء",
  "weekday|Wednesday": "الأربعاء",
+ "{app} is updating: it opens once it's done.": "يجري تحديث {app}: سيفتح عند الانتهاء.",
  "{app} updated to {version}.": "تم تحديث {app} إلى {version}.",
  "{h} h {m} min": "{h} س {m} د",
  "{h} h {m} min left": "متبقٍ {h} س {m} د",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}، الرمز {code}",
  "{version} is out: build it again": "صدر الإصدار {version}: أعد بناء التطبيق",
  "{version} is ready: it installs on the home screen.": "{version} جاهز: يُثبَّت على الشاشة الرئيسية.",
- "← → to move · OK to drop · Back to cancel": "← → للنقل · OK للإفلات · الرجوع للإلغاء"
+ "← → to move · OK to drop · Back to cancel": "← → للنقل · OK للإفلات · الرجوع للإلغاء",
+ "Free My TV {version} is ready: Free My TV > Updates.": "الإصدار {version} من Free My TV جاهز: Free My TV > التحديثات."
 }

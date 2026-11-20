@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Το Free My TV είναι εφαρμογή για τηλεόραση: εγκαταστήστε αυτό το APK στο Android TV ή Google TV σας (freemytv.io), όχι σε κινητό.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Το Free My TV είναι ενεργό: νέα αρχική οθόνη και προφύλαξη οθόνης, απενεργοποιημένες εφαρμογές: {n}.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Το Free My TV είναι ενεργό: νέα αρχική οθόνη, απενεργοποιημένες εφαρμογές: {n}.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Το Free My TV {version} είναι έτοιμο: Ρυθμίσεις αρχικής > Ενημερώσεις.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Η αρχική οθόνη του Free My TV κατέρρευσε 3 φορές στη σειρά· επανήλθε η αρχική.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Η αρχική οθόνη του Free My TV αντιμετώπισε πρόβλημα.\nΕπιστροφή στην αρχική οθόνη της τηλεόρασης…",
  "Free TV button": "Κουμπί Free TV",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "Το OK ελέγχει τώρα. Ο έλεγχος γίνεται και κάθε 6 ώρες.",
  "OK chooses where they come from: default, Immich or an album.": "Το OK επιλέγει από πού έρχονται: προεπιλογή, Immich ή ένα άλμπουμ.",
  "OK installs it; Android asks first.": "Το OK την εγκαθιστά· το Android ρωτά πρώτα.",
- "OK opens Free My TV's update and your apps' updates.": "Το OK ανοίγει την ενημέρωση του Free My TV και τις ενημερώσεις των εφαρμογών σας.",
  "OK opens the list. ← → change the value.": "Το OK ανοίγει τη λίστα. Τα ← → αλλάζουν την τιμή.",
  "OK or the arrows change the value.": "Το OK ή τα βέλη αλλάζουν την τιμή.",
  "OK picks, Back cancels.": "OK για επιλογή, Πίσω για ακύρωση.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "Τρίτη",
  "weekday|Wed": "Τετ",
  "weekday|Wednesday": "Τετάρτη",
+ "{app} is updating: it opens once it's done.": "Το {app} ενημερώνεται: θα ανοίξει μόλις τελειώσει.",
  "{app} updated to {version}.": "Το {app} ενημερώθηκε στην {version}.",
  "{h} h {m} min": "{h} ώ. {m} λεπ.",
  "{h} h {m} min left": "απομένουν {h} ώ. {m} λ.",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, κωδικός {code}",
  "{version} is out: build it again": "Βγήκε η {version}: φτιάξτε το ξανά",
  "{version} is ready: it installs on the home screen.": "Η {version} είναι έτοιμη: εγκαθίσταται στην αρχική οθόνη.",
- "← → to move · OK to drop · Back to cancel": "← → μετακίνηση · OK τοποθέτηση · Πίσω ακύρωση"
+ "← → to move · OK to drop · Back to cancel": "← → μετακίνηση · OK τοποθέτηση · Πίσω ακύρωση",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Το Free My TV {version} είναι έτοιμο: Free My TV > Ενημερώσεις."
 }

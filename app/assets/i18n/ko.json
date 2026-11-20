@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV는 TV용 앱입니다. 이 APK는 휴대전화가 아닌 Android TV 또는 Google TV에 설치하세요(freemytv.io).",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV 켜짐: 새 홈 화면과 화면 보호기, 앱 {n}개 꺼짐.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV 켜짐: 새 홈 화면, 앱 {n}개 꺼짐.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} 준비 완료: 홈 설정 > 업데이트.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Free My TV 홈 화면이 3번 연속 멈춰서 원래 홈 화면으로 돌아갔습니다.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Free My TV 홈 화면에 문제가 생겼습니다.\nTV의 원래 홈 화면으로 돌아갑니다…",
  "Free TV button": "Free TV 버튼",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK를 누르면 지금 확인합니다. 6시간마다도 확인합니다.",
  "OK chooses where they come from: default, Immich or an album.": "OK로 가져올 곳을 고릅니다: 기본값, Immich 또는 앨범.",
  "OK installs it; Android asks first.": "OK로 설치합니다. Android가 먼저 묻습니다.",
- "OK opens Free My TV's update and your apps' updates.": "OK를 누르면 Free My TV 업데이트와 앱 업데이트가 열립니다.",
  "OK opens the list. ← → change the value.": "OK로 목록을 엽니다. ← →로 값을 바꿉니다.",
  "OK or the arrows change the value.": "OK 또는 화살표로 값을 바꿉니다.",
  "OK picks, Back cancels.": "OK로 선택, 뒤로로 취소.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "화요일",
  "weekday|Wed": "수",
  "weekday|Wednesday": "수요일",
+ "{app} is updating: it opens once it's done.": "{app} 업데이트 중입니다. 완료되면 열립니다.",
  "{app} updated to {version}.": "{app}을(를) {version}(으)로 업데이트했습니다.",
  "{h} h {m} min": "{h}시간 {m}분",
  "{h} h {m} min left": "{h}시간 {m}분 남음",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, 코드 {code}",
  "{version} is out: build it again": "{version} 출시: 다시 빌드하세요",
  "{version} is ready: it installs on the home screen.": "{version} 준비 완료: 홈 화면에서 설치됩니다.",
- "← → to move · OK to drop · Back to cancel": "← → 이동 · OK 배치 · 뒤로 취소"
+ "← → to move · OK to drop · Back to cancel": "← → 이동 · OK 배치 · 뒤로 취소",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} 준비 완료: Free My TV > 업데이트."
 }

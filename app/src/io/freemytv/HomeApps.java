@@ -664,6 +664,12 @@ final class HomeApps {
 
     /** Opens the item; `options` for the transition, or null (the screensaver has no card to grow out of). */
     static boolean open(Context a, Item it, android.os.Bundle options) {
+        // Its update is downloading or installing (AppUpdates): opening it now could stop the install halfway.
+        if (it.kind == APP && AppUpdates.Progress.updating(a, it.pkg)) {
+            android.widget.Toast.makeText(a, Ui.trf("{app} is updating: it opens once it's done.", "app", it.label),
+                    android.widget.Toast.LENGTH_SHORT).show();
+            return true;
+        }
         // plain: tried when `intent` finds nothing (the app's own home, when it won't take the title's address)
         Intent intent, plain = null;
         switch (it.kind) {

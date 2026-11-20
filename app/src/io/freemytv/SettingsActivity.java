@@ -154,9 +154,11 @@ public class SettingsActivity extends Activity {
         private static final float LIST_ROW_H = 68, LIST_ROW_GAP = 6;
         private static final int PICK_VISIBLE = 9;
         private static final float LIST_X = 1000, LIST_R = 1824, LIST_TOP = 186, ROW_GAP = 8, CHOICE_H = 104;
-        // The main menu: nine rows, then the comparison, the picks (with the Watchmode credit) and two notices, all on
+        // The main menu: ten rows, then the comparison, the picks (with the Watchmode credit) and two notices, all on
         // one 1080 px screen: the rows share the 462 px that seven took.
-        private static final float MAIN_TOP = 140, ROW_H = 47.33f, MAIN_GAP = 4;
+        private static final float MAIN_TOP = 140, ROW_H = 42.2f, MAIN_GAP = 4;
+        /** Updates, just above TV Settings (the last row). */
+        private static final int MAIN_UPDATES = 8;
         private static final int AMBER = 0xFFFFC266, INK = 0xFF1C1C1E;
 
         private final SettingsActivity activity;
@@ -340,7 +342,7 @@ public class SettingsActivity extends Activity {
                     }
                     String[] names = {Ui.tr("Screensaver, preview"), Ui.tr("Home Settings"),
                             Ui.tr("Shelf"), Ui.tr("Top Buttons"), Ui.tr("Inputs"), Ui.tr("Remote Buttons"),
-                            Ui.tr("Sleep Timer"), Ui.tr("TV Settings")};
+                            Ui.tr("Sleep Timer"), Ui.tr("Updates") + ", " + updateModeName(updMode), Ui.tr("TV Settings")};
                     return row - 1 < names.length ? names[row - 1] : "";
                 }
                 case HOME_CHOICE: {
@@ -549,7 +551,7 @@ public class SettingsActivity extends Activity {
 
         private int rowCount() {
             switch (screen) {
-                case MAIN: return 9;
+                case MAIN: return 10;
                 case HOME_CHOICE: return 2;
                 case HOME_SETTINGS: return Math.min(SETTINGS_VISIBLE, settingLabels().length);
                 case PICKER: return Math.min(PICK_VISIBLE, pickLabels.size());
@@ -608,8 +610,8 @@ public class SettingsActivity extends Activity {
             String mode = freeActive() ? "Free My TV" : Ui.tr("Original");
             String[] labels = {Ui.tr("Home Screen"), Ui.tr("Screensaver"),
                     Ui.tr("Home Settings"), Ui.tr("Shelf"), Ui.tr("Top Buttons"), Ui.tr("Inputs"),
-                    Ui.tr("Remote Buttons"), Ui.tr("Sleep Timer"), Ui.tr("TV Settings")};
-            String[] values = {working ? "" : mode, Ui.tr("Preview"), "", "", "", "", "", "", ""};
+                    Ui.tr("Remote Buttons"), Ui.tr("Sleep Timer"), Ui.tr("Updates"), Ui.tr("TV Settings")};
+            String[] values = {working ? "" : mode, Ui.tr("Preview"), "", "", "", "", "", "", "", ""};
             for (int i = 0; i < labels.length; i++) {
                 float y = (MAIN_TOP + i * (ROW_H + MAIN_GAP)) * k;
                 rowRect.set(LIST_X * k, y, LIST_R * k, y + ROW_H * k);
@@ -949,7 +951,9 @@ public class SettingsActivity extends Activity {
                                 pickScroll = 0;
                                 screen = UPDATES;
                             } else if (screen == UPDATES) {
-                                showSettingsRow(updatesRow());
+                                focus = MAIN_UPDATES;
+                                pickScroll = 0;
+                                screen = MAIN;
                             } else if (screen == PICKER && pickFor == PICK_ALBUM) {
                                 openPhotoSources();
                             } else if (screen == PICKER && pickFor == PICK_PHOTOS) {
@@ -1046,21 +1050,16 @@ public class SettingsActivity extends Activity {
             if (dollar()) l.add(Ui.tr("Dollar"));
             l.add(Ui.tr("TMDB key"));
             l.add(Ui.tr("Watchmode key"));
-            l.add(Ui.tr("Updates"));
             return l.toArray(new String[0]);
         }
 
-        /** The Updates row: the last one, after the coins and the keys. */
-        private int updatesRow() {
-            return settingLabels().length - 1;
-        }
-
+        /** The TMDB key's row: the last but one, after the coins. */
         private int keyRow() {
-            return updatesRow() - 2;
+            return settingLabels().length - 2;
         }
 
         private int watchmodeRow() {
-            return updatesRow() - 1;
+            return settingLabels().length - 1;
         }
 
         /** A key's row: "Not set", or the key's last 4 characters (all that's ever shown of it). */
@@ -1151,10 +1150,9 @@ public class SettingsActivity extends Activity {
             if (HOME_ROW >= 0) v[HOME_ROW] = onOff(HomeAssistant.on(getContext()));
             v[QUOTES_ROW] = onOff(Prefs.quotes());
             // No quotes widget, nowhere to show prices: the coins read as off (and stay locked) until it is back on.
-            for (int i = COIN_ROWS; i < v.length - 3; i++) v[i] = onOff(Prefs.quotes() && Prefs.coin(i - COIN_ROWS));
-            v[v.length - 3] = keyValue(Recs.key());
-            v[v.length - 2] = keyValue(Recs.watchmodeKey());
-            v[v.length - 1] = updateModeName(updMode);   // opens the Updates screen
+            for (int i = COIN_ROWS; i < v.length - 2; i++) v[i] = onOff(Prefs.quotes() && Prefs.coin(i - COIN_ROWS));
+            v[v.length - 2] = keyValue(Recs.key());
+            v[v.length - 1] = keyValue(Recs.watchmodeKey());
             return v;
         }
 
@@ -1705,7 +1703,7 @@ public class SettingsActivity extends Activity {
                     return;
                 case QUOTES_ROW: Prefs.setQuotes(!Prefs.quotes()); break;
                 default:
-                    if (row >= keyRow() || !Prefs.quotes()) return;   // the keys and Updates act on OK only
+                    if (row >= keyRow() || !Prefs.quotes()) return;   // the keys act on OK only
                     Prefs.setCoin(row - COIN_ROWS, !Prefs.coin(row - COIN_ROWS));
                     break;
             }
@@ -2640,7 +2638,6 @@ public class SettingsActivity extends Activity {
                     : screen == HOME_SETTINGS && from + focus == POWER_ON_ROW && unavailable(focus) == null
                     ? Ui.tr("Only after a full start, not from standby.")
                     : screen == HOME_SETTINGS && (from + focus == keyRow() || from + focus == watchmodeRow()) ? Ui.tr("OK: send it from your phone, or type it.")
-                    : screen == HOME_SETTINGS && from + focus == updatesRow() ? Ui.tr("OK opens Free My TV's update and your apps' updates.")
                     : Ui.tr("OK or the arrows change the value.")), LIST_X * k + 30 * k, hy, hint);
             if (screen == REMOTE_KEYS) {
                 c.drawText(RemoteKeys.VESTEL ? Ui.tr("YouTube, Prime Video and Google Play: the TV itself controls those buttons.")
@@ -2730,8 +2727,6 @@ public class SettingsActivity extends Activity {
             } else if (screen == HOME_SETTINGS && pickScroll + focus == PHOTOS_ROW) {
                 askRemovePhotos();
                 return;
-            } else if (screen == HOME_SETTINGS && pickScroll + focus == updatesRow()) {
-                openUpdates();   // Free My TV's own update, then the apps from GitHub
             } else if (screen == HOME_SETTINGS && (pickScroll + focus == keyRow() || pickScroll + focus == watchmodeRow())) {
                 openKeyScreen(pickScroll + focus == watchmodeRow());
             } else if (screen == TMDB_KEY) {
@@ -2796,6 +2791,8 @@ public class SettingsActivity extends Activity {
                 pickScroll = 0;
                 screen = POWER;
                 focus = 0;
+            } else if (focus == MAIN_UPDATES) {
+                openUpdates();   // Free My TV's own update, then the apps from GitHub
             } else {
                 // As the drawer's TV Settings: where nothing answers the standard request (an HY300 Pro+ in Free My TV
                 // mode, #379), Android TV's own settings, and never a crash.

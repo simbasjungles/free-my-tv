@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV bir TV uygulamasıdır: bu APK'yı telefona değil, Android TV veya Google TV'nize (freemytv.io) yükleyin.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV açık: yeni ana ekran ve ekran koruyucu, {n} uygulama kapatıldı.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV açık: yeni ana ekran, {n} uygulama kapatıldı.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} hazır: Ana Ekran Ayarları > Güncellemeler.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Free My TV ana ekranı art arda 3 kez çöktü; orijinal ana ekrana dönüldü.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Free My TV ana ekranında bir sorun oluştu.\nTV'nin orijinal ana ekranına dönülüyor…",
  "Free TV button": "Free TV tuşu",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK şimdi denetler. Her 6 saatte bir de denetler.",
  "OK chooses where they come from: default, Immich or an album.": "OK nereden geleceklerini seçer: varsayılan, Immich veya bir albüm.",
  "OK installs it; Android asks first.": "OK yükler; Android önce sorar.",
- "OK opens Free My TV's update and your apps' updates.": "OK, Free My TV güncellemesini ve uygulamalarınızın güncellemelerini açar.",
  "OK opens the list. ← → change the value.": "OK listeyi açar. ← → değeri değiştirir.",
  "OK or the arrows change the value.": "OK veya oklar değeri değiştirir.",
  "OK picks, Back cancels.": "OK seçer, Geri iptal eder.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "Salı",
  "weekday|Wed": "Çar",
  "weekday|Wednesday": "Çarşamba",
+ "{app} is updating: it opens once it's done.": "{app} güncelleniyor: bittiğinde açılacak.",
  "{app} updated to {version}.": "{app}, {version} sürümüne güncellendi.",
  "{h} h {m} min": "{h} sa {m} dk",
  "{h} h {m} min left": "{h} sa {m} dk kaldı",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, kod {code}",
  "{version} is out: build it again": "{version} çıktı: yeniden derleyin",
  "{version} is ready: it installs on the home screen.": "{version} hazır: ana ekranda yüklenecek.",
- "← → to move · OK to drop · Back to cancel": "← → taşı · OK bırak · Geri iptal"
+ "← → to move · OK to drop · Back to cancel": "← → taşı · OK bırak · Geri iptal",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} hazır: Free My TV > Güncellemeler."
 }

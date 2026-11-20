@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
 /**
- * Keeps Free My TV and the apps installed from GitHub up to date (Home Settings > Updates). One setting, one schedule
+ * Keeps Free My TV and the apps installed from GitHub up to date (Free My TV > Updates). One setting, one schedule
  * and one check for all of them; by default only Free My TV is picked, as it updated itself before. Free My TV's own
  * release goes through Updates (its repository, the project's key), the other apps through KNOWN, each from its own
  * repository and release file. A new release is downloaded, checked (GitHub's SHA-256,
@@ -87,7 +87,7 @@ final class AppUpdates {
                 "app-full-release\\.apk"),
         new Source("io.homeassistant.companion.android.minimal", "Home Assistant (minimal)", "home-assistant/android",
                 false, "app-minimal-release\\.apk"),
-        // Not Free My TV itself: Updates does that (Home Settings > Updates).
+        // Not Free My TV itself: its row is the same check, with Updates' own rules (updateSelf).
     };
 
     private static final Object LOCK = new Object();
@@ -242,12 +242,14 @@ final class AppUpdates {
                 try {
                     waiting |= update(c, s, app);
                 } catch (Exception e) {
+                    Progress.clear(c, s.pkg);
                     boolean offline = offline(e);
                     failed |= offline || e instanceof Temporary;
                     put(app, "result", offline ? Ui.tr("No connection")
                             : Ui.trf("Error: {error}.", "error", String.valueOf(e.getMessage())));
                     AppLog.w("app update " + s.pkg + ": " + e);
                 }
+                Progress.clear(c, s.pkg);   // done, failed, or downloaded and waiting for the home screen: it opens again
                 put(apps, s.pkg, app);
                 put(status, "apps", apps);
                 write(c, "app-updates-status.json", status);
@@ -272,6 +274,91 @@ final class AppUpdates {
             if (waiting) later = later == 0 ? RETRY : Math.min(later, RETRY);
             write(c, "app-updates-status.json", status);
             if (later > 0) checkSoon(c, later);
+        }
+    }
+
+    // MARK: - Progress (app-updates-progress.json: the job writes it, the home screen reads it)
+
+    /**
+     * How far each app's update is, from 0 to 1 (the download to 0.9, then the APK going to the package manager), while
+     * it downloads or installs. The home screen greys that app's tile with a clock-like sweep and won't open it. A file,
+     * as the job runs in the main process and the home screen in :home; written at most every 300 ms or 2%.
+     */
+    static final class Progress {
+        private Progress() {}
+
+        private static final String FILE = "app-updates-progress.json";
+        /** A job killed mid-update leaves the file behind: an entry this old isn't believed any more. */
+        private static final long STALE_MS = 3 * 60_000L;
+        private static final java.util.Map<String, Float> mine = new java.util.HashMap<>();
+        private static long writtenAt;
+
+        static synchronized void set(Context c, String pkg, float done) {
+            Float was = mine.get(pkg);
+            long now = System.currentTimeMillis();
+            if (was != null && done - was < 0.02f && now - writtenAt < 300 && done < 1) return;
+            mine.put(pkg, Math.max(0, Math.min(1, done)));
+            save(c, now);
+        }
+
+        static synchronized void clear(Context c, String pkg) {
+            if (mine.remove(pkg) != null) save(c, System.currentTimeMillis());
+        }
+
+        private static void save(Context c, long now) {
+            writtenAt = now;
+            JSONObject o = new JSONObject();
+            put(o, "at", now);
+            JSONObject apps = new JSONObject();
+            for (java.util.Map.Entry<String, Float> e : mine.entrySet()) put(apps, e.getKey(), (double) e.getValue());
+            put(o, "apps", apps);
+            write(c, FILE, o);
+        }
+
+        // The reading side, in :home.
+        private static final java.util.Map<String, Float> seen = new java.util.HashMap<>();
+        private static long seenStamp = -1;
+
+        /** Reads the file again if it changed (a stat otherwise). True when what it says changed. */
+        static synchronized boolean poll(Context c) {
+            File f = new File(c.getFilesDir(), FILE);
+            long stamp = f.exists() ? f.lastModified() * 31 + f.length() : 0;
+            boolean stale = !seen.isEmpty() && System.currentTimeMillis() - f.lastModified() > STALE_MS;
+            if (stamp == seenStamp && !stale) return false;
+            seenStamp = stamp;
+            java.util.Map<String, Float> now = read(c);
+            if (now.equals(seen)) return false;
+            seen.clear();
+            seen.putAll(now);
+            return true;
+        }
+
+        /** The progress of `pkg`'s update as last polled, or -1 when it isn't updating. No file access: for onDraw. */
+        static synchronized float of(String pkg) {
+            Float p = pkg == null ? null : seen.get(pkg);
+            return p == null ? -1 : p;
+        }
+
+        static synchronized boolean any() {
+            return !seen.isEmpty();
+        }
+
+        /** Updating right now, read from the file (opening an app). */
+        static boolean updating(Context c, String pkg) {
+            return pkg != null && read(c).containsKey(pkg);
+        }
+
+        private static java.util.Map<String, Float> read(Context c) {
+            java.util.Map<String, Float> out = new java.util.HashMap<>();
+            JSONObject o = AppUpdates.read(c, FILE);
+            if (System.currentTimeMillis() - o.optLong("at") > STALE_MS) return out;
+            JSONObject apps = o.optJSONObject("apps");
+            if (apps == null) return out;
+            for (java.util.Iterator<String> it = apps.keys(); it.hasNext(); ) {
+                String pkg = it.next();
+                out.put(pkg, (float) apps.optDouble(pkg, 0));
+            }
+            return out;
         }
     }
 
@@ -369,12 +456,13 @@ final class AppUpdates {
         // first that is this app goes on to the checks below. At most MAX_TRIES downloads.
         PackageInfo archive = null;
         String problem = null;
+        Adb.Sent downloading = (bytes, total) -> Progress.set(c, s.pkg, 0.9f * bytes / total);
         for (int i = 0; i < assets.size() && i < MAX_TRIES; i++) {
             JSONObject asset = assets.get(i);
             File download = new File(dir, s.pkg + ".download");
             boolean unpacked = true;
             try {
-                download(asset, download);
+                download(asset, download, downloading);
                 if (isArchive(asset.optString("name"))) {
                     try {
                         extractApk(download, apk);
@@ -430,7 +518,8 @@ final class AppUpdates {
                 put(app, "result", Ui.trf("{version} is ready: it installs on the home screen.", "version", version));
                 return true;
             }
-            String out = adb.install(apk).trim();
+            // The last tenth of the progress: the APK going to the package manager (it waits for its answer at 100%).
+            String out = adb.install(apk, (bytes, total) -> Progress.set(c, s.pkg, 0.9f + 0.1f * bytes / total)).trim();
             if (!out.contains("Success")) throw new IOException(out.isEmpty() ? Ui.tr("the TV didn't install it") : out);
         }
         //noinspection ResultOfMethodCallIgnored
@@ -564,6 +653,11 @@ final class AppUpdates {
 
     /** Downloads a release file, checking its size and the SHA-256 GitHub publishes (when it does). */
     private static void download(JSONObject asset, File to) throws IOException {
+        download(asset, to, null);
+    }
+
+    /** The same, saying how much came (`progress` gets the bytes so far and the file's size). */
+    private static void download(JSONObject asset, File to, Adb.Sent progress) throws IOException {
         long size = asset.optLong("size", -1);
         if (size > MAX_DOWNLOAD) throw new IOException("the file is too large");
         HttpURLConnection c = (HttpURLConnection) new URL(asset.optString("browser_download_url")).openConnection();
@@ -591,6 +685,7 @@ final class AppUpdates {
                     if (total > MAX_DOWNLOAD) throw new IOException("the file is too large");
                     sha.update(buffer, 0, n);
                     out.write(buffer, 0, n);
+                    if (progress != null && size > 0) progress.sent(total, size);
                 }
             }
         } finally {

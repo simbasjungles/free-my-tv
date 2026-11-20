@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV on TV-sovellus: asenna tämä APK Android TV:hen tai Google TV:hen (freemytv.io), ei puhelimeen.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV on päällä: uusi aloitusnäyttö ja näytönsäästäjä, sovelluksia pois päältä: {n}.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV on päällä: uusi aloitusnäyttö, sovelluksia pois päältä: {n}.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} on valmis: Aloitusnäyttö > Päivitykset.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Free My TV:n aloitusnäyttö kaatui 3 kertaa peräkkäin; alkuperäinen palautettiin.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Free My TV:n aloitusnäytössä oli ongelma.\nPalataan television alkuperäiseen aloitusnäyttöön…",
  "Free TV button": "Free TV-painike",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK tarkistaa nyt. Tarkistus tehdään myös 6 tunnin välein.",
  "OK chooses where they come from: default, Immich or an album.": "OK valitsee, mistä ne tulevat: oletus, Immich tai albumi.",
  "OK installs it; Android asks first.": "OK asentaa sen; Android kysyy ensin.",
- "OK opens Free My TV's update and your apps' updates.": "OK avaa Free My TV:n päivityksen ja sovellustesi päivitykset.",
  "OK opens the list. ← → change the value.": "OK avaa luettelon. ← → muuttavat arvoa.",
  "OK or the arrows change the value.": "OK tai nuolet muuttavat arvoa.",
  "OK picks, Back cancels.": "OK valitsee, Takaisin peruuttaa.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "tiistai",
  "weekday|Wed": "ke",
  "weekday|Wednesday": "keskiviikko",
+ "{app} is updating: it opens once it's done.": "{app} päivittyy: se avautuu, kun päivitys on valmis.",
  "{app} updated to {version}.": "{app} päivitetty versioon {version}.",
  "{h} h {m} min": "{h} h {m} min",
  "{h} h {m} min left": "{h} h {m} min jäljellä",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, koodi {code}",
  "{version} is out: build it again": "{version} on julkaistu: rakenna se uudelleen",
  "{version} is ready: it installs on the home screen.": "{version} on valmis: se asennetaan aloitusnäytössä.",
- "← → to move · OK to drop · Back to cancel": "← → siirrä · OK pudota · Takaisin peruuta"
+ "← → to move · OK to drop · Back to cancel": "← → siirrä · OK pudota · Takaisin peruuta",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} on valmis: Free My TV > Päivitykset."
 }

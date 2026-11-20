@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV टीवी ऐप है: यह APK अपने Android TV या Google TV (freemytv.io) पर इंस्टॉल करें, फ़ोन पर नहीं।",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV चालू है: नई होम स्क्रीन और स्क्रीनसेवर, {n} ऐप बंद किए गए।",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV चालू है: नई होम स्क्रीन, {n} ऐप बंद किए गए।",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} तैयार है: होम सेटिंग > अपडेट.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Free My TV की होम स्क्रीन लगातार 3 बार क्रैश हुई; मूल होम स्क्रीन वापस लगा दी गई।",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Free My TV की होम स्क्रीन में समस्या आई।\nTV की मूल होम स्क्रीन पर लौट रहे हैं…",
  "Free TV button": "Free TV बटन",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK अभी जाँचता है। हर 6 घंटे में भी जाँच होती है।",
  "OK chooses where they come from: default, Immich or an album.": "OK से चुनें कि वे कहाँ से आएँ: डिफ़ॉल्ट, Immich या कोई एल्बम।",
  "OK installs it; Android asks first.": "OK से इंस्टॉल करें; Android पहले पूछेगा।",
- "OK opens Free My TV's update and your apps' updates.": "OK से Free My TV का अपडेट और आपके ऐप्स के अपडेट खुलते हैं।",
  "OK opens the list. ← → change the value.": "OK से सूची खुलती है। ← → से मान बदलें।",
  "OK or the arrows change the value.": "OK या तीर से मान बदलें।",
  "OK picks, Back cancels.": "OK से चुनें, Back से रद्द करें।",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "मंगलवार",
  "weekday|Wed": "बुध",
  "weekday|Wednesday": "बुधवार",
+ "{app} is updating: it opens once it's done.": "{app} अपडेट हो रहा है: पूरा होते ही खुलेगा।",
  "{app} updated to {version}.": "{app} {version} पर अपडेट हुआ।",
  "{h} h {m} min": "{h} घं {m} मिनट",
  "{h} h {m} min left": "{h} घं {m} मि बाकी",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, कोड {code}",
  "{version} is out: build it again": "{version} आ गया है: इसे फिर से बनाएँ",
  "{version} is ready: it installs on the home screen.": "{version} तैयार है: यह होम स्क्रीन पर इंस्टॉल होगा।",
- "← → to move · OK to drop · Back to cancel": "← → खिसकाएँ · OK छोड़ें · वापस रद्द करें"
+ "← → to move · OK to drop · Back to cancel": "← → खिसकाएँ · OK छोड़ें · वापस रद्द करें",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} तैयार है: Free My TV > अपडेट."
 }

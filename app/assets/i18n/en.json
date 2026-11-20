@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV is on: new home screen and screensaver, {n} apps turned off.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV is on: new home screen, {n} apps turned off.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} is ready: Home Settings > Updates.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…",
  "Free TV button": "Free TV button",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK checks now. It also checks every 6 hours.",
  "OK chooses where they come from: default, Immich or an album.": "OK chooses where they come from: default, Immich or an album.",
  "OK installs it; Android asks first.": "OK installs it; Android asks first.",
- "OK opens Free My TV's update and your apps' updates.": "OK opens Free My TV's update and your apps' updates.",
  "OK opens the list. ← → change the value.": "OK opens the list. ← → change the value.",
  "OK or the arrows change the value.": "OK or the arrows change the value.",
  "OK picks, Back cancels.": "OK picks, Back cancels.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "Tuesday",
  "weekday|Wed": "Wed",
  "weekday|Wednesday": "Wednesday",
+ "{app} is updating: it opens once it's done.": "{app} is updating: it opens once it's done.",
  "{app} updated to {version}.": "{app} updated to {version}.",
  "{h} h {m} min": "{h} h {m} min",
  "{h} h {m} min left": "{h} h {m} min left",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, code {code}",
  "{version} is out: build it again": "{version} is out: build it again",
  "{version} is ready: it installs on the home screen.": "{version} is ready: it installs on the home screen.",
- "← → to move · OK to drop · Back to cancel": "← → to move · OK to drop · Back to cancel"
+ "← → to move · OK to drop · Back to cancel": "← → to move · OK to drop · Back to cancel",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} is ready: Free My TV > Updates."
 }

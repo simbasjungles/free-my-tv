@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV er en TV-app: installer denne APK-en på Android TV eller Google TV (freemytv.io), ikke på en telefon.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV er på: ny startskjerm og skjermsparer, {n} apper slått av.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV er på: ny startskjerm, {n} apper slått av.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} er klar: Hjeminnstillinger > Oppdateringer.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Startskjermen til Free My TV krasjet 3 ganger på rad; den opprinnelige er tilbake.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Startskjermen til Free My TV fikk et problem.\nGår tilbake til TV-ens opprinnelige startskjerm…",
  "Free TV button": "Free TV-knappen",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK ser etter nå. Det sjekkes også hver 6. time.",
  "OK chooses where they come from: default, Immich or an album.": "OK velger hvor de kommer fra: standard, Immich eller et album.",
  "OK installs it; Android asks first.": "OK installerer den; Android spør først.",
- "OK opens Free My TV's update and your apps' updates.": "OK åpner oppdateringen av Free My TV og oppdateringene for appene dine.",
  "OK opens the list. ← → change the value.": "OK åpner listen. ← → endrer verdien.",
  "OK or the arrows change the value.": "OK eller pilene endrer verdien.",
  "OK picks, Back cancels.": "OK velger, Tilbake avbryter.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "tirsdag",
  "weekday|Wed": "ons.",
  "weekday|Wednesday": "onsdag",
+ "{app} is updating: it opens once it's done.": "{app} oppdateres: den åpnes når det er ferdig.",
  "{app} updated to {version}.": "{app} oppdatert til {version}.",
  "{h} h {m} min": "{h} t {m} min",
  "{h} h {m} min left": "{h} t {m} min igjen",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, kode {code}",
  "{version} is out: build it again": "{version} er ute: bygg den på nytt",
  "{version} is ready: it installs on the home screen.": "{version} er klar: den installeres på startskjermen.",
- "← → to move · OK to drop · Back to cancel": "← → flytt · OK slipp · Tilbake avbryt"
+ "← → to move · OK to drop · Back to cancel": "← → flytt · OK slipp · Tilbake avbryt",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} er klar: Free My TV > Oppdateringer."
 }

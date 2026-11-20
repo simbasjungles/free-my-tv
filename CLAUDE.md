@@ -250,7 +250,7 @@ TizenBrew Installer takes the first `.wgt` of the latest GitHub release, so ever
 with a Tizen certificate (`--sign`), which 2017-2022 TVs install as it is; on 2023+ TVs the installer signs it again
 with the person's Samsung certificate. Sign every release with the same author certificate: older TVs refuse an
 update signed by another. `python3 webos/build.py --generic` makes the LG `.ipk` that goes along.
-The release's `FreeMyTV.apk` updates itself (`Updates`: a weekly job, and Home Settings > Updates): it reads
+The release's `FreeMyTV.apk` updates itself (`Updates`, run by `AppUpdates` every 6 hours and from Free My TV > Updates): it reads
 `releases/latest`, so keep the asset named `FreeMyTV.apk`, sign it with the project's key, and raise `versionName`
 (compared number by number with the tag, `v1.3.0` > `1.2`) and `versionCode` (Android refuses a lower one). Before
 uploading, `apksigner verify --print-certs FreeMyTV.apk` must show the release certificate

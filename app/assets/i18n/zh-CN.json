@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV 是电视应用：请把这个 APK 安装在 Android TV 或 Google TV 上（freemytv.io），而不是手机上。",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV 已开启：新的主屏幕和屏保，已关闭 {n} 个应用。",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV 已开启：新的主屏幕，已关闭 {n} 个应用。",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} 已就绪：主屏幕设置 > 更新",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Free My TV 主屏幕连续崩溃 3 次，已切回原来的主屏幕。",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Free My TV 主屏幕出现问题。\n正在返回电视原来的主屏幕…",
  "Free TV button": "Free TV 键",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "按 OK 立即检查。也会每 6 小时检查一次。",
  "OK chooses where they come from: default, Immich or an album.": "按 OK 选择照片来源：默认、Immich 或某个相册。",
  "OK installs it; Android asks first.": "按 OK 安装；Android 会先询问。",
- "OK opens Free My TV's update and your apps' updates.": "按 OK 打开 Free My TV 的更新和你的应用更新。",
  "OK opens the list. ← → change the value.": "按 OK 打开列表，← → 更改数值。",
  "OK or the arrows change the value.": "按 OK 或方向键更改数值。",
  "OK picks, Back cancels.": "OK 选择，返回取消。",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "星期二",
  "weekday|Wed": "周三",
  "weekday|Wednesday": "星期三",
+ "{app} is updating: it opens once it's done.": "{app} 正在更新：完成后即可打开。",
  "{app} updated to {version}.": "{app} 已更新到 {version}。",
  "{h} h {m} min": "{h} 小时 {m} 分钟",
  "{h} h {m} min left": "剩余 {h} 小时 {m} 分钟",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url},代码 {code}",
  "{version} is out: build it again": "{version} 已发布：请重新构建",
  "{version} is ready: it installs on the home screen.": "{version} 已就绪：将在主屏幕上安装。",
- "← → to move · OK to drop · Back to cancel": "← → 移动 · OK 放置 · 返回 取消"
+ "← → to move · OK to drop · Back to cancel": "← → 移动 · OK 放置 · 返回 取消",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} 已就绪：Free My TV > 更新"
 }

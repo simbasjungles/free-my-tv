@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV adalah aplikasi TV: pasang APK ini di Android TV atau Google TV Anda (freemytv.io), bukan di ponsel.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV aktif: layar utama dan screensaver baru, {n} aplikasi dimatikan.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV aktif: layar utama baru, {n} aplikasi dimatikan.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} siap: Setelan Layar Utama > Pembaruan.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Layar utama Free My TV mogok 3 kali berturut-turut; kembali ke yang asli.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Layar utama Free My TV mengalami masalah.\nKembali ke layar utama asli TV…",
  "Free TV button": "Tombol Free TV",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK memeriksa sekarang. Pemeriksaan juga dilakukan setiap 6 jam.",
  "OK chooses where they come from: default, Immich or an album.": "OK memilih asalnya: bawaan, Immich, atau album.",
  "OK installs it; Android asks first.": "OK memasangnya; Android bertanya dulu.",
- "OK opens Free My TV's update and your apps' updates.": "OK membuka pembaruan Free My TV dan pembaruan aplikasi Anda.",
  "OK opens the list. ← → change the value.": "OK membuka daftar. ← → mengubah nilai.",
  "OK or the arrows change the value.": "OK atau tanda panah mengubah nilai.",
  "OK picks, Back cancels.": "OK memilih, Kembali membatalkan.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "Selasa",
  "weekday|Wed": "Rab",
  "weekday|Wednesday": "Rabu",
+ "{app} is updating: it opens once it's done.": "{app} sedang diperbarui: akan terbuka setelah selesai.",
  "{app} updated to {version}.": "{app} diperbarui ke {version}.",
  "{h} h {m} min": "{h} jam {m} mnt",
  "{h} h {m} min left": "sisa {h} jam {m} mnt",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, kode {code}",
  "{version} is out: build it again": "{version} sudah rilis: build ulang",
  "{version} is ready: it installs on the home screen.": "{version} siap: dipasang di layar utama.",
- "← → to move · OK to drop · Back to cancel": "← → pindahkan · OK letakkan · Kembali batalkan"
+ "← → to move · OK to drop · Back to cancel": "← → pindahkan · OK letakkan · Kembali batalkan",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} siap: Free My TV > Pembaruan."
 }

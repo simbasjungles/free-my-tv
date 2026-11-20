@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV ist eine TV-App: Installiere diese APK auf deinem Android TV oder Google TV (freemytv.io), nicht auf einem Handy.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV ist an: neuer Startbildschirm und Bildschirmschoner, {n} Apps ausgeschaltet.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV ist an: neuer Startbildschirm, {n} Apps ausgeschaltet.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} ist bereit: Start-Einstellungen > Updates.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Der Startbildschirm von Free My TV ist 3-mal hintereinander abgestürzt; der ursprüngliche ist wieder aktiv.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Der Startbildschirm von Free My TV hatte ein Problem.\nZurück zum ursprünglichen Startbildschirm…",
  "Free TV button": "Free TV-Taste",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK prüft jetzt. Geprüft wird auch alle 6 Stunden.",
  "OK chooses where they come from: default, Immich or an album.": "OK wählt, woher sie kommen: Standard, Immich oder ein Album.",
  "OK installs it; Android asks first.": "OK installiert sie; Android fragt vorher.",
- "OK opens Free My TV's update and your apps' updates.": "OK öffnet das Update von Free My TV und die Updates deiner Apps.",
  "OK opens the list. ← → change the value.": "OK öffnet die Liste. ← → ändern den Wert.",
  "OK or the arrows change the value.": "OK oder die Pfeiltasten ändern den Wert.",
  "OK picks, Back cancels.": "OK wählt aus, Zurück bricht ab.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "Dienstag",
  "weekday|Wed": "Mi.",
  "weekday|Wednesday": "Mittwoch",
+ "{app} is updating: it opens once it's done.": "{app} wird aktualisiert: Die App öffnet sich, sobald es fertig ist.",
  "{app} updated to {version}.": "{app} auf {version} aktualisiert.",
  "{h} h {m} min": "{h} Std. {m} Min.",
  "{h} h {m} min left": "noch {h} Std. {m} Min.",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, Code {code}",
  "{version} is out: build it again": "{version} ist da: neu bauen",
  "{version} is ready: it installs on the home screen.": "{version} ist bereit: Sie wird auf dem Startbildschirm installiert.",
- "← → to move · OK to drop · Back to cancel": "← → verschieben · OK ablegen · Zurück abbrechen"
+ "← → to move · OK to drop · Back to cancel": "← → verschieben · OK ablegen · Zurück abbrechen",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} ist bereit: Free My TV > Updates."
 }

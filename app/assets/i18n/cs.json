@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV je aplikace pro televize: nainstalujte tento APK do Android TV nebo Google TV (freemytv.io), ne do telefonu.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV je zapnuté: nová plocha a spořič, vypnuté aplikace: {n}.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV je zapnuté: nová plocha, vypnuté aplikace: {n}.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} je připraveno: Nastavení plochy > Aktualizace.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Plocha Free My TV třikrát po sobě spadla; vrácena původní.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Plocha Free My TV narazila na problém.\nNávrat k původní ploše televize…",
  "Free TV button": "Tlačítko Free TV",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK zkontroluje teď. Kontroluje se také každých 6 hodin.",
  "OK chooses where they come from: default, Immich or an album.": "OK vybere, odkud pocházejí: výchozí, Immich nebo album.",
  "OK installs it; Android asks first.": "OK ji nainstaluje; Android se nejdřív zeptá.",
- "OK opens Free My TV's update and your apps' updates.": "OK otevře aktualizaci Free My TV a aktualizace vašich aplikací.",
  "OK opens the list. ← → change the value.": "OK otevře seznam. ← → mění hodnotu.",
  "OK or the arrows change the value.": "OK nebo šipky mění hodnotu.",
  "OK picks, Back cancels.": "OK vybere, Zpět zruší.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "úterý",
  "weekday|Wed": "st",
  "weekday|Wednesday": "středa",
+ "{app} is updating: it opens once it's done.": "{app} se aktualizuje: otevře se, až bude hotovo.",
  "{app} updated to {version}.": "{app}: aktualizováno na {version}.",
  "{h} h {m} min": "{h} h {m} min",
  "{h} h {m} min left": "zbývá {h} h {m} min",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, kód {code}",
  "{version} is out: build it again": "Vyšla verze {version}: sestavte ji znovu",
  "{version} is ready: it installs on the home screen.": "{version} je připravena: nainstaluje se na domovské obrazovce.",
- "← → to move · OK to drop · Back to cancel": "← → přesunout · OK umístit · Zpět zrušit"
+ "← → to move · OK to drop · Back to cancel": "← → přesunout · OK umístit · Zpět zrušit",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} je připraveno: Free My TV > Aktualizace."
 }

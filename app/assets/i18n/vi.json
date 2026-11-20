@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV là ứng dụng cho TV: hãy cài APK này trên Android TV hoặc Google TV của bạn (freemytv.io), không phải trên điện thoại.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV đã bật: màn hình chính và trình bảo vệ màn hình mới, đã tắt {n} ứng dụng.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV đã bật: màn hình chính mới, đã tắt {n} ứng dụng.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} đã sẵn sàng: Màn hình chính > Cập nhật.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Màn hình chính Free My TV bị lỗi 3 lần liên tiếp; đã chuyển về màn hình gốc.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Màn hình chính Free My TV gặp sự cố.\nĐang quay về màn hình chính gốc của TV…",
  "Free TV button": "Nút Free TV",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK kiểm tra ngay. Ứng dụng cũng kiểm tra mỗi 6 giờ.",
  "OK chooses where they come from: default, Immich or an album.": "OK để chọn nguồn ảnh: mặc định, Immich hoặc một album.",
  "OK installs it; Android asks first.": "OK để cài; Android sẽ hỏi trước.",
- "OK opens Free My TV's update and your apps' updates.": "OK mở bản cập nhật Free My TV và các bản cập nhật ứng dụng của bạn.",
  "OK opens the list. ← → change the value.": "OK để mở danh sách. ← → để đổi giá trị.",
  "OK or the arrows change the value.": "OK hoặc phím mũi tên để đổi giá trị.",
  "OK picks, Back cancels.": "OK để chọn, Quay lại để hủy.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "Thứ Ba",
  "weekday|Wed": "Th 4",
  "weekday|Wednesday": "Thứ Tư",
+ "{app} is updating: it opens once it's done.": "{app} đang cập nhật: sẽ mở khi xong.",
  "{app} updated to {version}.": "{app} đã cập nhật lên {version}.",
  "{h} h {m} min": "{h} giờ {m} phút",
  "{h} h {m} min left": "còn {h} giờ {m} phút",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, mã {code}",
  "{version} is out: build it again": "Đã có {version}: hãy build lại",
  "{version} is ready: it installs on the home screen.": "{version} đã sẵn sàng: sẽ cài trên màn hình chính.",
- "← → to move · OK to drop · Back to cancel": "← → di chuyển · OK đặt · Quay lại hủy"
+ "← → to move · OK to drop · Back to cancel": "← → di chuyển · OK đặt · Quay lại hủy",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} đã sẵn sàng: Free My TV > Cập nhật."
 }

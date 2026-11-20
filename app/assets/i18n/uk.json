@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV — застосунок для телевізора: встановіть цей APK на Android TV або Google TV (freemytv.io), а не на телефон.",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV увімкнено: новий головний екран і заставка, вимкнено додатків: {n}.",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV увімкнено: новий головний екран, вимкнено додатків: {n}.",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} готова: Головний екран > Оновлення.",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Головний екран Free My TV збоїв 3 рази поспіль; повернуто початковий.",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "На головному екрані Free My TV сталася помилка.\nПовернення до початкового головного екрана…",
  "Free TV button": "Кнопка Free TV",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK перевіряє зараз. Перевірка також відбувається кожні 6 годин.",
  "OK chooses where they come from: default, Immich or an album.": "OK вибирає, звідки вони беруться: типово, Immich або альбом.",
  "OK installs it; Android asks first.": "OK встановлює її; Android спершу запитає.",
- "OK opens Free My TV's update and your apps' updates.": "OK відкриває оновлення Free My TV і оновлення ваших застосунків.",
  "OK opens the list. ← → change the value.": "OK відкриває список, ← → змінюють значення.",
  "OK or the arrows change the value.": "OK або стрілки змінюють значення.",
  "OK picks, Back cancels.": "OK — вибрати, «Назад» — скасувати.",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "вівторок",
  "weekday|Wed": "ср",
  "weekday|Wednesday": "середа",
+ "{app} is updating: it opens once it's done.": "{app} оновлюється: відкриється, щойно оновлення завершиться.",
  "{app} updated to {version}.": "{app}: оновлено до {version}.",
  "{h} h {m} min": "{h} год {m} хв",
  "{h} h {m} min left": "залишилося {h} год {m} хв",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, код {code}",
  "{version} is out: build it again": "Вийшла {version}: зберіть знову",
  "{version} is ready: it installs on the home screen.": "{version} готово: встановиться на головному екрані.",
- "← → to move · OK to drop · Back to cancel": "← → перемістити · OK розмістити · Назад скасувати"
+ "← → to move · OK to drop · Back to cancel": "← → перемістити · OK розмістити · Назад скасувати",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} готова: Free My TV > Оновлення."
 }

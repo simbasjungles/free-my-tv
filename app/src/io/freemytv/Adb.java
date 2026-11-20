@@ -207,6 +207,15 @@ final class Adb implements Closeable {
      * took it).
      */
     String install(File apk) throws IOException {
+        return install(apk, null);
+    }
+
+    /** What install() has sent so far, out of the APK's length (AppUpdates' progress). */
+    interface Sent {
+        void sent(long bytes, long total);
+    }
+
+    String install(File apk, Sent progress) throws IOException {
         int local = nextLocalId++;
         send(OPEN, local, 0, ("exec:cmd package install -r -S " + apk.length() + "\0").getBytes(StandardCharsets.UTF_8));
         ByteArrayOutputStream result = new ByteArrayOutputStream();
@@ -223,8 +232,11 @@ final class Adb implements Closeable {
             byte[] buffer = new byte[maxPayload];
             try (FileInputStream in = new FileInputStream(apk)) {
                 int n;
+                long sent = 0;
                 while ((n = in.read(buffer)) > 0) {
                     send(WRTE, local, remote, java.util.Arrays.copyOf(buffer, n));
+                    sent += n;
+                    if (progress != null) progress.sent(sent, apk.length());
                     // One message at a time: the next one goes once the TV said OKAY to this one.
                     while (true) {
                         Message m = read();

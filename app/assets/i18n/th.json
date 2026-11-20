@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV เป็นแอปสำหรับทีวี: ติดตั้ง APK นี้บน Android TV หรือ Google TV ของคุณ (freemytv.io) ไม่ใช่บนโทรศัพท์",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TV เปิดอยู่: หน้าหลักและสกรีนเซฟเวอร์ใหม่ ปิดแอปไปแล้ว {n} รายการ",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TV เปิดอยู่: หน้าหลักใหม่ ปิดแอปไปแล้ว {n} รายการ",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} พร้อมแล้ว: ตั้งค่าหน้าหลัก > อัปเดต",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "หน้าหลัก Free My TV ขัดข้อง 3 ครั้งติด จึงสลับกลับไปใช้หน้าหลักเดิม",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "หน้าหลัก Free My TV เกิดปัญหา\nกำลังกลับไปใช้หน้าหลักเดิมของทีวี…",
  "Free TV button": "ปุ่ม Free TV",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK ตรวจสอบตอนนี้ และตรวจสอบทุก 6 ชั่วโมงด้วย",
  "OK chooses where they come from: default, Immich or an album.": "กด OK เพื่อเลือกที่มาของรูป: ค่าเริ่มต้น, Immich หรืออัลบั้ม",
  "OK installs it; Android asks first.": "กด OK เพื่อติดตั้ง Android จะถามก่อน",
- "OK opens Free My TV's update and your apps' updates.": "กด OK เพื่อเปิดการอัปเดต Free My TV และการอัปเดตแอปของคุณ",
  "OK opens the list. ← → change the value.": "กด OK เพื่อเปิดรายการ กด ← → เพื่อเปลี่ยนค่า",
  "OK or the arrows change the value.": "กด OK หรือปุ่มลูกศรเพื่อเปลี่ยนค่า",
  "OK picks, Back cancels.": "OK เลือก, ย้อนกลับ ยกเลิก",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "วันอังคาร",
  "weekday|Wed": "พ.",
  "weekday|Wednesday": "วันพุธ",
+ "{app} is updating: it opens once it's done.": "กำลังอัปเดต {app}: จะเปิดได้เมื่ออัปเดตเสร็จ",
  "{app} updated to {version}.": "อัปเดต {app} เป็น {version} แล้ว",
  "{h} h {m} min": "{h} ชม. {m} นาที",
  "{h} h {m} min left": "เหลือ {h} ชม. {m} นาที",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}, รหัส {code}",
  "{version} is out: build it again": "{version} ออกแล้ว: บิลด์ใหม่อีกครั้ง",
  "{version} is ready: it installs on the home screen.": "{version} พร้อมแล้ว: จะติดตั้งที่หน้าจอหลัก",
- "← → to move · OK to drop · Back to cancel": "← → ย้าย · OK วาง · ย้อนกลับ ยกเลิก"
+ "← → to move · OK to drop · Back to cancel": "← → ย้าย · OK วาง · ย้อนกลับ ยกเลิก",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} พร้อมแล้ว: Free My TV > อัปเดต"
 }

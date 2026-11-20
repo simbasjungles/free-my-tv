@@ -83,7 +83,6 @@
  "Free My TV is a TV app: install this APK on your Android TV or Google TV (freemytv.io), not on a phone.": "Free My TV はテレビ用アプリです。この APK はスマートフォンではなく、Android TV または Google TV にインストールしてください（freemytv.io）。",
  "Free My TV is on: new home screen and screensaver, {n} apps turned off.": "Free My TVがオン：新しいホーム画面とスクリーンセーバー、{n}個のアプリをオフにしました。",
  "Free My TV is on: new home screen, {n} apps turned off.": "Free My TVがオン：新しいホーム画面、{n}個のアプリをオフにしました。",
- "Free My TV {version} is ready: Home Settings > Updates.": "Free My TV {version} の準備ができました：ホームの設定＞アップデート",
  "Free My TV's home screen crashed 3 times in a row; I switched back to the original one.": "Free My TVのホーム画面が3回続けて停止したため、元のホーム画面に戻しました。",
  "Free My TV's home screen ran into a problem.\nGoing back to the TV's original home screen…": "Free My TVのホーム画面で問題が発生しました。\nテレビの元のホーム画面に戻ります…",
  "Free TV button": "Free TVボタン",
@@ -176,7 +175,6 @@
  "OK checks now. It also checks every 6 hours.": "OK で今すぐ確認します。6 時間ごとにも確認します。",
  "OK chooses where they come from: default, Immich or an album.": "OKで取得元を選びます：デフォルト、Immich、またはアルバム。",
  "OK installs it; Android asks first.": "OKでインストールします。先にAndroidが確認します。",
- "OK opens Free My TV's update and your apps' updates.": "OK で Free My TV のアップデートとアプリのアップデートを開きます。",
  "OK opens the list. ← → change the value.": "OKで一覧を開きます。← →で値を変更します。",
  "OK or the arrows change the value.": "OKまたは矢印で値を変更します。",
  "OK picks, Back cancels.": "OKで選択、戻るでキャンセル。",
@@ -462,6 +460,7 @@
  "weekday|Tuesday": "火曜日",
  "weekday|Wed": "水",
  "weekday|Wednesday": "水曜日",
+ "{app} is updating: it opens once it's done.": "{app} を更新中です。完了すると開けます。",
  "{app} updated to {version}.": "{app} を {version} にアップデートしました。",
  "{h} h {m} min": "{h}時間 {m}分",
  "{h} h {m} min left": "残り{h}時間{m}分",
@@ -483,5 +482,6 @@
  "{url}, code {code}": "{url}、コード {code}",
  "{version} is out: build it again": "{version} が出ました：もう一度ビルドしてください",
  "{version} is ready: it installs on the home screen.": "{version} の準備ができました: ホーム画面でインストールされます。",
- "← → to move · OK to drop · Back to cancel": "← → 移動 · OK 配置 · 戻る キャンセル"
+ "← → to move · OK to drop · Back to cancel": "← → 移動 · OK 配置 · 戻る キャンセル",
+ "Free My TV {version} is ready: Free My TV > Updates.": "Free My TV {version} の準備ができました：Free My TV＞アップデート"
 }
