@@ -797,7 +797,8 @@ var TV = (function () {
             for (var j = 0; j < devices.length; j++) {
               var d = devices[j];
               if (d.appId !== list[i].id) continue;
-              list[i].connected = d.connected !== false;
+              // Some sets (a 2019 55SM8100, webOS 4.5) say connected for every HDMI port; hdmiPlugIn tells the cable.
+              list[i].connected = typeof d.hdmiPlugIn === 'boolean' ? d.hdmiPlugIn : d.connected !== false;
               // A name the person gave the input on the TV ("PS5"), if any.
               if (d.label && !/^hdmi\s*\d$/i.test(d.label)) list[i].label = d.label;
             }
