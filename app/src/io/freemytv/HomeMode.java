@@ -1,7 +1,9 @@
 package io.freemytv;
 
 import android.app.UiModeManager;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Build;
@@ -390,6 +392,178 @@ final class HomeMode {
     private static String resumedPackage(Adb adb) throws IOException {
         Matcher m = RESUMED.matcher(adb.shell("dumpsys activity activities | grep -m 3 -E 'ResumedActivity|Resumed:'"));
         return m.find() ? m.group(1) : null;
+    }
+
+    private static final ComponentName DROIDLOGIC_SOURCES =
+            new ComponentName("com.droidlogic.tv.settings", "com.droidlogic.tv.settings.TvSourceActivity");
+
+    /**
+     * Amlogic's Live TV (com.android.tv on a Wanbo T6 Max projector, Android 9) opens its Signal Source picker over
+     * the input at every cold start (QuickKeyInfo.startDroidlogicTvSource at the end of onCreate), so an HDMI input
+     * opened from here, or at power-on, came up behind a menu. Back closes it and leaves the input playing: for 8 s
+     * after we open an input, when that picker comes to the front, it gets one.
+     *
+     * cec_wake (config.properties, "1.1.0.0"): a box behind the input that sleeps out of the TV's reach. A box behind a
+     * soundbar isn't in the TV's CEC list while asleep, so the TV only selects the soundbar's port (1.0.0.0) and the
+     * box stays off. Its own <Set Stream Path> wakes it: written raw to Amlogic's /dev/cec (open to the shell) through
+     * the TV's ADB, a moment after the input opens, so it comes after the TV's own routing.
+     */
+    static void closeSourcePicker(Context c) {
+        Context app = c.getApplicationContext();
+        Intent probe = new Intent().setComponent(DROIDLOGIC_SOURCES);
+        boolean picker = app.getPackageManager().resolveActivity(probe, 0) != null;
+        String wake = cecWakeFrame();
+        if (!picker && wake == null) return;
+        new Thread(() -> {
+            long until = SystemClock.elapsedRealtime() + 8_000;
+            try (Adb adb = Adb.connect(app, 10_000, null)) {
+                if (wake != null) {
+                    SystemClock.sleep(1500);
+                    adb.shell("[ -w /dev/cec ] && printf '" + wake + "' > /dev/cec");
+                    AppLog.w("input: CEC <Set Stream Path> " + Config.CEC_WAKE.trim() + ", to wake the box there");
+                }
+                while (picker && SystemClock.elapsedRealtime() < until) {
+                    String front = adb.shell("dumpsys activity activities | grep -m 3 -E 'ResumedActivity|Resumed:'");
+                    if (front.contains("com.droidlogic.tv.settings/.TvSourceActivity")) {
+                        adb.shell("input keyevent 4");
+                        AppLog.w("input: closed Amlogic's Signal Source picker over it");
+                        return;
+                    }
+                    SystemClock.sleep(400);
+                }
+            } catch (IOException e) {
+                AppLog.w("input: source picker: " + e.getMessage());
+            }
+        }, "source-picker").start();
+    }
+
+    /** cec_wake's <Set Stream Path> as printf escapes ("\x0f\x86\x11\x00" for 1.1.0.0), or null when unset or invalid. */
+    static String cecWakeFrame() {
+        int address = cecWakeAddress();
+        if (address <= 0) return null;
+        return String.format(java.util.Locale.ROOT, "\\x0f\\x86\\x%02x\\x%02x", address >> 8, address & 0xFF);
+    }
+
+    /** cec_wake as a CEC physical address (1.1.0.0 is 0x1100), or -1 when unset or invalid. */
+    static int cecWakeAddress() {
+        String[] parts = Config.CEC_WAKE.trim().split("\\.");
+        if (parts.length != 4) return -1;
+        int address = 0;
+        for (String p : parts) {
+            if (!p.matches("[0-9a-fA-F]")) return -1;
+            address = address << 4 | Integer.parseInt(p, 16);
+        }
+        return address == 0 ? -1 : address;
+    }
+
+    private static final Pattern AUDIO_STATUS = Pattern.compile("<Report Audio Status> src: 5, dst: 0, params: ([0-9A-Fa-f]{2})");
+    private static final Pattern TV_MUTE = Pattern.compile("time=(\\S+ \\S+) message=<User Control Pressed> src: 0, dst: 5, params: 43");
+
+    /**
+     * At power-on, on Amlogic (/dev/cec open to the shell): a Wanbo T6 Max projector (Android 9) turns System Audio on
+     * as it starts, reads the soundbar's status (unmuted), then presses Mute on it over CEC (0x43, a toggle) while its
+     * own volume stays unmuted, so the soundbar ended up muted at every start. For `windowMs`, each such Mute from the
+     * TV that leaves the soundbar muted gets one more Mute press, which unmutes it. Mutes from other remotes (the box's,
+     * the soundbar's) aren't the TV's and are left alone.
+     */
+    static void keepAudioSystemUnmuted(Context c, long windowMs) {
+        Context app = c.getApplicationContext();
+        new Thread(() -> {
+            long until = SystemClock.elapsedRealtime() + windowMs;
+            String handled = "";   // when the last Mute we undid was pressed ("2026-11-20 02:16:23")
+            Adb adb = null;
+            // A connection that fails or drops (the input's own ADB work runs at the same moment) is made again: the
+            // TV's Mute comes 10 to 20 s after the input opens, and missing it left the soundbar muted.
+            while (SystemClock.elapsedRealtime() < until) {
+                try {
+                    if (adb == null) {
+                        adb = Adb.connect(app, 10_000, null);
+                        if (!adb.shell("[ -w /dev/cec ] && echo yes").contains("yes")) break;
+                    }
+                    String history = adb.shell("dumpsys hdmi_control | grep -E 'Report Audio Status|User Control Pressed'");
+                    // By the time of the TV's last Mute, not by counting them: the history is a ring, and the older
+                    // lines leave it (the TV presses Mute twice in a start, about 7 s apart; counting missed the second).
+                    String lastMute = "";
+                    int status = -1;
+                    for (String line : history.split("\n")) {
+                        Matcher mute = TV_MUTE.matcher(line);
+                        if (mute.find()) lastMute = mute.group(1);
+                        Matcher m = AUDIO_STATUS.matcher(line);
+                        if (m.find()) status = Integer.parseInt(m.group(1), 16);
+                    }
+                    if (lastMute.compareTo(handled) > 0 && status >= 0x80) {   // the high bit is mute
+                        adb.shell("printf '\\x05\\x44\\x43' > /dev/cec; sleep 0.2; printf '\\x05\\x45' > /dev/cec");
+                        AppLog.w("at power-on: the TV muted the soundbar over CEC (" + lastMute + "); unmuted it");
+                        handled = lastMute;
+                    }
+                } catch (IOException | RuntimeException e) {
+                    AppLog.w("at power-on: soundbar mute: " + e.getMessage() + "; trying again");
+                    if (adb != null) {
+                        try { adb.close(); } catch (Exception ignored) { }
+                        adb = null;
+                    }
+                }
+                SystemClock.sleep(1_500);
+            }
+            if (adb != null) {
+                try { adb.close(); } catch (Exception ignored) { }
+            }
+        }, "audio-unmute").start();
+    }
+
+    /**
+     * At power-on with cec_wake: wakes the box right away (not after the input opens) and waits until it answers on
+     * the CEC bus (the TV lists it, powered on), so the input opens on its picture instead of on "No signal". The
+     * <Set Stream Path> goes again every 5 s while it doesn't answer. False after `timeoutMs` without an answer.
+     */
+    private static final Pattern DISPLAY_NAME = Pattern.compile("display_name: (.+?) power_status");
+
+    /** The name the box behind cec_wake gave over CEC the last time it answered ("Xiaomi TV Box"), or null. */
+    static String cecBoxName(Context c) {
+        try (FileInputStream in = new FileInputStream(new File(c.getFilesDir(), "cec-box-name"))) {
+            byte[] data = new byte[64];
+            int n = in.read(data);
+            String name = n > 0 ? new String(data, 0, n, StandardCharsets.UTF_8).trim() : "";
+            return name.isEmpty() ? null : name;
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private static void saveCecBoxName(Context c, String name) {
+        if (name.isEmpty() || name.length() > 32 || name.equals(cecBoxName(c))) return;
+        try (FileOutputStream out = new FileOutputStream(new File(c.getFilesDir(), "cec-box-name"))) {
+            out.write(name.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException ignored) {
+        }
+    }
+
+    static boolean wakeCecBox(Context app, long timeoutMs) {
+        String frame = cecWakeFrame();
+        if (frame == null) return false;
+        String phys = String.format(java.util.Locale.ROOT, "0x%04x", cecWakeAddress());
+        long until = SystemClock.elapsedRealtime() + timeoutMs, resend = 0;
+        try (Adb adb = Adb.connect(app, 10_000, null)) {
+            while (SystemClock.elapsedRealtime() < until) {
+                if (SystemClock.elapsedRealtime() >= resend) {
+                    adb.shell("[ -w /dev/cec ] && printf '" + frame + "' > /dev/cec");
+                    resend = SystemClock.elapsedRealtime() + 5_000;
+                }
+                // Asleep, the box isn't in the TV's list at all; awake, it joins as soon as it announces itself, with
+                // power_status -1 (unknown) until the TV's next once-a-minute poll says 0. 1 is standby.
+                String box = adb.shell("dumpsys hdmi_control | grep -i 'physical_address: " + phys + "'");
+                if (box.contains("physical_address") && !box.contains("power_status: 1 ")) {
+                    Matcher name = DISPLAY_NAME.matcher(box);
+                    if (name.find()) saveCecBoxName(app, name.group(1).trim());
+                    SystemClock.sleep(2_000);   // its HDMI output comes up a moment after it answers
+                    return true;
+                }
+                SystemClock.sleep(1_000);
+            }
+        } catch (IOException e) {
+            AppLog.w("at power-on: CEC wake: " + e.getMessage());
+        }
+        return false;
     }
 
     /**

@@ -1180,7 +1180,7 @@ public class SettingsActivity extends Activity {
                 case HOME_SETTINGS:
                     return pickScroll + i == PLAYING_ROW ? Capabilities.NEED_LISTENER
                             : pickScroll + i == HOME_ROW ? Capabilities.NEED_HOME_ASSISTANT
-                            : pickScroll + i == POWER_ON_ROW ? Capabilities.NEED_LIVE_TV
+                            : pickScroll + i == POWER_ON_ROW ? Capabilities.NEED_POWER_ON
                             : pickScroll + i == LIVE_BUTTON_ROW ? Capabilities.NEED_HDMI
                             : pickScroll + i == SAVER_ROW ? Capabilities.NEED_SCREENSAVER : null;
                 case POWER: {
@@ -1190,7 +1190,7 @@ public class SettingsActivity extends Activity {
                 case SHELF_EDIT: {   // only to add it: one already among the buttons can still move or go
                     String key = shelfRows.get(pickScroll + i)[0];
                     if (editingInputs || !editingTop || shelfOrder.contains(key)) return null;
-                    return HomeApps.TOP_LIVE.equals(key) ? Capabilities.NEED_LIVE_TV
+                    return HomeApps.TOP_LIVE.equals(key) ? Capabilities.NEED_POWER_ON
                             : HomeApps.TOP_STORE.equals(key) ? Capabilities.NEED_APP_STORE : null;
                 }
                 default:

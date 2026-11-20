@@ -129,6 +129,7 @@ final class Config {
     static final String CURRENCY = "$CURRENCY";
     static final String TEMPERATURE = "$(prop temperature auto)";
     static final String HIDE_SERVICES = "$(prop hide_services '')";
+    static final String CEC_WAKE = "$(prop cec_wake '')";   // a box behind an HDMI input to wake over CEC ("1.1.0.0")
     static final String THEME = "$(prop theme auto)";
     static final String IMMICH_SERVER = "$(prop immich_server '')";
     static final String HA_URL = "$(prop home_assistant_url '')";

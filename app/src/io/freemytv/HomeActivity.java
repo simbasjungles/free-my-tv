@@ -58,10 +58,7 @@ public class HomeActivity extends Activity {
         if (HomeMode.noteHomeShown(this) && SystemClock.elapsedRealtime() < 240_000 && "live".equals(Prefs.powerOn())) {
             org.json.JSONObject s = HomeMode.state(this);
             liveWaits = HomeMode.FREE.equals(s.optString("mode")) && !s.optBoolean("homeReverted");
-            if (liveWaits) {
-                AppLog.w("at power-on: Live TV in 10 s, unless a key comes first");
-                home.postDelayed(powerOnLive, 10_000);
-            }
+            if (liveWaits) startPowerOnLive();
         }
     }
 
@@ -81,13 +78,73 @@ public class HomeActivity extends Activity {
                 return;
             }
             liveWaits = false;
+            hideSplash();
             AppLog.w("at power-on: another screen is in front, no Live TV");
             return;
         }
         liveWaits = false;
         AppLog.w("at power-on: Live TV");
-        HomeApps.open(this, HomeApps.action(HomeApps.LIVE_TV, HomeApps.TOP_LIVE, Ui.tr("Live TV"), "live_tv"), null);
+        HomeApps.open(this, HomeApps.liveButton(this), null);   // what the Live TV button opens: Live TV or its HDMI input
+        HomeMode.keepAudioSystemUnmuted(this, 60_000);
+        if (home != null) home.postDelayed(this::hideSplash, 2_000);   // gone behind the input, not flashed before it
     };
+
+    /**
+     * At power-on "Live TV": a "Turning on…" screen over the home screen until the input opens, so the home screen
+     * doesn't come up and then vanish. With cec_wake, the box behind the input is woken at once and the input opens
+     * when it answers (up to 30 s); without it, after 3 s. A key before that stays on the home screen.
+     */
+    private void startPowerOnLive() {
+        showSplash();
+        if (HomeMode.cecWakeFrame() == null) {
+            AppLog.w("at power-on: Live TV in 3 s, unless a key comes first");
+            home.postDelayed(powerOnLive, 3_000);
+            return;
+        }
+        AppLog.w("at power-on: waking the box at " + Config.CEC_WAKE.trim() + ", then Live TV, unless a key comes first");
+        android.content.Context app = getApplicationContext();
+        new Thread(() -> {
+            boolean up = HomeMode.wakeCecBox(app, 30_000);
+            AppLog.w(up ? "at power-on: the box answered on CEC" : "at power-on: the box didn't answer in 30 s, Live TV anyway");
+            HomeView h = home;
+            if (h != null) h.post(powerOnLive);
+        }, "power-on-wake").start();
+    }
+
+    private android.view.View splash;
+
+    private void showSplash() {
+        HomeApps.Item target = HomeApps.liveButton(this);
+        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        box.setOrientation(android.widget.LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER);
+        box.setBackgroundColor(Color.rgb(7, 11, 30));
+        TextView title = new TextView(this);
+        // With cec_wake, the box's own name (what it last said over CEC), not the port's: the port is named after the
+        // first device on it, a soundbar here ("HW-T5 Series"), while what turns on is the box behind it.
+        String cecName = HomeMode.cecWakeFrame() != null ? HomeMode.cecBoxName(this) : null;
+        title.setText(Ui.trf("Turning on {name}…", "name", cecName != null ? cecName : target.label));
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 34);
+        title.setGravity(Gravity.CENTER);
+        TextView hint = new TextView(this);
+        hint.setText(Ui.tr("Press any key to stay on the home screen."));
+        hint.setTextColor(Color.argb(170, 255, 255, 255));
+        hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        hint.setGravity(Gravity.CENTER);
+        hint.setPadding(0, 32, 0, 0);
+        box.addView(title);
+        box.addView(hint);
+        addContentView(box, new android.view.ViewGroup.LayoutParams(-1, -1));
+        splash = box;
+    }
+
+    private void hideSplash() {
+        if (splash == null) return;
+        android.view.ViewParent parent = splash.getParent();
+        if (parent instanceof android.view.ViewGroup) ((android.view.ViewGroup) parent).removeView(splash);
+        splash = null;
+    }
 
     @Override protected void onResume() {
         super.onResume();
@@ -126,6 +183,7 @@ public class HomeActivity extends Activity {
         super.onNewIntent(intent);
         if (liveDark) {   // Home while Live TV waits for the screen: it counts as a key
             liveWaits = liveDark = false;
+            hideSplash();
             AppLog.w("at power-on: Home came first, no Live TV");
         }
         if (home == null) return;
@@ -171,6 +229,7 @@ public class HomeActivity extends Activity {
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
         if (liveWaits) {
             liveWaits = liveDark = false;
+            hideSplash();
             AppLog.w("at power-on: a key came first (" + KeyEvent.keyCodeToString(event.getKeyCode())
                     + (event.getAction() == KeyEvent.ACTION_UP ? " up" : "") + "), no Live TV");
         }

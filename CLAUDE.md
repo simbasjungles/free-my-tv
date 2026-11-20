@@ -623,6 +623,24 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   TLS-only on 5555, with no pairing screen in its settings: `com.android.tv.settings` (Activity Launcher, from
   F-Droid) has one. After pairing, `adb tcpip 5555` and Wireless debugging off leave classic adb on 5555, until the
   next restart.
+- Wanbo T6 Max projector (Amlogic `tl1`, product `marconi`, Android 9 tested): adbd listens on 3333
+  (`service.adb.tcp.port`, set at every start), so `Adb.port()` reads that property (5555 when it's unset). Its Live TV
+  (`com.android.tv`, Droidlogic's) opens `com.droidlogic.tv.settings/.TvSourceActivity` over the input at every cold
+  start (`QuickKeyInfo.startDroidlogicTvSource` at the end of `onCreate`; no setting turns it off): for 8 s after we
+  open an input, `HomeMode.closeSourcePicker` sends Back when that picker is in front, and the input keeps playing.
+  It has no tuner, so *At power-on* and the Live TV top button count as available when *Live TV button* points at an
+  HDMI input (`Capabilities.NEED_POWER_ON`), and *At power-on* opens what that button opens (`HomeApps.liveButton`).
+  Its input switch only selects the port (`portSelect`), never a device behind it, and a sleeping box isn't in its CEC
+  list, so a box behind a soundbar stayed asleep: `cec_wake` writes a raw <Set Stream Path> to `/dev/cec`
+  (`crw-rw-rw-`) through the TV's ADB (`printf '\x0f\x86\x11\x00' > /dev/cec` for 1.1.0.0). At power-on that goes out
+  at once and the input opens when the box shows up in `dumpsys hdmi_control` (power_status -1 until the TV's
+  once-a-minute poll, so any status but 1), with a "Turning on <its CEC name>…" screen over the home screen until then
+  (30 s at most; a key stays home). As System Audio comes on at start, its firmware presses Mute on the soundbar
+  (`<User Control Pressed> 0x43`, two or three times, about 7 s apart) while its own volume stays unmuted:
+  `HomeMode.keepAudioSystemUnmuted` presses it again for 60 s after each one that leaves the soundbar muted, telling
+  them apart by time, not by count (the CEC history is a ring and old lines leave it). <Standby> from the box
+  (its `hdmi_control_auto_device_off_enabled`) left it in a standby that neither its remote nor CEC ended, until it
+  was unplugged. `screencap` comes out empty; what the HDMI input receives is in `/sys/class/hdmirx/hdmirx0/info`.
 - Xiaomi's Chinese firmware (MIUI TV; Redmi `MiTV-MFTP0`, Android 9 tested) has no passthrough handler either: its own
   `com.xiaomi.mitv.tvplayer/.ExternalSourceActivity` (action `com.xiaomi.mitv.tvplayer.EXTSRC_PLAY`) opens a port from
   an `input` extra (HDMI 1 to 3 are 23 to 25; there is no number for a fourth), so `inputs` keeps HDMI 1 to 3 there.
