@@ -355,10 +355,17 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tileFill = new Paint(Paint.ANTI_ALIAS_FLAG);
     // An app being updated (AppUpdates.Progress): its tile in grey, the colour coming back clockwise from the top, like
-    // a clock's hand, as the update goes.
+    // a clock's hand, as the update goes. Greying alone barely shows on a dark tile, so, as other systems do, marks
+    // that don't depend on the tile's colours: a mid-grey veil over the part not done (black turns dark grey, white
+    // light grey), a light hand with a dark edge, and the tile's outline filling clockwise over a faint track.
     private final RectF updOval = new RectF(), updLayer = new RectF();
-    private final android.graphics.Path updSector = new android.graphics.Path();
+    private final android.graphics.Path updSector = new android.graphics.Path(), updEdge = new android.graphics.Path(),
+            updPart = new android.graphics.Path();
+    private final android.graphics.PathMeasure updMeasure = new android.graphics.PathMeasure();
     private final Paint updGrey = new Paint();
+    private final Paint updVeil = new Paint(Paint.ANTI_ALIAS_FLAG), updLine = new Paint(Paint.ANTI_ALIAS_FLAG);
+    { updVeil.setColor(0x8C8A8A8A); updLine.setStyle(Paint.Style.STROKE); updLine.setStrokeCap(Paint.Cap.ROUND); }
+    private float bodyR;   // the corner radius the last tile body drew with
     {
         android.graphics.ColorMatrix grey = new android.graphics.ColorMatrix();
         grey.setSaturation(0);
@@ -1941,9 +1948,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         int layer = c.saveLayer(updLayer, updGrey);
         drawShelfTileBody(c, i);
         c.restoreToCount(layer);
-        sweep(c, cell, p);
+        c.drawRoundRect(cell, bodyR, bodyR, updVeil);
+        sweep(c, cell, bodyR, p);
         drawShelfTileBody(c, i);
         c.restore();
+        updateMarks(c, cell, bodyR, p);
     }
 
     private void drawShelfTileBody(Canvas c, int i) {
@@ -1956,6 +1965,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         float cx = base.centerX(), cy = base.centerY();
         cell.set(cx - bw * s / 2, cy - bh * s / 2, cx + bw * s / 2, cy + bh * s / 2);
         float r = r0 * s;
+        bodyR = r;
         // Shadow at the resting icon size, enlarged by the transform (so the blur stays cached): short at rest, deep
         // and lower when focused.
         c.save();
@@ -2003,11 +2013,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     /**
-     * Saves the canvas and clips it to the part of `cell` an update has done: a sector from 12 o'clock, clockwise,
+     * Saves the canvas and clips it to the part of `cell` (corner radius `r`) an update has done: a sector from 12 o'clock, clockwise,
      * `done` of a full turn (a clock's hand sweeping over the tile). The caller draws the tile in colour, then restores.
      * The path is reused: no allocation.
      */
-    private void sweep(Canvas c, RectF cell, float done) {
+    private void sweep(Canvas c, RectF cell, float r, float done) {
         c.save();
         float cx = cell.centerX(), cy = cell.centerY();
         float reach = (float) Math.hypot(cell.width(), cell.height());   // past the tile's corners
@@ -2016,9 +2026,68 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         updSector.moveTo(cx, cy);
         updSector.arcTo(updOval, -90, 360 * Math.max(0, Math.min(1, done)), false);
         updSector.close();
-        // Only the tile: its shadow, already drawn in grey, drawn twice would leave the sector's edge on the glass.
-        c.clipRect(cell);
+        // Only the tile, corners rounded: its shadow, already drawn in grey, drawn twice would leave the sector's edge
+        // on the glass and a darker square at each corner.
+        updPart.rewind();
+        updPart.addRoundRect(cell, r, r, android.graphics.Path.Direction.CW);
+        c.clipPath(updPart);
         if (done < 0.999f) c.clipPath(updSector);   // a whole turn: arcTo takes 360° as 0°, so no sector at all
+    }
+
+    /**
+     * Over an updating tile, marks that show on any colour: the outline of `cell` (corner radius `r`) filling clockwise
+     * from 12 o'clock over a faint track, and the hand from the centre to the edge, each light with a dark edge. The
+     * paths are reused: no allocation.
+     */
+    private void updateMarks(Canvas c, RectF cell, float r, float done) {
+        done = Math.max(0, Math.min(1, done));
+        float w = 3 * k, in = w / 2;
+        float l = cell.left + in, t = cell.top + in, rt = cell.right - in, b = cell.bottom - in;
+        float cr = Math.max(0, r - in), cx = cell.centerX(), cy = cell.centerY();
+        // The outline, from the top's middle, clockwise.
+        updEdge.rewind();
+        updEdge.moveTo(cx, t);
+        updEdge.lineTo(rt - cr, t);
+        updOval.set(rt - 2 * cr, t, rt, t + 2 * cr);
+        updEdge.arcTo(updOval, -90, 90, false);
+        updEdge.lineTo(rt, b - cr);
+        updOval.set(rt - 2 * cr, b - 2 * cr, rt, b);
+        updEdge.arcTo(updOval, 0, 90, false);
+        updEdge.lineTo(l + cr, b);
+        updOval.set(l, b - 2 * cr, l + 2 * cr, b);
+        updEdge.arcTo(updOval, 90, 90, false);
+        updEdge.lineTo(l, t + cr);
+        updOval.set(l, t, l + 2 * cr, t + 2 * cr);
+        updEdge.arcTo(updOval, 180, 90, false);
+        updEdge.close();
+        updLine.setStrokeWidth(w);
+        updLine.setColor(0x40000000);
+        c.drawPath(updEdge, updLine);
+        updMeasure.setPath(updEdge, false);
+        updPart.rewind();
+        updMeasure.getSegment(0, updMeasure.getLength() * done, updPart, true);
+        // The hand, from the centre out, cut to the outline (so it ends inside the rounded corners too).
+        if (done > 0.001f && done < 0.999f) {
+            double a = Math.toRadians(360 * done - 90);
+            float reach = (float) Math.hypot(cell.width(), cell.height());
+            float hx = cx + (float) Math.cos(a) * reach, hy = cy + (float) Math.sin(a) * reach;
+            c.save();
+            c.clipPath(updEdge);
+            updLine.setColor(0x73000000);
+            updLine.setStrokeWidth(w + 2.5f * k);
+            c.drawLine(cx, cy, hx, hy, updLine);
+            updLine.setColor(0xF2FFFFFF);
+            updLine.setStrokeWidth(w);
+            c.drawLine(cx, cy, hx, hy, updLine);
+            c.restore();
+        }
+        // The outline's part done over it: a dark edge, then the light line.
+        updLine.setColor(0x73000000);
+        updLine.setStrokeWidth(w + 2.5f * k);
+        c.drawPath(updPart, updLine);
+        updLine.setColor(0xF2FFFFFF);
+        updLine.setStrokeWidth(w);
+        c.drawPath(updPart, updLine);
     }
 
     /**
@@ -2662,9 +2731,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         int layer = c.saveLayer(updLayer, updGrey);
         drawCardBody(c, it, base, radius, f, grow);
         c.restoreToCount(layer);
-        sweep(c, cell, p);
+        c.drawRoundRect(cell, bodyR, bodyR, updVeil);
+        sweep(c, cell, bodyR, p);
         drawCardBody(c, it, base, radius, f, grow);
         c.restore();
+        updateMarks(c, cell, bodyR, p);
     }
 
     private void drawCardBody(Canvas c, HomeApps.Item it, RectF base, float radius, float f, float grow) {
@@ -2672,6 +2743,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         float cx = base.centerX(), cy = base.centerY();
         cell.set(cx - base.width() * s / 2, cy - base.height() * s / 2, cx + base.width() * s / 2, cy + base.height() * s / 2);
         float r = radius * s;
+        bodyR = r;
         float fc = Ui.clamp(f);
         if (f > 0.01f) {
             tmp.set(cell);
