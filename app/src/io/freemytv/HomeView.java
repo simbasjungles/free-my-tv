@@ -357,14 +357,22 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     // An app being updated (AppUpdates.Progress): its tile in grey, the colour coming back clockwise from the top, like
     // a clock's hand, as the update goes. Greying alone barely shows on a dark tile, so, as other systems do, marks
     // that don't depend on the tile's colours: a mid-grey veil over the part not done (black turns dark grey, white
-    // light grey), a light hand with a dark edge, and the tile's outline filling clockwise over a faint track.
+    // light grey), a soft light behind the sweep's edge, a fine hand, and a ring inside the tile's edge.
     private final RectF updOval = new RectF(), updLayer = new RectF();
     private final android.graphics.Path updSector = new android.graphics.Path(), updEdge = new android.graphics.Path(),
             updPart = new android.graphics.Path();
-    private final android.graphics.PathMeasure updMeasure = new android.graphics.PathMeasure();
     private final Paint updGrey = new Paint();
-    private final Paint updVeil = new Paint(Paint.ANTI_ALIAS_FLAG), updLine = new Paint(Paint.ANTI_ALIAS_FLAG);
-    { updVeil.setColor(0x8C8A8A8A); updLine.setStyle(Paint.Style.STROKE); updLine.setStrokeCap(Paint.Cap.ROUND); }
+    private final Paint updVeil = new Paint(Paint.ANTI_ALIAS_FLAG), updRing = new Paint(Paint.ANTI_ALIAS_FLAG),
+            updGlow = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final android.graphics.Matrix updMatrix = new android.graphics.Matrix();
+    private final android.graphics.SweepGradient updGlowShader = new android.graphics.SweepGradient(0, 0,
+            new int[] {0x00FFFFFF, 0x00FFFFFF, 0x47FFFFFF}, new float[] {0, 1 - 24f / 360, 1});
+    {
+        updVeil.setColor(0x8C8A8A8A);
+        updRing.setStyle(Paint.Style.STROKE);
+        updRing.setStrokeCap(Paint.Cap.BUTT);
+        updGlow.setShader(updGlowShader);
+    }
     private float bodyR;   // the corner radius the last tile body drew with
     {
         android.graphics.ColorMatrix grey = new android.graphics.ColorMatrix();
@@ -2035,59 +2043,54 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     /**
-     * Over an updating tile, marks that show on any colour: the outline of `cell` (corner radius `r`) filling clockwise
-     * from 12 o'clock over a faint track, and the hand from the centre to the edge, each light with a dark edge. The
-     * paths are reused: no allocation.
+     * Over an updating tile, marks that show on any colour, all cut by the sector `sweep` left in `updSector`, so they
+     * meet at one angle: a soft light trailing the sweep's edge, a fine hand from the centre, and a ring inside the
+     * tile's edge (corner radius `r`) over a faint track. Light lines on a faint dark halo, so they show on any tile.
+     * No allocation.
      */
     private void updateMarks(Canvas c, RectF cell, float r, float done) {
         done = Math.max(0, Math.min(1, done));
-        float w = 3 * k, in = w / 2;
-        float l = cell.left + in, t = cell.top + in, rt = cell.right - in, b = cell.bottom - in;
-        float cr = Math.max(0, r - in), cx = cell.centerX(), cy = cell.centerY();
-        // The outline, from the top's middle, clockwise.
+        boolean turning = done > 0.001f && done < 0.999f;
+        float cx = cell.centerX(), cy = cell.centerY(), edge = 360 * done - 90;
+        float in = 5 * k, w = 2.5f * k;
+        updOval.set(cell);
+        updOval.inset(in, in);
+        float ir = Math.max(0, r - in);
         updEdge.rewind();
-        updEdge.moveTo(cx, t);
-        updEdge.lineTo(rt - cr, t);
-        updOval.set(rt - 2 * cr, t, rt, t + 2 * cr);
-        updEdge.arcTo(updOval, -90, 90, false);
-        updEdge.lineTo(rt, b - cr);
-        updOval.set(rt - 2 * cr, b - 2 * cr, rt, b);
-        updEdge.arcTo(updOval, 0, 90, false);
-        updEdge.lineTo(l + cr, b);
-        updOval.set(l, b - 2 * cr, l + 2 * cr, b);
-        updEdge.arcTo(updOval, 90, 90, false);
-        updEdge.lineTo(l, t + cr);
-        updOval.set(l, t, l + 2 * cr, t + 2 * cr);
-        updEdge.arcTo(updOval, 180, 90, false);
-        updEdge.close();
-        updLine.setStrokeWidth(w);
-        updLine.setColor(0x40000000);
-        c.drawPath(updEdge, updLine);
-        updMeasure.setPath(updEdge, false);
+        updEdge.addRoundRect(updOval, ir, ir, android.graphics.Path.Direction.CW);
+        updRing.setStrokeWidth(w);
+        updRing.setColor(0x4DFFFFFF);
+        c.drawPath(updEdge, updRing);   // the track
+        c.save();
         updPart.rewind();
-        updMeasure.getSegment(0, updMeasure.getLength() * done, updPart, true);
-        // The hand, from the centre out, cut to the outline (so it ends inside the rounded corners too).
-        if (done > 0.001f && done < 0.999f) {
-            double a = Math.toRadians(360 * done - 90);
+        updPart.addRoundRect(cell, r, r, android.graphics.Path.Direction.CW);
+        c.clipPath(updPart);
+        if (turning) {
+            c.clipPath(updSector);
+            // The light: 24 degrees behind the edge, fading out.
+            updMatrix.setRotate(edge, 0, 0);
+            updMatrix.postTranslate(cx, cy);
+            updGlowShader.setLocalMatrix(updMatrix);
+            c.drawPaint(updGlow);
+        }
+        // Each line twice: a faint dark halo (what shows on a white tile), then the light line (what shows on a dark one).
+        for (int pass = 0; pass < 2; pass++) {
+            updRing.setColor(pass == 0 ? 0x33000000 : 0xFFFFFFFF);
+            updRing.setStrokeWidth(pass == 0 ? w + 2 * k : w);
+            c.drawPath(updEdge, updRing);
+        }
+        if (turning) {
+            double a = Math.toRadians(edge);
             float reach = (float) Math.hypot(cell.width(), cell.height());
             float hx = cx + (float) Math.cos(a) * reach, hy = cy + (float) Math.sin(a) * reach;
-            c.save();
             c.clipPath(updEdge);
-            updLine.setColor(0x73000000);
-            updLine.setStrokeWidth(w + 2.5f * k);
-            c.drawLine(cx, cy, hx, hy, updLine);
-            updLine.setColor(0xF2FFFFFF);
-            updLine.setStrokeWidth(w);
-            c.drawLine(cx, cy, hx, hy, updLine);
-            c.restore();
+            for (int pass = 0; pass < 2; pass++) {
+                updRing.setColor(pass == 0 ? 0x33000000 : 0xFFFFFFFF);
+                updRing.setStrokeWidth(pass == 0 ? 3.5f * k : 1.5f * k);
+                c.drawLine(cx, cy, hx, hy, updRing);
+            }
         }
-        // The outline's part done over it: a dark edge, then the light line.
-        updLine.setColor(0x73000000);
-        updLine.setStrokeWidth(w + 2.5f * k);
-        c.drawPath(updPart, updLine);
-        updLine.setColor(0xF2FFFFFF);
-        updLine.setStrokeWidth(w);
-        c.drawPath(updPart, updLine);
+        c.restore();
     }
 
     /**
