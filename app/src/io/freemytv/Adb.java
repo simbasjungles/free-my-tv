@@ -67,15 +67,36 @@ final class Adb implements Closeable {
         out = socket.getOutputStream();
     }
 
+    private static int port;
+
+    /**
+     * The port the TV's adbd listens on: 5555, or what service.adb.tcp.port says (a Wanbo T6 Max projector, Amlogic,
+     * Android 9, sets 3333 at every start).
+     */
+    static int port() {
+        if (port != 0) return port;
+        int p = 5555;
+        try {
+            Process pr = Runtime.getRuntime().exec(new String[] {"getprop", "service.adb.tcp.port"});
+            byte[] b = new byte[16];
+            int n = pr.getInputStream().read(b);
+            pr.destroy();
+            int v = n > 0 ? Integer.parseInt(new String(b, 0, n, StandardCharsets.US_ASCII).trim()) : 0;
+            if (v > 0 && v < 65536) p = v;
+        } catch (Exception ignored) {
+        }
+        return port = p;
+    }
+
     /** Connects and authenticates. If the TV doesn't know our key yet, waits up to `approvalMs` for you to accept. */
     static Adb connect(Context c, int approvalMs, Approval approval) throws IOException {
         KeyPair keys = keys(c);
         Socket s = new Socket();
         try {
-            s.connect(new InetSocketAddress("127.0.0.1", 5555), 3000);
+            s.connect(new InetSocketAddress("127.0.0.1", port()), 3000);
         } catch (IOException e) {
             s.close();
-            throw new IOException(Ui.tr("debugging is off on the TV (port 5555 closed)"));
+            throw new IOException(Ui.tr("debugging is off on the TV (port 5555 closed)").replace("5555", String.valueOf(port())));
         }
         Adb adb;
         try {
@@ -142,7 +163,7 @@ final class Adb implements Closeable {
     private static Adb signedIn(KeyPair keys) {
         Socket s = new Socket();
         try {
-            s.connect(new InetSocketAddress("127.0.0.1", 5555), 3000);
+            s.connect(new InetSocketAddress("127.0.0.1", port()), 3000);
             s.setSoTimeout(5000);
             Adb adb = new Adb(s);
             adb.send(CNXN, VERSION, MAX_DATA, "host::\0".getBytes(StandardCharsets.US_ASCII));
