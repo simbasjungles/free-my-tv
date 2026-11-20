@@ -250,7 +250,7 @@ TizenBrew Installer takes the first `.wgt` of the latest GitHub release, so ever
 with a Tizen certificate (`--sign`), which 2017-2022 TVs install as it is; on 2023+ TVs the installer signs it again
 with the person's Samsung certificate. Sign every release with the same author certificate: older TVs refuse an
 update signed by another. `python3 webos/build.py --generic` makes the LG `.ipk` that goes along.
-The release's `FreeMyTV.apk` updates itself (`Updates`: a weekly job, and Home Settings > Updates): it reads
+The release's `FreeMyTV.apk` updates itself (`Updates`, run by `AppUpdates` every 6 hours and from Free My TV > Updates): it reads
 `releases/latest`, so keep the asset named `FreeMyTV.apk`, sign it with the project's key, and raise `versionName`
 (compared number by number with the tag, `v1.3.0` > `1.2`) and `versionCode` (Android refuses a lower one). Before
 uploading, `apksigner verify --print-certs FreeMyTV.apk` must show the release certificate
@@ -311,9 +311,10 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   `Screensaver` in `:home`. Keep both in step. `ScreensaverAlone` reads `Prefs` from another process than the settings screen's, so it calls `Prefs.reload()`
   when it starts (which also re-applies a new language; `HomeData` fetches the forecast again when the city changed).
   To check for newer APIs, compile against `platforms/android-26/android.jar`: only AGSL (`RuntimeShader`, guarded
-  by a try/catch), `BitmapShader.setFilterMode` (guarded), `Recording.Node`, `Ui.Weighted` (the Android 9 font weight)
-  and `Activity.setTranslucent` (guarded: TCL's Android 11 marks the home activity translucent, and the app just left
-  stayed on screen over it) should come up.
+  by a try/catch), `BitmapShader.setFilterMode` (guarded), `Recording.Node`, `Ui.Weighted` (the Android 9 font weight),
+  `Activity.setTranslucent` (guarded: TCL's Android 11 marks the home activity translucent, and the app just left
+  stayed on screen over it), `AppUpdates.Android9` (signing certificates) and `AppUpdates.Android11` (install source)
+  should come up.
 - The home screen is drawn by hand on one Canvas (`HomeView`); the glass and the sky are AGSL shaders (`Shaders`,
   Android 13+, with a fallback for 8 to 12). Keep it at 60 fps: no allocations in `onDraw`, no work on the UI thread.
 - Some TVs draw their UI at 1280×720 on a 1080p panel (TCL's 1 GB models: `ro.surface_flinger.max_graphics_width`

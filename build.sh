@@ -212,6 +212,9 @@ esac
 # path has a space (and the wrappers trip over a JAVA_HOME that has one), so there the jars inside them are run with the
 # JDK's java instead; on macOS and Linux the usual executables are used.
 CPSEP=:; BAT=; case "$(uname -s 2>/dev/null)" in MINGW*|MSYS*|CYGWIN*) CPSEP=";"; BAT=.bat ;; esac
+# Git Bash converts a lone /c/... path for Windows tools, but not a ";" list: there each path is converted itself.
+BOOTCP="$AJ$CPSEP$BT/core-lambda-stubs.jar"
+if [ -n "$BAT" ]; then BOOTCP="$(cygpath -w "$AJ");$(cygpath -w "$BT/core-lambda-stubs.jar")"; fi
 d8() {
   if [ -n "$BAT" ]; then "$JAVA" -Xmx1024M -Xss1m -cp "$BT/lib/d8.jar" com.android.tools.r8.D8 "$@"
   else "$BT/d8" "$@"; fi
@@ -220,7 +223,7 @@ apksigner() {
   if [ -n "$BAT" ]; then "$JAVA" -jar "$BT/lib/apksigner.jar" "$@"
   else "$BT/apksigner" "$@"; fi
 }
-"$JAVAC" -nowarn -Xlint:-options -source 8 -target 8 -bootclasspath "$AJ$CPSEP$BT/core-lambda-stubs.jar" -classpath "$AJ" \
+"$JAVAC" -nowarn -Xlint:-options -source 8 -target 8 -bootclasspath "$BOOTCP" -classpath "$AJ" \
   -encoding UTF-8 -d out/classes $(find app/src out/gen -name '*.java')
 d8 --release --min-api 26 --lib "$AJ" --output out $(find out/classes -name '*.class')
 if command -v zip >/dev/null; then (cd out && zip -qj base.apk classes.dex)

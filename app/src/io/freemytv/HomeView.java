@@ -354,6 +354,23 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private final Paint veil = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tileFill = new Paint(Paint.ANTI_ALIAS_FLAG);
+    // An app being updated (AppUpdates.Progress): its tile in grey, the colour coming back clockwise from the top, like
+    // a clock's hand, as the update goes. Greying alone barely shows on a dark tile, so the part not done also gets a
+    // mid-grey veil (black turns dark grey, white light grey): the edge between the veil and the colour reads on any tile.
+    private final RectF updOval = new RectF(), updLayer = new RectF();
+    private final android.graphics.Path updSector = new android.graphics.Path(), updPart = new android.graphics.Path();
+    private final Paint updGrey = new Paint();
+    private final Paint updVeil = new Paint(Paint.ANTI_ALIAS_FLAG);
+    { updVeil.setColor(0x8C8A8A8A); }
+    private float bodyR;   // the corner radius the last tile body drew with
+    {
+        android.graphics.ColorMatrix grey = new android.graphics.ColorMatrix();
+        grey.setSaturation(0);
+        android.graphics.ColorMatrix dim = new android.graphics.ColorMatrix();
+        dim.setScale(0.7f, 0.7f, 0.7f, 1);
+        grey.postConcat(dim);
+        updGrey.setColorFilter(new android.graphics.ColorMatrixColorFilter(grey));
+    }
     private final RectF tmp = new RectF(), cell = new RectF(), screen = new RectF();
     private final TextPaint fitPaint = new TextPaint();
     private final RectF gridCell = new RectF();
@@ -421,6 +438,18 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     private final Runnable reloadSoon = this::reload;
+
+    /** Reads AppUpdates' progress: every 300 ms while an app updates (its tile sweeps), every 2 s otherwise. */
+    private final Runnable updatesWatch = new Runnable() {
+        @Override public void run() {
+            if (!running) return;
+            if (AppUpdates.Progress.poll(getContext())) {
+                tiles.invalidate();
+                sheetLayer.invalidate();
+            }
+            handler.postDelayed(this, AppUpdates.Progress.any() ? 300 : 2000);
+        }
+    };
     private static final long APPS_MAX_AGE_MS = 15 * 60_000;
     private final LauncherApps launcherApps;
     private boolean appsStale = true;
@@ -706,6 +735,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         if (tvInputs != null) tvInputs.registerCallback(inputCallback, handler);
         startStatus();
         handler.postDelayed(tick, 15_000);
+        handler.removeCallbacks(updatesWatch);
+        handler.post(updatesWatch);
         playing.start();
         checkNotices();
         hiddenNow.retainAll(Prefs.watchHidden());   // Home Settings may have shown the hidden ones again
@@ -744,6 +775,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         closeMenu(true);
         Choreographer.getInstance().removeFrameCallback(this);
         handler.removeCallbacks(tick);
+        handler.removeCallbacks(updatesWatch);
         handler.removeCallbacks(homeTick);
         handler.removeCallbacks(reloadSoon);
         handler.removeCallbacks(bars);
@@ -1901,6 +1933,26 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
      */
     private void drawShelfTile(Canvas c, int i) {
         HomeApps.Item it = shelf.get(i);
+        float p = it.kind == HomeApps.APP ? AppUpdates.Progress.of(it.pkg) : -1;
+        if (p < 0) {
+            drawShelfTileBody(c, i);
+            return;
+        }
+        // Updating: the whole tile in grey, then in colour over the part done (cell is where the body drew it). The
+        // layer covers the tile grown, lifted and its shadow, not the screen.
+        updLayer.set(tileRects[i]);
+        updLayer.inset(-0.5f * updLayer.height(), -0.5f * updLayer.height());
+        int layer = c.saveLayer(updLayer, updGrey);
+        drawShelfTileBody(c, i);
+        c.restoreToCount(layer);
+        c.drawRoundRect(cell, bodyR, bodyR, updVeil);
+        sweep(c, cell, bodyR, p);
+        drawShelfTileBody(c, i);
+        c.restore();
+    }
+
+    private void drawShelfTileBody(Canvas c, int i) {
+        HomeApps.Item it = shelf.get(i);
         // Lifted to be moved: a little bigger than focused, with a deeper shadow.
         float l = !reorderTop && i == liftIndex ? Math.max(0, moveLift.value) : 0;
         float f = tileFocus[i].value, fc = Ui.clamp(f), s = 1 + FOCUS_GROW * f + LIFT_GROW * l;
@@ -1909,6 +1961,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         float cx = base.centerX(), cy = base.centerY();
         cell.set(cx - bw * s / 2, cy - bh * s / 2, cx + bw * s / 2, cy + bh * s / 2);
         float r = r0 * s;
+        bodyR = r;
         // Shadow at the resting icon size, enlarged by the transform (so the blur stays cached): short at rest, deep
         // and lower when focused.
         c.save();
@@ -1953,6 +2006,28 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         } else {
             if (it.tile != null) roundImage(c, it.tile, it.tileShader, cell, r);
         }
+    }
+
+    /**
+     * Saves the canvas and clips it to the part of `cell` (corner radius `r`) an update has done: a sector from 12 o'clock, clockwise,
+     * `done` of a full turn (a clock's hand sweeping over the tile). The caller draws the tile in colour, then restores.
+     * The path is reused: no allocation.
+     */
+    private void sweep(Canvas c, RectF cell, float r, float done) {
+        c.save();
+        float cx = cell.centerX(), cy = cell.centerY();
+        float reach = (float) Math.hypot(cell.width(), cell.height());   // past the tile's corners
+        updOval.set(cx - reach, cy - reach, cx + reach, cy + reach);
+        updSector.rewind();
+        updSector.moveTo(cx, cy);
+        updSector.arcTo(updOval, -90, 360 * Math.max(0, Math.min(1, done)), false);
+        updSector.close();
+        // Only the tile, corners rounded: its shadow, already drawn in grey, drawn twice would leave the sector's edge
+        // on the glass and a darker square at each corner.
+        updPart.rewind();
+        updPart.addRoundRect(cell, r, r, android.graphics.Path.Direction.CW);
+        c.clipPath(updPart);
+        if (done < 0.999f) c.clipPath(updSector);   // a whole turn: arcTo takes 360° as 0°, so no sector at all
     }
 
     /**
@@ -2586,10 +2661,28 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
 
     /** 16:9 sheet card. Focused (the shelf's subtle focus): it grows, with a shadow, a soft sheen and a thin border. */
     private void drawCard(Canvas c, HomeApps.Item it, RectF base, float radius, float f, float grow) {
+        float p = it.kind == HomeApps.APP ? AppUpdates.Progress.of(it.pkg) : -1;
+        if (p < 0) {
+            drawCardBody(c, it, base, radius, f, grow);
+            return;
+        }
+        updLayer.set(base);
+        updLayer.inset(-0.3f * base.height(), -0.3f * base.height());
+        int layer = c.saveLayer(updLayer, updGrey);
+        drawCardBody(c, it, base, radius, f, grow);
+        c.restoreToCount(layer);
+        c.drawRoundRect(cell, bodyR, bodyR, updVeil);
+        sweep(c, cell, bodyR, p);
+        drawCardBody(c, it, base, radius, f, grow);
+        c.restore();
+    }
+
+    private void drawCardBody(Canvas c, HomeApps.Item it, RectF base, float radius, float f, float grow) {
         float s = 1 + grow * f;
         float cx = base.centerX(), cy = base.centerY();
         cell.set(cx - base.width() * s / 2, cy - base.height() * s / 2, cx + base.width() * s / 2, cy + base.height() * s / 2);
         float r = radius * s;
+        bodyR = r;
         float fc = Ui.clamp(f);
         if (f > 0.01f) {
             tmp.set(cell);
@@ -3377,6 +3470,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         }
         if (it.kind == HomeApps.INPUTS) {
             openInputs();
+            return;
+        }
+        if (it.kind == HomeApps.APP && AppUpdates.Progress.updating(getContext(), it.pkg)) {   // greyed, sweeping
+            showToast(Ui.trf("{app} is updating: it opens once it's done.", "app", it.label));
             return;
         }
         boolean opened = HomeApps.open(activity, it, this, Math.round(r.left), Math.round(r.top),

@@ -2,9 +2,6 @@ package io.freemytv;
 
 import android.app.Activity;
 import android.app.PendingIntent;
-import android.app.job.JobInfo;
-import android.app.job.JobScheduler;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
@@ -12,7 +9,6 @@ import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.os.Build;
-import android.os.PersistableBundle;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -31,14 +27,16 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
 /**
- * Updates from GitHub's releases (Android only). Once a week, and from Home Settings > Updates, the latest release is
- * looked up; a newer one's FreeMyTV.apk is downloaded and checked (GitHub's size and SHA-256, a newer version, the
- * project's key), then handed on OK to Android's installer, which asks before installing. Only the APK from the
- * releases (--generic, the project's key) takes them: a build made on a computer has its own key and config, so it's
- * only told that a new version is out, and only when asked (nothing in the background could come of it).
+ * Free My TV's own update from GitHub's releases (Android only), one of the apps AppUpdates keeps up to date (Home
+ * Settings > Updates): AppUpdates' job calls check() with the other apps' checks. The latest release is looked up; a
+ * newer one's FreeMyTV.apk is downloaded and checked (GitHub's size and SHA-256, a newer version, the project's key).
+ * In Free My TV mode AppUpdates installs it through ADB on the home screen; in Original it's handed on OK to Android's
+ * installer, which asks before installing. Only the APK from the releases (--generic, the project's key) takes them: a
+ * build made on a computer has its own key and config, so it's only told that a new version is out.
  *
- * Checks and installs run in the main process (ModeJob, HomeReceiver), one at a time under this class's lock, and only
- * they write update.json; Settings, in :home, reads it, and the home screen keeps what it told in update-told.
+ * Checks and installs run in the main process (UpdateJob, ModeJob, HomeReceiver), one at a time under this class's
+ * lock, and only they write update.json; Settings, in :home, reads it, and the home screen keeps what it told in
+ * update-told.
  */
 final class Updates {
     private Updates() {}
@@ -51,6 +49,7 @@ final class Updates {
     private static final String ASSET = "FreeMyTV.apk";
     private static final long MAX_SIZE = 30L << 20;   // the APK is about 1.5 MB
     private static final long WEEK = 7 * 24 * 3600_000L;
+    /** Its weekly job's id from before AppUpdates checked it (AppUpdates.schedule cancels a job left with it). */
     static final int JOB = 2900;
     static final String ACTION = "io.freemytv.UPDATE_STATUS";
 
@@ -76,20 +75,6 @@ final class Updates {
             releaseKey = is;
         }
         return releaseKey;
-    }
-
-    /** The week's check, as a job that waits for the network and survives restarts (scheduled once). */
-    static void schedule(Context c) {
-        if (!takesReleases(c)) return;
-        JobScheduler scheduler = c.getSystemService(JobScheduler.class);
-        if (scheduler == null || scheduler.getPendingJob(JOB) != null) return;
-        PersistableBundle extras = new PersistableBundle();
-        extras.putString("action", ModeJob.UPDATE);
-        // A check that failed (no network, or GitHub's hourly limit on an address many homes share) tries again in
-        // 30 minutes, then 1 hour, 2…
-        scheduler.schedule(new JobInfo.Builder(JOB, new ComponentName(c, ModeJob.class)).setExtras(extras)
-                .setPeriodic(WEEK).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setPersisted(true)
-                .setBackoffCriteria(30 * 60_000L, JobInfo.BACKOFF_POLICY_EXPONENTIAL).build());
     }
 
     // MARK: - State
@@ -137,6 +122,11 @@ final class Updates {
         save(c, o);
     }
 
+    /** The downloaded APK a ready state names (AppUpdates installs it through ADB in Free My TV mode). */
+    static File readyFile(Context c) {
+        return new File(dir(c), state(c).optString("file"));
+    }
+
     /** A check or download under way (one stopped with its process counts as over 2 minutes after its last word). */
     static boolean busy(JSONObject o) {
         String state = o.optString("state");
@@ -175,11 +165,12 @@ final class Updates {
         String v = o.optString("version");
         File told = new File(a.getFilesDir(), "update-told");
         if (!ready(o, installedVersion(a)) || v.equals(text(told))) return;
+        if (Capabilities.adb(a)) return;   // Free My TV mode: AppUpdates installs it on the home screen by itself
         try (OutputStream out = new FileOutputStream(told)) {
             out.write(v.getBytes(StandardCharsets.UTF_8));
         } catch (IOException ignored) {
         }
-        Toast.makeText(a, Ui.trf("Free My TV {version} is ready: Home Settings > Updates.", "version", v), Toast.LENGTH_LONG).show();
+        Toast.makeText(a, Ui.trf("Free My TV {version} is ready: Free My TV > Updates.", "version", v), Toast.LENGTH_LONG).show();
     }
 
     // MARK: - Check and download
