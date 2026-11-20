@@ -56,3 +56,16 @@ p.load('b', function () {}); p.load('c', function () {}); assert.strictEqual(p.s
 var q = e.imagePool(1), settled = false;
 q.load('pending', function (ok) { settled = !ok; }); q.load('new', function () {}); assert(settled);
 console.log('EckCoreTest: region, modes, stale responses, offline cache, preferences, trailers and bounded images passed.');
+var changed = core(); changed.eck.toggleGenre(27);
+assert.strictEqual(changed.eck.mode(), 'genres');
+assert.strictEqual(changed.requests.length, 1, 'genre selection starts a live query immediately');
+assert(changed.requests[0].url.indexOf('with_genres=28|35|27|878') >= 0 || changed.requests[0].url.indexOf('27') >= 0);
+changed.requests[0].reply({results:[movie(55)]}); assert.strictEqual(changed.eck.list()[0].id,55);
+changed.sandbox.Prefs.tmdbKey = function () { return ''; };
+changed.eck.refresh(true); assert(changed.eck.error().indexOf('TMDB') >= 0);
+var sceneList = [{url:'a'},{url:'b'},{url:'c'}];
+assert.strictEqual(e.sceneStart(sceneList,'a',function(){return 0;}),1);
+assert.strictEqual(e.sceneStart(sceneList,'c',function(){return 0.999;}),1);
+assert.strictEqual(e.sceneStart([{url:'a'}],'a',function(){return 0;}),0);
+assert.strictEqual(e.sceneStart([],'a',function(){return 0;}),0);
+console.log('EckCoreTest: immediate genre discovery, missing key and non-repeating ambient start passed.');

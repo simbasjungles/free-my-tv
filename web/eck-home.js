@@ -37,7 +37,7 @@
   }
   function restorePosition() {
     var p = ECK.read('position', {});
-    row = typeof p.row === 'number' && isFinite(p.row) ? Math.max(0, Math.min(4, p.row)) : 1;
+    row = [0, 1, 2, 3, 5].indexOf(p.row) >= 0 ? p.row : 5;
     col = Math.max(0, +p.col || 0);
     selected = Math.max(0, +p.index || 0); appPage = Math.max(0, +p.appPage || 0);
     view = p.view === 'favourites' ? 'favourites' : 'movies';
@@ -57,7 +57,8 @@
       b.setAttribute('aria-label', x[1]); el('span', '', b, x[1]); b.setAttribute('data-focus', '0:' + i);
     });
     var viewport = el('div', 'eck-viewport', root); content = el('div', 'eck-content', viewport);
-    var hero = el('section', 'eck-hero', content);
+    var hero = button(content, 'eck-hero', '', function () { row = 5; col = 0; focus(); activate(); });
+    hero.setAttribute('data-focus', '5:0'); hero.setAttribute('aria-label', 'Öne çıkan film');
     heroPhoto = el('div', 'eck-hero-photo', hero); el('div', 'eck-hero-shade', hero);
     var copy = el('div', 'eck-hero-copy', hero); el('div', 'eck-eyebrow', copy, 'BU AKŞAM NE İZLESEK?');
     heroTitle = el('h1', '', copy, 'Yeni bir hikâye keşfet.'); heroMeta = el('div', 'eck-meta', copy);
@@ -67,7 +68,7 @@
     rail = el('div', 'eck-rail', content); actions = el('div', 'eck-actions', content);
     el('h2', 'eck-app-heading', content, 'Uygulamaların'); appsBox = el('div', 'eck-apps', content);
     el('div', 'eck-footer', root, '↑ ↓ Bölümler   ·   ← → Seç   ·   OK Aç   ·   Geri Dön');
-    el('div', 'eck-footer-right', root, demo ? 'ÖNİZLEME · ÖRNEK İÇERİK' : 'ECK TV 1.6');
+    el('div', 'eck-footer-right', root, demo ? 'ÖNİZLEME · ÖRNEK İÇERİK' : 'ECK TV 1.7');
   }
   function clockText() { var d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
   function weatherText() { return Data.weather ? Data.degrees(Data.weather.temp) + ' · ' + Data.condition(Data.weather.code, Data.weather.isDay) : 'Hava durumu bekleniyor'; }
@@ -115,14 +116,17 @@
       [view === 'favourites' ? 'Tüm öneriler' : 'Favorilerim', function () { view = view === 'favourites' ? 'movies' : 'favourites'; selected = 0; state = {}; updateFilms(); }]
     ].forEach(function (a, i) {
       var b = button(actions, 'eck-chip', a[0], function () { row = 2; col = i; a[1](); focus(); }); b.setAttribute('data-focus', '2:' + i);
+      b.disabled = !m && i < 3;
     });
     updateHero(m);
   }
   function updateHero(m) {
-    heroTitle.textContent = m ? m.title : 'Yeni bir hikâye keşfet.';
+    heroTitle.textContent = m ? m.title : !Prefs.tmdbKey() ? 'Film önerilerini etkinleştir' : 'Yeni bir hikâye keşfet.';
     heroMeta.textContent = m ? m.year + '  ·  ★ ' + m.rating.toFixed(1) + '  ·  Film' : 'Şehirler, yıldızlar ve sana ait bir ekran.';
     heroText.textContent = m ? m.overview || 'Fragmanı açmak için film kartında OK tuşuna bas.'
-      : view === 'favourites' ? 'Beğendiğin filmleri favoriye eklediğinde burada bulabilirsin.' : ECK.error() || (ECK.busy() ? 'Filmler yükleniyor…' : 'Öneriler için Ayarlar’dan TMDB anahtarını ekle.');
+      : view === 'favourites' ? 'Henüz favorin yok. OK ile tüm önerilere dön.' : ECK.error() || (ECK.busy() ? 'Filmler yükleniyor…' : 'Bu listede gösterilecek film yok. OK ile önerileri yenile.');
+    root.querySelector('.eck-hero').setAttribute('aria-label', m ? m.title + ' · YouTube fragmanını aç' : Prefs.tmdbKey() ? 'Önerileri yenile' : 'Film önerilerini etkinleştir');
+    root.querySelector('.eck-hero-note').textContent = m ? 'OK · YouTube’da fragmanı aç' : Prefs.tmdbKey() ? 'OK · Önerileri yenile' : 'OK · TMDB anahtarını ekle';
     var url = m ? Data.image(m.backdrop, 'w1280') : '';
     if (lastHero === url) return; lastHero = url; var mine = ++heroGeneration;
     clearTimeout(heroTimer);
@@ -136,11 +140,15 @@
     }, 180);
   }
   function renderApps() {
-    appsBox.innerHTML = ''; var pages = Math.max(1, Math.ceil(apps.length / 14)); appPage = Math.min(appPage, pages - 1);
-    apps.slice(appPage * 14, appPage * 14 + 14).forEach(function (a, i) {
-      var b = button(appsBox, 'eck-app' + (a.icon ? '' : ' no-icon'), '', function () { launchApp(a); });
-      b.style.left = (i % 7 * 255 + 5) + 'px'; b.style.top = (Math.floor(i / 7) * 96 + 5) + 'px';
-      b.setAttribute('data-focus', (3 + Math.floor(i / 7)) + ':' + (i % 7));
+    appsBox.innerHTML = ''; var pages = Math.max(1, Math.ceil(apps.length / 8)); appPage = Math.min(appPage, pages - 1);
+    apps.slice(appPage * 8, appPage * 8 + 8).forEach(function (a, i) {
+      var b = button(appsBox, 'eck-app' + (a.icon ? '' : ' no-icon'), '', function () { row = 3; col = i; focus(); launchApp(a); });
+      b.style.left = (i * 220 + 5) + 'px'; b.style.top = '5px';
+      b.setAttribute('data-focus', '3:' + i);
+      b.setAttribute('aria-label', a.title);
+      var colours = {netflix:'#ffffff',youtube:'#182139',primevideo:'#0876ae','disney+':'#122650',
+        max:'#5125ba',appletv:'#111218',spotify:'#168844',plex:'#202b3c',crunchyroll:'#e46c19'};
+      if (a.icon) b.style.backgroundColor = colours[a.title.toLowerCase().replace(/\s/g, '')] || a.color || '#202a42';
       if (a.icon) { var img = el('img', '', b); img.src = a.icon; img.alt = ''; img.onerror = function () { b.className += ' no-icon'; img.style.display = 'none'; }; }
       el('span', '', b, a.title);
     });
@@ -148,14 +156,16 @@
     if (pages > 1) el('div', 'eck-app-page', appsBox, 'Sayfa ' + (appPage + 1) + ' / ' + pages + ' · satır sonunda →');
   }
   function columns(r) {
-    if (r === 0) return 3; if (r === 1) return films.length; if (r === 2) return 4;
-    return Math.min(7, Math.max(0, apps.length - appPage * 14 - (r - 3) * 7));
+    if (r === 0) return 3; if (r === 5) return 1;
+    if (r === 1) return films.length; if (r === 2) return 4;
+    return r === 3 ? Math.min(8, Math.max(0, apps.length - appPage * 8)) : 0;
   }
   function focus() {
     var nodes = root.querySelectorAll('.focused'); for (var i = 0; i < nodes.length; i++) setClass(nodes[i], 'focused', false);
     if (modal) { focusModal(); return; }
     if (row === 1) col = selected;
     col = Math.max(0, Math.min(col, Math.max(0, columns(row) - 1)));
+    if (row === 2 && !films.length) col = 3;
     var node = root.querySelector('[data-focus="' + row + ':' + col + '"]'); if (node) setClass(node, 'focused', true);
     content.style.webkitTransform = content.style.transform = 'translateY(0)';
     savePosition();
@@ -170,14 +180,14 @@
       modalIndex = Math.max(0, Math.min(menuRows.length - 1, modalIndex + (dy || dx))); focusModal(); return;
     }
     if (dy) {
-      var next = row + dy;
-      while (next >= 0 && next <= 4 && !columns(next)) next += dy;
-      if (next >= 0 && next <= 4) { row = next; col = row === 1 ? selected : Math.min(col, columns(row) - 1); }
-    } else if (row === 1 && films.length) {
+      var order = [0, 5, 3, 1, 2], next = order.indexOf(row) + dy;
+      while (next >= 0 && next < order.length && !columns(order[next])) next += dy;
+      if (next >= 0 && next < order.length) { row = order[next]; col = row === 1 ? selected : Math.min(col, columns(row) - 1); }
+    } else if ((row === 1 || row === 5) && films.length) {
       selected = Math.max(0, Math.min(films.length - 1, selected + dx)); renderFilms();
-    } else if (row >= 3 && dx && (col + dx < 0 || col + dx >= columns(row))) {
-      var pages = Math.ceil(apps.length / 14), nextPage = appPage + (dx > 0 ? 1 : -1);
-      if (nextPage >= 0 && nextPage < pages) { appPage = nextPage; row = 3; col = dx > 0 ? 0 : 6; renderApps(); }
+    } else if (row === 3 && dx && (col + dx < 0 || col + dx >= columns(row))) {
+      var pages = Math.ceil(apps.length / 8), nextPage = appPage + (dx > 0 ? 1 : -1);
+      if (nextPage >= 0 && nextPage < pages) { appPage = nextPage; col = dx > 0 ? 0 : 7; renderApps(); }
     } else col = Math.max(0, Math.min(columns(row) - 1, col + dx));
     focus();
   }
@@ -211,7 +221,12 @@
       if (col === 1) showSaver(); if (col === 2) settings();
     } else if (row === 1) play(false);
     else if (row === 2) { var b = actions.children[col]; if (b) b.click(); }
-    else launchApp(apps[appPage * 14 + (row - 3) * 7 + col]);
+    else if (row === 5) {
+      if (selectedMovie()) play(false);
+      else if (view === 'favourites') { view = 'movies'; updateFilms(); }
+      else if (!Prefs.tmdbKey()) keyForm();
+      else ECK.refresh(true);
+    } else launchApp(apps[appPage * 8 + col]);
   }
   function closeModal() { if (modal) root.removeChild(modal); modal = null; form = null; menuRows = []; idleAt = Date.now(); focus(); }
   function openModal(title, note) {
@@ -246,7 +261,7 @@
       {label: 'Ekran koruyucuyu önizle', value: 'Şehir / uzay', run: function () { closeModal(); showSaver(); }},
       {label: 'Önerileri yenile', run: function () { closeModal(); ECK.refresh(true); }},
       {label: 'Gizlenen filmleri tekrar göster', run: function () { ECK.resetHidden(); toast('Gizlenen filmler tekrar gösteriliyor.'); }},
-      {label: 'Hakkında', value: 'ECK TV 1.6', run: about}
+      {label: 'Hakkında', value: 'ECK TV 1.7', run: about}
     ]);
   }
   function modes() {
@@ -257,8 +272,8 @@
   }
   function genreMenu(keep) {
     var at = keep === true ? modalIndex : 0;
-    menu('Türlerim', 'Birden fazla tür seçebilirsin. Seçilen türlerden herhangi birine uyan filmler listelenir.', ECK.genres.map(function (g) {
-      return {label: g[1], value: ECK.selectedGenres().indexOf(g[0]) >= 0 ? '✓' : '', run: function () { ECK.toggleGenre(g[0]); genreMenu(true); }};
+    menu('Türlerim', 'Seçimler anında kaydedilir ve film araması otomatik başlar. Geri ile ana ekrana dön.', ECK.genres.map(function (g) {
+      return {label: g[1], value: ECK.selectedGenres().indexOf(g[0]) >= 0 ? '✓' : '', run: function () { view = 'movies'; ECK.toggleGenre(g[0]); genreMenu(true); }};
     })); modalIndex = at; focusModal();
   }
   function themeMenu() {
@@ -302,7 +317,7 @@
     });
   }
   function about() {
-    menu('ECK TV 1.6', 'Free My TV temel alınarak geliştirildi. Film bilgileri TMDB’den sağlanır; TMDB tarafından onaylanmış değildir.', [
+    menu('ECK TV 1.7', 'Free My TV temel alınarak geliştirildi. Film bilgileri TMDB’den sağlanır; TMDB tarafından onaylanmış değildir.', [
       {label: 'Görseller', value: 'Unsplash / NASA', run: function () { toast('Şehir: Unsplash · Uzay: NASA Images. Kaynak adı ambiyans ekranında görünür.'); }},
       {label: 'Kumanda', value: 'Yönler · OK · Geri', run: function () {}},
       {label: 'Geri', run: settings}
@@ -348,10 +363,13 @@
     pool.load(scene.url, function (ok) {
       if (!ok || document.hidden) return;
       root.querySelector('.eck-wall').style.backgroundImage = 'url("' + scene.url + '")';
+      if (!selectedMovie()) { heroPhoto.style.backgroundImage = 'url("' + scene.url + '")'; heroPhoto.className = 'eck-hero-photo ready'; }
     });
   }
   function showSaver() {
     if (saver || document.hidden) return;
+    sceneIndex = ECK.sceneStart(scenes, ECK.read('lastSceneStart', ECK.read('lastScene', '')));
+    if (scenes.length) ECK.write('lastSceneStart', scenes[sceneIndex].url);
     savePosition(); saver = el('section', 'eck-saver', root); saver.setAttribute('aria-label', 'Ekran koruyucu');
     var a = el('div', 'eck-saver-photo', saver), b = el('div', 'eck-saver-photo', saver);
     el('div', 'eck-saver-shade', saver);
@@ -371,6 +389,7 @@
           var back = front === a ? b : a; back.style.backgroundImage = 'url("' + scene.url + '")';
           setClass(back, 'on', true); setClass(front, 'on', false); front = back;
           credit.textContent = scene.title + ' · ' + scene.source;
+          ECK.write('lastScene', scene.url);
           var following = scenes[sceneIndex % scenes.length]; pool.load(following.url, function () {});
         } else credit.textContent = 'Bağlantı bekleniyor · Son görüntü korunuyor';
         saverTimer = setTimeout(function () { next(0); }, 45000);
@@ -384,7 +403,6 @@
   }
   function back() {
     if (modal) {
-      if (modal.getAttribute('aria-label') === 'Türlerim' && ECK.mode() === 'genres') ECK.refresh(false);
       closeModal(); return;
     }
     if (row !== 0) { row = 0; col = 0; focus(); } else { savePosition(); TV.back(); }

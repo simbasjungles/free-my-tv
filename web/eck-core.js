@@ -125,12 +125,20 @@ var ECK = (function () {
     return {load: preload, size: function () { return pool.length; }};
   }
   function selectMode(value) { write('mode', value === 'genres' ? 'genres' : 'popular'); refresh(false); }
+  function sceneStart(list, last, random) {
+    var choices = [];
+    for (var i = 0; i < list.length; i++) if (list[i].url !== last) choices.push(i);
+    if (!choices.length) return 0;
+    return choices[Math.min(choices.length - 1, Math.floor((random || Math.random)() * choices.length))];
+  }
   return {
     genres: GENRES, selectedGenres: genres, mode: mode, setMode: selectMode,
     toggleGenre: function (id) {
       var list = genres(), at = list.indexOf(id);
       if (at < 0) list.push(id); else list.splice(at, 1);
       write('genres', list);
+      write('mode', 'genres');
+      refresh(true);
     },
     list: visible, refresh: refresh, busy: function () { return busy; }, error: function () { return error; },
     onChange: function (fn) { listeners.push(fn); }, favourites: favourites, isFavourite: isFavourite,
@@ -138,6 +146,7 @@ var ECK = (function () {
     hide: function (id) { var list = hidden(); if (list.indexOf(id) < 0) list.push(id); write('hidden', list.slice(-200)); emit(); },
     resetHidden: function () { write('hidden', []); emit(); },
     read: function (key, fallback) { return read(key, fallback); }, write: write,
+    sceneStart: sceneStart,
     bestTrailer: bestTrailer, searchQuery: searchQuery, trailer: trailer, request: request, imagePool: imagePool
   };
 })();

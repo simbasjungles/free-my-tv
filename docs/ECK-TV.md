@@ -1,5 +1,11 @@
 # ECK TV for Samsung Tizen
 
+## 1.7 interaction update
+
+The large featured area is now a remote-selectable button: it opens the selected trailer, or the TMDB key form when recommendations have not been configured. Demo movies remain browser-only and never substitute for real TV recommendations. Apps use one compact row of eight tiles, with paging at the row edge; vertical navigation follows header → featured movie → apps → recommendations → movie actions. White logos have contrasting brand backgrounds.
+
+Each genre toggle immediately switches discovery to the genre list and starts a fresh request; generation checks discard earlier responses. Each ambient opening chooses a random first scene excluding the preceding opening's first scene, persisted across app restarts. A one-scene collection necessarily repeats. Trailer playback still uses the existing YouTube adapter and requires confirmation on the real TV; mock launch success is not evidence of actual playback.
+
 ECK TV 1.6 is a Turkish home screen for Samsung Tizen 4.0 and newer, based on Free My TV. The Android and LG home screens retain their existing behavior. Only the Samsung builder enables `CONFIG.eckHome`.
 
 ## Behavior
