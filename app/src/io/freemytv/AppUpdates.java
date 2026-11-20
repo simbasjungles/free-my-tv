@@ -90,6 +90,8 @@ final class AppUpdates {
 
     private static final Object LOCK = new Object();
     private static final long MAX_DOWNLOAD = 400L * 1024 * 1024;
+    /** Release files tried per check before giving up (the named one, then guesses: see pickAssets). */
+    private static final int MAX_TRIES = 3;
     private static final int JOB_PERIODIC = 2100, JOB_SOON = 2101;
     private static final long PERIOD = 6 * 3600_000L, RETRY = 20 * 60_000L;
 
@@ -125,18 +127,44 @@ final class AppUpdates {
         return ALL.equals(m) || (CUSTOM.equals(m) && picked(c).contains(pkg));
     }
 
-    /** The known apps installed on this TV, in KNOWN's order. */
+    /**
+     * Stores that update what they installed, with their own key (Play, Amazon, F-Droid): an app from them is theirs to
+     * update, and GitHub's release wouldn't install over it anyway.
+     */
+    private static final Set<String> STORES = new HashSet<>(java.util.Arrays.asList("com.android.vending",
+            "com.amazon.venezia", "org.fdroid.fdroid", "org.fdroid.basic", "com.aurora.store"));
+
+    /** The known apps installed on this TV, in KNOWN's order, but not those a store installed (it updates them). */
     static List<Source> installed(Context c) {
         List<Source> out = new ArrayList<>();
         PackageManager pm = c.getPackageManager();
         for (Source s : KNOWN) {
             try {
                 pm.getPackageInfo(s.pkg, 0);
-                out.add(s);
+                if (!STORES.contains(installer(pm, s.pkg))) out.add(s);
             } catch (PackageManager.NameNotFoundException ignored) {
             }
         }
         return out;
+    }
+
+    /** Who installed a package ("" for adb, a file manager or unknown). */
+    @SuppressWarnings("deprecation")
+    private static String installer(PackageManager pm, String pkg) {
+        try {
+            String name = Build.VERSION.SDK_INT >= 30 ? Android11.installer(pm, pkg) : pm.getInstallerPackageName(pkg);
+            return name == null ? "" : name;
+        } catch (IllegalArgumentException | PackageManager.NameNotFoundException e) {
+            return "";
+        }
+    }
+
+    /** Android 11's install source (getInstallerPackageName is deprecated there); only called there. */
+    private static final class Android11 {
+        static String installer(PackageManager pm, String pkg) throws PackageManager.NameNotFoundException {
+            android.content.pm.InstallSourceInfo info = pm.getInstallSourceInfo(pkg);
+            return info.getInstallingPackageName();
+        }
     }
 
     // MARK: - Status (app-updates-status.json, written by the job, read by the settings)
@@ -196,7 +224,7 @@ final class AppUpdates {
             }
             JSONObject apps = status.optJSONObject("apps");
             if (apps == null) apps = new JSONObject();
-            boolean waiting = false;
+            boolean waiting = false, failed = false;
             for (Source s : installed(c)) {
                 if (!enabled(c, s.pkg)) continue;
                 JSONObject app = apps.optJSONObject(s.pkg);
@@ -204,7 +232,10 @@ final class AppUpdates {
                 try {
                     waiting |= update(c, s, app);
                 } catch (Exception e) {
-                    put(app, "result", Ui.trf("Error: {error}.", "error", String.valueOf(e.getMessage())));
+                    boolean offline = offline(e);
+                    failed |= offline || e instanceof Temporary;
+                    put(app, "result", offline ? Ui.tr("No connection")
+                            : Ui.trf("Error: {error}.", "error", String.valueOf(e.getMessage())));
                     AppLog.w("app update " + s.pkg + ": " + e);
                 }
                 put(apps, s.pkg, app);
@@ -212,16 +243,35 @@ final class AppUpdates {
                 write(c, "app-updates-status.json", status);
             }
             put(status, "apps", apps);
+            // No network, or GitHub busy or over its hourly limit (an address many homes share): again in 30 minutes,
+            // then 1 hour, 2…, up to the usual 6, as Updates does for Free My TV.
+            int retries = status.optInt("retries");
+            long later = failed ? Math.min(PERIOD, (30 * 60_000L) << Math.min(retries, 4)) : 0;
+            put(status, "retries", failed ? retries + 1 : 0);
+            if (waiting) later = later == 0 ? RETRY : Math.min(later, RETRY);
             write(c, "app-updates-status.json", status);
-            if (waiting) checkSoon(c, RETRY);
+            if (later > 0) checkSoon(c, later);
         }
+    }
+
+    /** A failure worth trying again soon: GitHub busy or over its limit, a download cut short. */
+    static final class Temporary extends IOException {
+        Temporary(String message) {
+            super(message);
+        }
+    }
+
+    private static boolean offline(Exception e) {
+        return e instanceof java.net.UnknownHostException || e instanceof java.net.SocketException
+                || e instanceof java.net.SocketTimeoutException || e instanceof javax.net.ssl.SSLException;
     }
 
     /** One app: checks its latest release and installs it if it's newer. True when an install waits for the home screen. */
     private static boolean update(Context c, Source s, JSONObject app) throws IOException, JSONException {
         PackageManager pm = c.getPackageManager();
         PackageInfo installed = packageInfo(pm, s.pkg);
-        File dir = new File(c.getCacheDir(), "updates");
+        // Not the cache, which Android empties first when storage runs low (as Updates keeps its download).
+        File dir = new File(c.getNoBackupFilesDir(), "app-updates");
         File apk = new File(dir, s.pkg + ".apk");
 
         // Downloaded and checked earlier, waiting for the home screen: install it unless the TV got a newer copy since.
@@ -229,12 +279,12 @@ final class AppUpdates {
         //noinspection ResultOfMethodCallIgnored
         apk.delete();
 
-        JSONObject asset = latestAsset(s, abiOf(installed.applicationInfo));
-        if (asset == null) {
+        List<JSONObject> assets = latestAssets(s, abiOf(installed.applicationInfo));
+        if (assets.isEmpty()) {
             put(app, "result", Ui.tr("No APK for this TV in the latest release."));
             return false;
         }
-        String seen = asset.optLong("id") + ":" + asset.optString("updated_at");
+        String seen = assets.get(0).optLong("id") + ":" + assets.get(0).optString("updated_at");
         if (seen.equals(app.optString("seen")) && app.optLong("versionCode") <= versionCode(installed)) {
             // The same file was refused before (another key, another app): say so again, not "Up to date".
             if (!app.optString("refused").isEmpty()) throw new IOException(app.optString("refused"));
@@ -242,21 +292,40 @@ final class AppUpdates {
             return false;
         }
         app.remove("refused");
-        if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("no cache folder");
-        File download = new File(dir, s.pkg + ".download");
-        try {
-            download(asset, download);
-            if (asset.optString("name").endsWith(".tar.gz")) extractApk(download, apk);
-            else if (!download.renameTo(apk)) throw new IOException("could not keep the download");
-        } finally {
-            //noinspection ResultOfMethodCallIgnored
-            download.delete();
-        }
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("no folder for the downloads");
 
-        PackageInfo archive = archiveInfo(pm, apk);
-        String problem = archive == null ? Ui.tr("the download isn't an app")
-                : !s.pkg.equals(archive.packageName) ? Ui.trf("the download isn't {app}", "app", s.name)
-                : null;
+        // The file the patterns name, else the release's other likely files (a project that renamed its files): the
+        // first that is this app goes on to the checks below. At most MAX_TRIES downloads.
+        PackageInfo archive = null;
+        String problem = null;
+        for (int i = 0; i < assets.size() && i < MAX_TRIES; i++) {
+            JSONObject asset = assets.get(i);
+            File download = new File(dir, s.pkg + ".download");
+            boolean unpacked = true;
+            try {
+                download(asset, download);
+                if (isArchive(asset.optString("name"))) {
+                    try {
+                        extractApk(download, apk);
+                    } catch (IOException e) {
+                        unpacked = false;   // no APK in that archive: not the file, try the next
+                    }
+                } else if (!download.renameTo(apk)) {
+                    throw new IOException("could not keep the download");
+                }
+            } finally {
+                //noinspection ResultOfMethodCallIgnored
+                download.delete();
+            }
+            archive = unpacked ? archiveInfo(pm, apk) : null;
+            problem = archive == null ? Ui.tr("the download isn't an app")
+                    : !s.pkg.equals(archive.packageName) ? Ui.trf("the download isn't {app}", "app", s.name)
+                    : null;
+            if (problem == null) break;
+            AppLog.w("app update " + s.pkg + ": " + asset.optString("name") + " isn't it, trying the next file");
+            //noinspection ResultOfMethodCallIgnored
+            apk.delete();
+        }
         if (problem == null && versionCode(archive) <= versionCode(installed)) {
             put(app, "seen", seen);
             put(app, "versionCode", versionCode(archive));
@@ -311,34 +380,79 @@ final class AppUpdates {
 
     // MARK: - GitHub
 
-    /** The release file for this ABI from the newest release (or pre-release, for a beta) that has one. */
-    private static JSONObject latestAsset(Source s, String abi) throws IOException, JSONException {
+    /** The release files worth trying, from the newest release (or pre-release, for a beta) that has any. */
+    private static List<JSONObject> latestAssets(Source s, String abi) throws IOException, JSONException {
         String api = "https://api.github.com/repos/" + s.repo + "/releases";
         JSONArray releases = s.prerelease ? new JSONArray(get(api + "?per_page=10"))
                 : new JSONArray().put(new JSONObject(get(api + "/latest")));
         for (int r = 0; r < releases.length(); r++) {
             JSONObject release = releases.getJSONObject(r);
             if (release.optBoolean("draft")) continue;
-            JSONObject asset = pickAsset(release.optJSONArray("assets"), s.files, abi);
-            if (asset != null) return asset;
+            List<JSONObject> assets = pickAssets(release.optJSONArray("assets"), s.files, abi, s.repo);
+            if (!assets.isEmpty()) return assets;
         }
-        return null;
+        return new ArrayList<>();
     }
 
-    /** The first file name that matches, pattern by pattern. */
-    static JSONObject pickAsset(JSONArray assets, String[] files, String abi) {
-        if (assets == null) return null;
+    /**
+     * The files to try, in order: those the patterns name (pattern by pattern), then, in case the project renamed its
+     * files, the other APKs and archives that look like this TV's build. Only from that repository's releases (as
+     * Updates does for Free My TV; github.com then redirects to its download host). What's downloaded must still be
+     * the app, newer and signed with its key, so a wrong guess costs a download, never an install.
+     */
+    static List<JSONObject> pickAssets(JSONArray assets, String[] files, String abi, String repo) {
+        List<JSONObject> out = new ArrayList<>();
+        if (assets == null) return out;
+        String from = ("https://github.com/" + repo + "/releases/download/").toLowerCase(Locale.ROOT);
+        List<JSONObject> fromRepo = new ArrayList<>();
+        for (int i = 0; i < assets.length(); i++) {
+            JSONObject a = assets.optJSONObject(i);
+            if (a != null && a.optString("browser_download_url").toLowerCase(Locale.ROOT).startsWith(from)) fromRepo.add(a);
+        }
         for (String file : files) {
             Pattern p = Pattern.compile(file.replace("{abi}", Pattern.quote(abi)));
-            for (int i = 0; i < assets.length(); i++) {
-                JSONObject a = assets.optJSONObject(i);
-                if (a != null && p.matcher(a.optString("name")).matches()
-                        && a.optString("browser_download_url").startsWith("https://")) {
-                    return a;
-                }
+            for (JSONObject a : fromRepo) {
+                if (!out.contains(a) && p.matcher(a.optString("name")).matches()) out.add(a);
             }
         }
-        return null;
+        for (int rank = 0; rank < 2; rank++) {
+            for (JSONObject a : fromRepo) {
+                if (!out.contains(a) && guess(a.optString("name"), abi) == rank) out.add(a);
+            }
+        }
+        return out;
+    }
+
+    /** ABIs as release files name them, most specific first. */
+    private static final String[][] ABI_NAMES = {
+        {"arm64-v8a", "arm64", "aarch64"},
+        {"armeabi-v7a", "armeabi", "armv7", "arm32"},
+        {"x86_64", "x64", "amd64"},
+        {"x86", "i686"},
+    };
+
+    /**
+     * How much a file looks like an APK for this ABI: 0 named for it, 1 for every ABI (universal, or none named), -1
+     * not one to try (another ABI, a debug, Wear OS, car or test build, not an APK or archive).
+     */
+    static int guess(String name, String abi) {
+        String n = name.toLowerCase(Locale.ROOT);
+        if (!(n.endsWith(".apk") || isArchive(n))) return -1;
+        if (n.matches(".*(debug|wear|automotive|androidtest|unsigned|linux|windows|macos|darwin|ios).*")) return -1;
+        n = n.replace("x86_64", "amd64").replace("x86-64", "amd64");   // so "x86" below doesn't find it in "x86_64"
+        Set<String> named = new HashSet<>();
+        for (String[] names : ABI_NAMES) {
+            for (String token : names) {
+                if (n.matches(".*(^|[^a-z0-9])" + Pattern.quote(token) + "($|[^a-z0-9]).*")) named.add(names[0]);
+            }
+        }
+        if (named.isEmpty() || n.contains("universal")) return 1;
+        return named.size() == 1 && named.contains(abi) ? 0 : -1;
+    }
+
+    private static boolean isArchive(String name) {
+        String n = name.toLowerCase(Locale.ROOT);
+        return n.endsWith(".tar.gz") || n.endsWith(".tgz");
     }
 
     /** The ABI an installed app runs as (its native library folder: lib/arm, lib/arm64…), else the TV's first. */
@@ -360,7 +474,11 @@ final class AppUpdates {
         c.setRequestProperty("User-Agent", "FreeMyTV");
         c.setRequestProperty("Accept", "application/vnd.github+json");
         try {
-            if (c.getResponseCode() != 200) throw new IOException("GitHub: HTTP " + c.getResponseCode());
+            int code = c.getResponseCode();
+            if (code != 200) {
+                String why = "GitHub: HTTP " + code;
+                throw code == 403 || code == 429 || code >= 500 ? new Temporary(why) : new IOException(why);
+            }
             try (InputStream in = c.getInputStream()) {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] buffer = new byte[8192];
@@ -389,7 +507,11 @@ final class AppUpdates {
         }
         long total = 0;
         try {
-            if (c.getResponseCode() != 200) throw new IOException("download: HTTP " + c.getResponseCode());
+            int code = c.getResponseCode();
+            if (code != 200) {
+                String why = "download: HTTP " + code;
+                throw code == 429 || code >= 500 ? new Temporary(why) : new IOException(why);
+            }
             try (InputStream in = c.getInputStream(); OutputStream out = new FileOutputStream(to)) {
                 byte[] buffer = new byte[64 * 1024];
                 int n;
@@ -403,7 +525,7 @@ final class AppUpdates {
         } finally {
             c.disconnect();
         }
-        if (size >= 0 && total != size) throw new IOException("the download was cut short");
+        if (size >= 0 && total != size) throw new Temporary("the download was cut short");
         String digest = asset.optString("digest");
         if (digest.startsWith("sha256:") && !digest.substring(7).equalsIgnoreCase(hex(sha.digest()))) {
             throw new IOException("the download doesn't match GitHub's SHA-256");
