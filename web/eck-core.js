@@ -17,7 +17,7 @@ var ECK = (function () {
     var kept = read('genres', [28, 878, 35]);
     return GENRES.filter(function (g) { return kept instanceof Array && kept.indexOf(g[0]) >= 0; }).map(function (g) { return g[0]; });
   }
-  function stamp() { return mode() + ':' + genres().join(','); }
+  function stamp() { return 'new30:' + mode() + ':' + genres().join(','); }
   function request(url, headers, done) {
     var xhr = new XMLHttpRequest(), over = false;
     function finish(err, body) { if (over) return; over = true; done(err, body); }
@@ -40,7 +40,7 @@ var ECK = (function () {
   }
   function cleanMovie(m) {
     return {id: +m.id, title: String(m.title || '').slice(0, 160), original: String(m.original_title || '').slice(0, 160),
-      year: String(m.release_date || '').slice(0, 4), overview: String(m.overview || '').slice(0, 850),
+      year: String(m.release_date || '').slice(0, 4), released: String(m.release_date || '').slice(0, 10), overview: String(m.overview || '').slice(0, 850),
       backdrop: m.backdrop_path || '', poster: m.poster_path || '', rating: Number(m.vote_average || 0)};
   }
   function hidden() { var v = read('hidden', []); return v instanceof Array ? v : []; }
@@ -63,20 +63,34 @@ var ECK = (function () {
     if (!force && cache && Date.now() - cache.at >= 0 && Date.now() - cache.at < 6 * 3600000) { emit(); return; }
     if (mode() === 'genres' && !genres().length) { error = 'Ayarlar’dan en az bir tür seç.'; emit(); return; }
     busy = true; emit();
-    var path = mode() === 'popular' ? '/movie/popular?language=tr-TR&region=TR&page=1'
-      : '/discover/movie?language=tr-TR&region=TR&sort_by=popularity.desc&include_adult=false&vote_count.gte=50&with_genres=' + genres().join('|');
-    tmdb(path, function (err, res) {
+    var today = new Date(), since = new Date(today.getTime()); since.setMonth(since.getMonth() - 18);
+    function date(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+    var base = '/discover/movie?language=tr-TR&region=TR&sort_by=popularity.desc&include_adult=false&include_video=false&vote_count.gte=20&primary_release_date.lte=' + date(today)
+      + (mode() === 'genres' ? '&with_genres=' + genres().join('|') : '');
+    var recent = base + '&primary_release_date.gte=' + date(since), pending = 3, received = [], successes = 0;
+    function finish(err, res) {
       if (mine !== generation || key !== stamp()) return;
+      if (!err && res && res.results instanceof Array) { successes++; received = received.concat(res.results); }
+      if (--pending) return;
       busy = false;
-      if (err || !res || !(res.results instanceof Array)) {
+      if (!successes) {
         error = movies.length ? 'Çevrimdışı · son kaydedilen liste' : 'Filmler yüklenemedi. Bağlantıyı ve TMDB anahtarını kontrol et.';
       } else {
-        movies = res.results.filter(function (m) { return m.id && m.title && m.backdrop_path && !m.adult; }).slice(0, 20).map(cleanMovie);
+        var ids = {}, off = hidden();
+        movies = received.filter(function (m) {
+          if (!m.id || !m.title || !m.backdrop_path || m.adult || ids[m.id] || off.indexOf(+m.id) >= 0 || !m.release_date || m.release_date > date(today)) return false;
+          ids[m.id] = true; return true;
+        }).sort(function (a, b) {
+          return a.release_date === b.release_date ? Number(b.popularity || 0) - Number(a.popularity || 0) : a.release_date < b.release_date ? 1 : -1;
+        }).slice(0, 30).map(cleanMovie);
+        error = successes < 3 ? 'Bazı öneriler yenilenemedi · mevcut sonuçlar gösteriliyor' : '';
         // Two slots only: changing genres replaces its previous cache, rather than filling storage.
         write('movies.' + mode(), {stamp: key, at: Date.now(), list: movies});
       }
       emit();
-    });
+    }
+    // Two recent pages plus a popular backfill, without any streaming-provider restriction.
+    tmdb(recent + '&page=1', finish); tmdb(recent + '&page=2', finish); tmdb(base + '&page=1', finish);
   }
   // Prefer an actual Turkish trailer over an English trailer; reject teasers, clips and non-YouTube entries.
   function bestTrailer(videos) {

@@ -19,11 +19,15 @@ function core() {
 function movie(id) { return {id: id, title: 'Film ' + id, backdrop_path: '/photo.jpg', release_date: '2024-01-01'}; }
 var c = core(), e = c.eck;
 // Region-specific lists must never depend on the installed streaming services.
-e.refresh(true); assert(c.requests[0].url.indexOf('/movie/popular?language=tr-TR&region=TR') >= 0);
-e.setMode('genres'); assert(c.requests[1].url.indexOf('with_genres=') >= 0);
-c.requests[1].reply({results: [movie(2)]}); c.requests[0].reply({results: [movie(1)]});
+function replyBatch(c, start, list, status) { for (var j = 0; j < 3; j++) c.requests[start + j].reply({results:list}, status); }
+e.refresh(true); assert(c.requests[0].url.indexOf('/discover/movie?language=tr-TR&region=TR') >= 0);
+assert(c.requests[0].url.indexOf('primary_release_date.gte=') >= 0);
+assert(c.requests[1].url.indexOf('page=2') >= 0);
+assert(c.requests[2].url.indexOf('primary_release_date.gte=') < 0, 'backfill can include older popular films');
+e.setMode('genres'); assert(c.requests[3].url.indexOf('with_genres=') >= 0);
+replyBatch(c,3,[movie(2)]); replyBatch(c,0,[movie(1)]);
 assert.strictEqual(e.list()[0].id, 2, 'a late popular response must not overwrite the genre list');
-e.setMode('popular'); c.requests[2].reply({results: [movie(3), movie(4)]});
+e.setMode('popular'); replyBatch(c,6,[movie(3),movie(4)]);
 e.hide(3); assert.strictEqual(e.list().length, 1); e.resetHidden(); assert.strictEqual(e.list().length, 2);
 e.toggleFavourite(e.list()[0]); assert(e.isFavourite(3)); e.toggleFavourite(e.list()[0]); assert(!e.isFavourite(3));
 for (var i = 1; i < 100; i++) e.toggleFavourite({id: i, title: 'Film'});
@@ -31,7 +35,7 @@ assert.strictEqual(e.favourites().length, 80, 'favourites must be bounded');
 for (i = 0; i < 230; i++) e.hide(i); assert.strictEqual(e.read('hidden', []).length, 200);
 assert.strictEqual(Object.keys(c.memory).filter(function (k) { return k.indexOf('movies.') >= 0; }).length, 2, 'only two list caches');
 var count = c.requests.length; e.refresh(false); assert.strictEqual(c.requests.length, count, 'fresh cache avoids network');
-e.refresh(true); c.requests[c.requests.length - 1].reply({}, 503); assert(e.error().indexOf('son kaydedilen') >= 0);
+count = c.requests.length; e.refresh(true); replyBatch(c,count,[],503); assert(e.error().indexOf('son kaydedilen') >= 0);
 // Turkish trailer, official tie-break, invalid ids/teasers filtered out.
 var v = [
   {site: 'YouTube', type: 'Trailer', key: 'abcdefghijk', iso_639_1: 'en', official: true},
@@ -58,9 +62,9 @@ q.load('pending', function (ok) { settled = !ok; }); q.load('new', function () {
 console.log('EckCoreTest: region, modes, stale responses, offline cache, preferences, trailers and bounded images passed.');
 var changed = core(); changed.eck.toggleGenre(27);
 assert.strictEqual(changed.eck.mode(), 'genres');
-assert.strictEqual(changed.requests.length, 1, 'genre selection starts a live query immediately');
+assert.strictEqual(changed.requests.length, 3, 'genre selection starts recent pages and backfill immediately');
 assert(changed.requests[0].url.indexOf('with_genres=28|35|27|878') >= 0 || changed.requests[0].url.indexOf('27') >= 0);
-changed.requests[0].reply({results:[movie(55)]}); assert.strictEqual(changed.eck.list()[0].id,55);
+replyBatch(changed,0,[movie(55)]); assert.strictEqual(changed.eck.list()[0].id,55);
 changed.sandbox.Prefs.tmdbKey = function () { return ''; };
 changed.eck.refresh(true); assert(changed.eck.error().indexOf('TMDB') >= 0);
 var sceneList = [{url:'a'},{url:'b'},{url:'c'}];
@@ -81,3 +85,14 @@ assert.strictEqual(shelf.length,8);assert(shelf.every(function(a){return a.avail
 var missing=e.launcherApps([{id:'k',title:'YouTube Kids'},{id:'m',title:'Amazon Music'},{id:'c',title:'Cinemax'}]);
 assert(missing.every(function(a){return a.id===null && !a.available;}));
 console.log('EckCoreTest: fixed eight-app shelf, legacy ids, exclusions and missing-app handling passed.');
+var fresh = core(), batch = [];
+for (i=0;i<45;i++) { var item=movie(1000+i); item.release_date='2025-01-'+('0'+(i%28+1)).slice(-2); batch.push(item); }
+batch.push({id:9,title:'Future',backdrop_path:'/f.jpg',release_date:'2099-01-01'});
+fresh.eck.refresh(true); fresh.requests[0].reply({results:batch.slice(0,20)}); fresh.requests[1].reply({results:batch.slice(20)}); fresh.requests[2].reply({results:batch});
+assert.strictEqual(fresh.eck.list().length,30);
+assert.strictEqual(new Set(fresh.eck.list().map(function(m){return m.id;})).size,30);
+assert(!fresh.eck.list().some(function(m){return m.id===9;}));
+for(i=1;i<30;i++) assert(fresh.eck.list()[i-1].released>=fresh.eck.list()[i].released,'newer releases come first');
+count=fresh.requests.length; fresh.eck.refresh(true); fresh.requests[count].reply({results:[movie(88)]}); fresh.requests[count+1].reply({},503); fresh.requests[count+2].reply({},503);
+assert.strictEqual(fresh.eck.list()[0].id,88); assert(fresh.eck.error().indexOf('Bazı')>=0);
+console.log('EckCoreTest: 30 unique recommendations, newest-first ordering, future exclusion and partial network recovery passed.');
