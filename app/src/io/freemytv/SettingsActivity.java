@@ -1136,7 +1136,11 @@ public class SettingsActivity extends Activity {
             if (HOME_ROW >= 0) v[HOME_ROW] = onOff(HomeAssistant.on(getContext()));
             v[QUOTES_ROW] = onOff(Prefs.quotes());
             // No quotes widget, nowhere to show prices: the coins read as off (and stay locked) until it is back on.
-            for (int i = COIN_ROWS; i < v.length - 3; i++) v[i] = onOff(Prefs.quotes() && Prefs.coin(i - COIN_ROWS));
+            for (int i = COIN_ROWS; i < v.length - 3; i++) {
+                int k = i - COIN_ROWS;
+                v[i] = !Prefs.quotes() || !Prefs.coin(k) ? Ui.tr("Off")
+                        : HomeData.unitUsd(k) ? Ui.tr("On, in dollars") : Ui.tr("On");
+            }
             v[v.length - 3] = keyValue(Recs.key());
             v[v.length - 2] = keyValue(Recs.watchmodeKey());
             v[v.length - 1] = updatesValue();
@@ -1543,7 +1547,22 @@ public class SettingsActivity extends Activity {
                 case QUOTES_ROW: Prefs.setQuotes(!Prefs.quotes()); break;
                 default:
                     if (row >= keyRow() || !Prefs.quotes()) return;   // the keys and Updates act on OK only
-                    Prefs.setCoin(row - COIN_ROWS, !Prefs.coin(row - COIN_ROWS));
+                    int coin = row - COIN_ROWS;
+                    // A coin row cycles: Off, then on in the TV's currency, then on in dollars (#486). Dollars are
+                    // not offered where the TV's currency is one already, and never on the dollar row.
+                    if (coin < 3 && !"USD".equals(Place.currency())) {
+                        if (!Prefs.coin(coin)) {
+                            Prefs.setCoin(coin, true);
+                            Prefs.setCoinUnit(coin, "");
+                        } else if (!HomeData.unitUsd(coin)) {
+                            Prefs.setCoinUnit(coin, "USD");
+                        } else {
+                            Prefs.setCoin(coin, false);
+                            Prefs.setCoinUnit(coin, "");
+                        }
+                    } else {
+                        Prefs.setCoin(coin, !Prefs.coin(coin));
+                    }
                     break;
             }
             HomeData.get(getContext()).settingsChanged();
