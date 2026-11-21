@@ -1,7 +1,7 @@
 'use strict';
 var assert = require('assert'), fs = require('fs'), vm = require('vm'), path = require('path');
-function core() {
-  var memory = {}, requests = [], images = [], callbacks = [], timers = [];
+function core(saved) {
+  var memory = saved || {}, requests = [], images = [], callbacks = [], timers = [];
   var sandbox = {
     localStorage: {getItem: function (k) { return memory[k] || null; }, setItem: function (k, v) { memory[k] = v; }},
     Prefs: {tmdbKey: function () { return 'test-only-placeholder'; }},
@@ -24,16 +24,17 @@ e.refresh(true); assert(c.requests[0].url.indexOf('/discover/movie?language=tr-T
 assert(c.requests[0].url.indexOf('primary_release_date.gte=') >= 0);
 assert(c.requests[1].url.indexOf('page=2') >= 0);
 assert(c.requests[2].url.indexOf('primary_release_date.gte=') < 0, 'backfill can include older popular films');
-e.setMode('genres'); assert(c.requests[3].url.indexOf('with_genres=') >= 0);
+assert.strictEqual(e.genre(),0, 'new catalog defaults to All');
+e.setGenre(28); assert(c.requests[3].url.indexOf('with_genres=28') >= 0);
 replyBatch(c,3,[movie(2)]); replyBatch(c,0,[movie(1)]);
 assert.strictEqual(e.list()[0].id, 2, 'a late popular response must not overwrite the genre list');
-e.setMode('popular'); replyBatch(c,6,[movie(3),movie(4)]);
+e.setGenre(0); e.refresh(true); replyBatch(c,6,[movie(3),movie(4)]);
 e.hide(3); assert.strictEqual(e.list().length, 1); e.resetHidden(); assert.strictEqual(e.list().length, 2);
 e.toggleFavourite(e.list()[0]); assert(e.isFavourite(3)); e.toggleFavourite(e.list()[0]); assert(!e.isFavourite(3));
 for (var i = 1; i < 100; i++) e.toggleFavourite({id: i, title: 'Film'});
 assert.strictEqual(e.favourites().length, 80, 'favourites must be bounded');
 for (i = 0; i < 230; i++) e.hide(i); assert.strictEqual(e.read('hidden', []).length, 200);
-assert.strictEqual(Object.keys(c.memory).filter(function (k) { return k.indexOf('movies.') >= 0; }).length, 2, 'only two list caches');
+assert.strictEqual(Object.keys(c.memory).filter(function (k) { return k.indexOf('movies.') >= 0; }).length, 1, 'one catalog slot regardless of genre changes');
 var count = c.requests.length; e.refresh(false); assert.strictEqual(c.requests.length, count, 'fresh cache avoids network');
 count = c.requests.length; e.refresh(true); replyBatch(c,count,[],503); assert(e.error().indexOf('son kaydedilen') >= 0);
 // Turkish trailer, official tie-break, invalid ids/teasers filtered out.
@@ -60,10 +61,10 @@ p.load('b', function () {}); p.load('c', function () {}); assert.strictEqual(p.s
 var q = e.imagePool(1), settled = false;
 q.load('pending', function (ok) { settled = !ok; }); q.load('new', function () {}); assert(settled);
 console.log('EckCoreTest: region, modes, stale responses, offline cache, preferences, trailers and bounded images passed.');
-var changed = core(); changed.eck.toggleGenre(27);
-assert.strictEqual(changed.eck.mode(), 'genres');
+var changed = core(); changed.eck.setGenre(27);
+assert.strictEqual(changed.eck.genre(), 27);
 assert.strictEqual(changed.requests.length, 3, 'genre selection starts recent pages and backfill immediately');
-assert(changed.requests[0].url.indexOf('with_genres=28|35|27|878') >= 0 || changed.requests[0].url.indexOf('27') >= 0);
+assert(changed.requests[0].url.indexOf('with_genres=27') >= 0);
 replyBatch(changed,0,[movie(55)]); assert.strictEqual(changed.eck.list()[0].id,55);
 changed.sandbox.Prefs.tmdbKey = function () { return ''; };
 changed.eck.refresh(true); assert(changed.eck.error().indexOf('TMDB') >= 0);
@@ -96,3 +97,25 @@ for(i=1;i<30;i++) assert(fresh.eck.list()[i-1].released>=fresh.eck.list()[i].rel
 count=fresh.requests.length; fresh.eck.refresh(true); fresh.requests[count].reply({results:[movie(88)]}); fresh.requests[count+1].reply({},503); fresh.requests[count+2].reply({},503);
 assert.strictEqual(fresh.eck.list()[0].id,88); assert(fresh.eck.error().indexOf('Bazı')>=0);
 console.log('EckCoreTest: 30 unique recommendations, newest-first ordering, future exclusion and partial network recovery passed.');
+var independent = core(), scopes = [];
+independent.eck.onChange(function(scope){scopes.push(scope);});
+independent.eck.refresh(false); independent.eck.showcase.refresh(false);
+assert.strictEqual(independent.requests.length,3,'same unfiltered feed requests coalesce');
+var diverse = [movie(1),movie(2),movie(3),movie(4)];
+diverse[0].genre_ids=[28];diverse[1].genre_ids=[28];diverse[2].genre_ids=[35];diverse[3].genre_ids=[27];
+replyBatch(independent,0,diverse);
+assert.strictEqual(independent.eck.showcase.list().map(function(m){return m.id;}).join(','),'1,3,4,2','showcase mixes genres independently');
+var showcaseIds=independent.eck.showcase.list().map(function(m){return m.id;}).join(',');
+scopes.length=0;independent.eck.setGenre(28);independent.eck.setGenre(35);independent.eck.setGenre(28);
+assert.strictEqual(independent.requests.length,9,'rapid return to an in-flight genre coalesces');
+replyBatch(independent,3,[movie(100)]);replyBatch(independent,6,[movie(200)]);
+assert.strictEqual(independent.eck.list()[0].id,100,'late superseded genre cannot replace the current list');
+assert.strictEqual(independent.eck.showcase.list().map(function(m){return m.id;}).join(','),showcaseIds);
+assert(scopes.every(function(s){return s==='catalog';}),'genre events never update showcase');
+var saved=core(independent.memory);assert.strictEqual(saved.eck.genre(),28);saved.eck.refresh(false);assert.strictEqual(saved.requests.length,0,'genre and feed survive restart');
+count=independent.requests.length;independent.eck.showcase.refresh(true);replyBatch(independent,count,[],503);
+assert.strictEqual(independent.eck.list()[0].id,100);assert(independent.eck.showcase.error());
+count=independent.requests.length;independent.eck.refresh(true);replyBatch(independent,count,[],503);
+assert.strictEqual(independent.eck.showcase.list().map(function(m){return m.id;}).join(','),showcaseIds);
+assert.strictEqual(Object.keys(independent.memory).filter(function(k){return k.indexOf('movies.')>=0;}).length,2);
+console.log('EckCoreTest: independent feeds, diversity, shared request/cache reuse, rapid genres, persistence and isolated failures passed.');

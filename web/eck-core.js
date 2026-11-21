@@ -1,7 +1,7 @@
 /* ECK TV's bounded local preferences, movie lists and trailer selection. ES5 for Tizen 4. */
 var ECK = (function () {
   'use strict';
-  var PREFIX = 'eck.', listeners = [], generation = 0, busy = false, movies = [], error = '';
+  var PREFIX = 'eck.', listeners = [], discoveryCache = [], pendingDiscovery = {};
   var GENRES = [[28, 'Aksiyon'], [12, 'Macera'], [16, 'Animasyon'], [35, 'Komedi'], [80, 'Suç'],
     [99, 'Belgesel'], [18, 'Dram'], [10751, 'Aile'], [14, 'Fantastik'], [36, 'Tarih'],
     [27, 'Korku'], [10402, 'Müzik'], [9648, 'Gizem'], [10749, 'Romantik'], [878, 'Bilim kurgu'],
@@ -11,13 +11,11 @@ var ECK = (function () {
     catch (e) { return fallback; }
   }
   function write(key, value) { try { localStorage.setItem(PREFIX + key, JSON.stringify(value)); } catch (e) {} }
-  function emit() { for (var i = 0; i < listeners.length; i++) listeners[i](); }
-  function mode() { return read('mode', 'popular') === 'genres' ? 'genres' : 'popular'; }
-  function genres() {
-    var kept = read('genres', [28, 878, 35]);
-    return GENRES.filter(function (g) { return kept instanceof Array && kept.indexOf(g[0]) >= 0; }).map(function (g) { return g[0]; });
+  function emit(scope) { for (var i = 0; i < listeners.length; i++) listeners[i](scope || 'catalog'); }
+  function genre() {
+    var id = +read('catalogGenre', 0);
+    return GENRES.some(function (g) { return g[0] === id; }) ? id : 0;
   }
-  function stamp() { return 'new30:' + mode() + ':' + genres().join(','); }
   function request(url, headers, done) {
     var xhr = new XMLHttpRequest(), over = false;
     function finish(err, body) { if (over) return; over = true; done(err, body); }
@@ -44,7 +42,6 @@ var ECK = (function () {
       backdrop: m.backdrop_path || '', poster: m.poster_path || '', rating: Number(m.vote_average || 0)};
   }
   function hidden() { var v = read('hidden', []); return v instanceof Array ? v : []; }
-  function visible() { var off = hidden(); return movies.filter(function (m) { return off.indexOf(m.id) < 0; }); }
   function favourites() { var v = read('favourites', []); return v instanceof Array ? v.slice(0, 80) : []; }
   function isFavourite(id) { return favourites().some(function (m) { return m.id === id; }); }
   function toggleFavourite(m) {
@@ -52,24 +49,57 @@ var ECK = (function () {
     if (!had) list.unshift(m);
     write('favourites', list.slice(0, 80)); emit();
   }
-  function refresh(force) {
-    var mine = ++generation, cache = read('movies.' + mode(), null), key = stamp();
+  // Identical requests from the two feeds share transport, never selection or feed state.
+  function discover(path, force, done) {
+    var key = Prefs.tmdbKey() + ':' + path, now = Date.now();
+    var cached = discoveryCache.filter(function (x) { return x.key === key && now >= x.at && now - x.at < 6 * 3600000; })[0];
+    if (pendingDiscovery[key]) { pendingDiscovery[key].push(done); return; }
+    if (!force && cached) { done(null, cached.body); return; }
+    pendingDiscovery[key] = [done];
+    tmdb(path, function (err, body) {
+      var waiting = pendingDiscovery[key]; delete pendingDiscovery[key];
+      if (!err && body && body.results instanceof Array) {
+        discoveryCache = discoveryCache.filter(function (x) { return x.key !== key; });
+        discoveryCache.push({key: key, at: Date.now(), body: body});
+        discoveryCache = discoveryCache.slice(-12);
+      }
+      waiting.forEach(function (fn) { fn(err, body); });
+    });
+  }
+  function varied(list) {
+    var remaining = list.slice(), used = {}, result = [];
+    while (remaining.length && result.length < 30) {
+      var best = 0;
+      for (var i = 1; i < remaining.length; i++) {
+        var a = (remaining[i].genre_ids || [0])[0] || 0, b = (remaining[best].genre_ids || [0])[0] || 0;
+        if ((used[a] || 0) < (used[b] || 0)) best = i;
+      }
+      var m = remaining.splice(best, 1)[0], group = (m.genre_ids || [0])[0] || 0;
+      used[group] = (used[group] || 0) + 1; result.push(m);
+    }
+    return result;
+  }
+  function movieFeed(scope) {
+    var generation = 0, busy = false, movies = [], error = '', active = '';
+    function refresh(force) {
+    var filter = scope === 'catalog' ? genre() : 0, key = 'split30:' + filter;
+    if (busy && active === key && !force) return;
+    var mine = ++generation, cache = read('movies.' + scope, null); active = key;
     if (cache && cache.stamp !== key) cache = null;
     busy = false;
     if (cache && cache.list instanceof Array) movies = cache.list;
     else movies = [];
     error = '';
-    if (!Prefs.tmdbKey()) { error = 'Filmler için Ayarlar’dan TMDB anahtarını ekle.'; emit(); return; }
-    if (!force && cache && Date.now() - cache.at >= 0 && Date.now() - cache.at < 6 * 3600000) { emit(); return; }
-    if (mode() === 'genres' && !genres().length) { error = 'Ayarlar’dan en az bir tür seç.'; emit(); return; }
-    busy = true; emit();
+    if (!Prefs.tmdbKey()) { error = 'Filmler için Ayarlar’dan TMDB anahtarını ekle.'; emit(scope); return; }
+    if (!force && cache && Date.now() - cache.at >= 0 && Date.now() - cache.at < 6 * 3600000) { emit(scope); return; }
+    busy = true; emit(scope);
     var today = new Date(), since = new Date(today.getTime()); since.setMonth(since.getMonth() - 18);
     function date(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
     var base = '/discover/movie?language=tr-TR&region=TR&sort_by=popularity.desc&include_adult=false&include_video=false&vote_count.gte=20&primary_release_date.lte=' + date(today)
-      + (mode() === 'genres' ? '&with_genres=' + genres().join('|') : '');
+      + (filter ? '&with_genres=' + filter : '');
     var recent = base + '&primary_release_date.gte=' + date(since), pending = 3, received = [], successes = 0;
     function finish(err, res) {
-      if (mine !== generation || key !== stamp()) return;
+      if (mine !== generation || active !== key) return;
       if (!err && res && res.results instanceof Array) { successes++; received = received.concat(res.results); }
       if (--pending) return;
       busy = false;
@@ -77,21 +107,26 @@ var ECK = (function () {
         error = movies.length ? 'Çevrimdışı · son kaydedilen liste' : 'Filmler yüklenemedi. Bağlantıyı ve TMDB anahtarını kontrol et.';
       } else {
         var ids = {}, off = hidden();
-        movies = received.filter(function (m) {
+        var eligible = received.filter(function (m) {
           if (!m.id || !m.title || !m.backdrop_path || m.adult || ids[m.id] || off.indexOf(+m.id) >= 0 || !m.release_date || m.release_date > date(today)) return false;
           ids[m.id] = true; return true;
-        }).sort(function (a, b) {
+        });
+        movies = (scope === 'showcase' ? varied(eligible) : eligible.sort(function (a, b) {
           return a.release_date === b.release_date ? Number(b.popularity || 0) - Number(a.popularity || 0) : a.release_date < b.release_date ? 1 : -1;
-        }).slice(0, 30).map(cleanMovie);
+        }).slice(0, 30)).map(cleanMovie);
         error = successes < 3 ? 'Bazı öneriler yenilenemedi · mevcut sonuçlar gösteriliyor' : '';
-        // Two slots only: changing genres replaces its previous cache, rather than filling storage.
-        write('movies.' + mode(), {stamp: key, at: Date.now(), list: movies});
+        // One persistent slot per independent feed; the shared in-memory query cache is bounded too.
+        write('movies.' + scope, {stamp: key, at: Date.now(), list: movies});
       }
-      emit();
+      emit(scope);
     }
     // Two recent pages plus a popular backfill, without any streaming-provider restriction.
-    tmdb(recent + '&page=1', finish); tmdb(recent + '&page=2', finish); tmdb(base + '&page=1', finish);
+    discover(recent + '&page=1', force, finish); discover(recent + '&page=2', force, finish); discover(base + '&page=1', force, finish);
+    }
+    return {refresh: refresh, busy: function () { return busy; }, error: function () { return error; },
+      list: function () { var off = hidden(); return movies.filter(function (m) { return off.indexOf(m.id) < 0; }); }};
   }
+  var catalog = movieFeed('catalog'), showcase = movieFeed('showcase');
   // Prefer an actual Turkish trailer over an English trailer; reject teasers, clips and non-YouTube entries.
   function bestTrailer(videos) {
     var candidates = (videos || []).filter(function (v) {
@@ -138,7 +173,6 @@ var ECK = (function () {
     }
     return {load: preload, size: function () { return pool.length; }};
   }
-  function selectMode(value) { write('mode', value === 'genres' ? 'genres' : 'popular'); refresh(false); }
   /** Fixed shelf; keep the installed id, never guess an app id when a service is absent. */
   function launcherApps(installed) {
     var definitions = [
@@ -168,15 +202,13 @@ var ECK = (function () {
     return choices[Math.min(choices.length - 1, Math.floor((random || Math.random)() * choices.length))];
   }
   return {
-    genres: GENRES, selectedGenres: genres, mode: mode, setMode: selectMode,
-    toggleGenre: function (id) {
-      var list = genres(), at = list.indexOf(id);
-      if (at < 0) list.push(id); else list.splice(at, 1);
-      write('genres', list);
-      write('mode', 'genres');
-      refresh(true);
+    genres: GENRES, genre: genre,
+    setGenre: function (id) {
+      var valid = GENRES.some(function (g) { return g[0] === +id; });
+      write('catalogGenre', valid ? +id : 0); catalog.refresh(false);
     },
-    list: visible, refresh: refresh, busy: function () { return busy; }, error: function () { return error; },
+    list: catalog.list, refresh: catalog.refresh, busy: catalog.busy, error: catalog.error,
+    showcase: showcase,
     onChange: function (fn) { listeners.push(fn); }, favourites: favourites, isFavourite: isFavourite,
     toggleFavourite: toggleFavourite,
     hide: function (id) { var list = hidden(); if (list.indexOf(id) < 0) list.push(id); write('hidden', list.slice(-200)); emit(); },

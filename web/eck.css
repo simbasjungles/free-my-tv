@@ -26,10 +26,16 @@ body.eck { background: #eceef4; color: #192039; }
 .eck-hero h1 { margin: 12px 0 10px; font-size: 42px; line-height: 1.12; letter-spacing: -1px; max-height: 48px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .eck-meta { font-size: 20px; color: #cbd4ed; }
 .eck-description { font-size: 20px; line-height: 1.4; color: #dde3f1; height: 56px; overflow: hidden; margin: 13px 0 0; }
-.eck-heading { position: absolute; top: 654px; left: 0; font-size: 23px; font-weight: 600; margin: 0; }
-.eck-count { position: absolute; top: 659px; right: 0; font-size: 18px; opacity: 0.7; }
-.eck-rail { position: absolute; top: 696px; left: 0; width: 1768px; height: 161px; overflow: hidden; padding: 8px 0; }
-.eck-film { position: absolute; top: 8px; width: 276px; height: 148px; border-radius: 12px; background: #202a42; color: #fff; background-size: cover; background-position: center; overflow: hidden; transition: transform 0.2s; -webkit-transition: -webkit-transform 0.2s; text-align: left; }
+.eck-heading { position: absolute; top: 645px; left: 0; width: 340px; font-size: 23px; font-weight: 600; margin: 0; }
+.eck-count { position: absolute; top: 676px; left: 0; font-size: 16px; opacity: 0.7; }
+.eck-genres { position: absolute; left: 360px; top: 643px; width: 1408px; height: 49px; overflow: hidden; }
+.eck-genre { position: absolute; top: 4px; width: 168px; height: 40px; font-size: 18px; border-radius: 20px; background: rgba(116,127,160,0.13); }
+.eck-genre.chosen { background: #6c57cc; color: #fff; }
+.eck-catalog-note { position: absolute; top: 752px; left: 8px; font-size: 22px; opacity: 0.75; }
+.eck-rail { position: absolute; top: 706px; left: 0; width: 1768px; height: 148px; overflow: hidden; }
+.eck-film { position: absolute; top: 8px; width: 276px; height: 138px; border-radius: 12px; background: #202a42; color: #fff; overflow: hidden; transition: transform 0.2s; -webkit-transition: -webkit-transform 0.2s; text-align: left; }
+.eck-film img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.2s; }
+.eck-film img.ready { opacity: 1; }
 .eck-film span { position: absolute; left: 0; right: 0; bottom: 0; padding: 29px 16px 14px; font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: linear-gradient(transparent,rgba(0,0,0,0.88)); }
 .eck-chip { display: inline-block; height: 49px; line-height: 49px; padding: 0 24px; margin-right: 16px; border-radius: 16px; background: rgba(116,127,160,0.16); font-size: 19px; }
 .eck-app-heading { position: absolute; left: 0; top: 258px; font-size: 23px; margin: 0; }
