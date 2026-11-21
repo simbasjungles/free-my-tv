@@ -62,6 +62,7 @@ ANIMATION=false; [ "$(prop hide_animation false)" = "true" ] && ANIMATION=true
 SAVER=true; [ "$(prop screensaver true)" = "false" ] && SAVER=false
 STREMIO=false; [ "$(prop open_in_stremio false)" = "true" ] && STREMIO=true
 NUVIO=false; [ "$(prop open_in_nuvio false)" = "true" ] && NUVIO=true
+LAMPA=false; [ "$(prop open_in_lampa false)" = "true" ] && LAMPA=true
 
 # Servers on your own network (Immich, and the next feature that needs one) often answer in plain HTTP. One rule for
 # all of them: a server given as http:// must be on the local network, and only its host may skip HTTPS
@@ -141,6 +142,7 @@ final class Config {
     static final boolean GENERIC = $GENERIC;   // built with --generic, as the APK on GitHub's releases (Updates)
     static final boolean OPEN_IN_STREMIO = $STREMIO;
     static final boolean OPEN_IN_NUVIO = $NUVIO;
+    static final boolean OPEN_IN_LAMPA = $LAMPA;
 }
 EOF
 
