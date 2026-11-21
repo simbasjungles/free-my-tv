@@ -1418,6 +1418,9 @@ public class SettingsActivity extends Activity {
                 appPkgs.add(Prefs.ALL_APPS);
                 appLabels.add(Ui.tr("All Apps"));
             }
+            // The sleep timer is not a brand button: any mappable key can step it (5, 10 … 90 minutes, then off).
+            appPkgs.add(Prefs.SLEEP_TIMER);
+            appLabels.add(Ui.tr("Sleep Timer"));
             for (String[] f : found) {
                 appPkgs.add(f[0]);
                 appLabels.add(f[1]);
