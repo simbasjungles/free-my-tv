@@ -138,10 +138,17 @@ final class Recs {
      * with both apps on the TV, Nuvio opens.
      */
     private static final String[] NUVIO = {"com.nuvio.tv", "com.nuvio.app"};
+    /**
+     * Lampa (open_in_lampa, #525): opens the title's page on themoviedb.org, which it reads directly — no IMDb id
+     * needed, so no external_ids fetch either. Asked after Nuvio and before Stremio: with several of the three
+     * installed and their flags on, Nuvio opens first, then Lampa, then Stremio.
+     */
+    private static final String LAMPA = "top.rootu.lampa";
     private static final Map<String, String> SERVICE_NAME = new HashMap<>();
     static {
         SERVICE_NAME.put("stremio", "Stremio");
         SERVICE_NAME.put("nuvio", "Nuvio");
+        SERVICE_NAME.put("lampa", "Lampa");
         SERVICE_NAME.put("netflix", "Netflix");
         SERVICE_NAME.put("prime", "Prime Video");
         SERVICE_NAME.put("disney", "Disney+");
@@ -1019,6 +1026,11 @@ final class Recs {
             p.app = "nuvio";
             p.pkg = nuvio;
             p.link = nuvioLink(p.kind, p.id);
+        } else if (p.app != null && lampa()) {   // Lampa reads the TMDB id itself, so no external_ids lookup
+            p.servicePkg = p.pkg;
+            p.app = "lampa";
+            p.pkg = LAMPA;
+            p.link = lampaLink(p.kind, p.id);
         } else if (p.app != null && stremio() && imdb.startsWith("tt")) {
             p.servicePkg = p.pkg;
             p.app = "stremio";
@@ -1128,6 +1140,12 @@ final class Recs {
         return Config.OPEN_IN_STREMIO && HomeApps.launchIntent(context.getPackageManager(), STREMIO) != null;
     }
 
+    /** Lampa's package when open_in_lampa is on and the app is on the TV: the launch intent also lets forks of
+     *  Lampa with the same package work, as with Stremio. */
+    private boolean lampa() {
+        return Config.OPEN_IN_LAMPA && HomeApps.launchIntent(context.getPackageManager(), LAMPA) != null;
+    }
+
     /** Nuvio's package when open_in_nuvio is on and the app is on the TV: the release APK first, else Google Play's. */
     private String nuvio() {
         if (!Config.OPEN_IN_NUVIO) return null;
@@ -1140,9 +1158,16 @@ final class Recs {
         return "nuvio://tmdb/" + ("movie".equals(kind) ? "movie" : "series") + "/" + id;
     }
 
+    /** Lampa's page for a title: its own site view of themoviedb.org (https://www.themoviedb.org/movie/603), the
+     *  form the app itself opens for a TMDB link (#525). */
+    static String lampaLink(String kind, long id) {
+        return "https://www.themoviedb.org/" + ("movie".equals(kind) ? "movie" : "tv") + "/" + id;
+    }
+
     private long sourceStamp() {
         long stamp = ((key().hashCode() * 31L + REGION.hashCode()) * 31L + (Prefs.hideAnimation() ? 1 : 0)) * 31L + Config.PLEX_URL.hashCode();
         if (stremio()) stamp = stamp * 31L + 1;   // off: the same stamp as before, so nothing is fetched again
+        if (lampa()) stamp = stamp * 31L + 2;
         String nuvio = nuvio();
         if (nuvio != null) stamp = stamp * 31L + nuvio.hashCode();
         for (String[] service : SERVICES) stamp = stamp * 31L + (installed(service[2]) ? service[2].hashCode() : 0);
