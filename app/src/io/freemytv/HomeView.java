@@ -327,6 +327,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private String clockText = "", dateText = "", weatherLine = "";
     /** "Off in 42 min" next to the round buttons while the sleep timer runs (Settings > Sleep Timer); "" otherwise. */
     private String sleepText = "";
+    /** The small date · time · temperature line by the round buttons in Picks and Continue Watching (#377); the
+     *  clock screen draws its own bigger ones, so the line keeps to the modes whose top row has the room. */
+    private String infoLine = "";
+    private long infoLineAt = -1, infoLineWeather = -1;
+    private int infoLinePrefs = -1;
     private long weatherLineAt = -1;
     private int weatherLinePrefs = -1;
     private String weatherLineLanguage = "";
@@ -4680,6 +4685,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         if (!picksMode()) {
             if (continueMode()) drawWatchRow(c);
             if (HomeData.coinCount() > 0 || playingTab != null) drawQuotes(c);
+            drawInfoLine(c);
             return;
         }
         // Text tabs (the selected one in bold, in the main text color); with focus on the tabs, the selected one gets
@@ -4713,6 +4719,38 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         for (int i = 0; i < slots; i++) if (i != top) drawLightCard(c, i);
         if (top >= 0) drawLightCard(c, top);
         if (HomeData.coinCount() > 0 || playingTab != null) drawQuotes(c);
+        drawInfoLine(c);
+    }
+
+    /**
+     * The small date · time · temperature line at the round buttons, in Picks and Continue Watching (#377): the
+     * clock screen has the big ones, and these modes' top row has the room at its right end. It sits left of the
+     * buttons, fades while one of them has focus (the row below fades for the same reason), and stays away when
+     * there is no room between the title and them.
+     */
+    private void drawInfoLine(Canvas c) {
+        long now = System.currentTimeMillis();
+        long minute = now / 60_000L;
+        HomeData.Weather wx = data.weather;
+        boolean weather = Prefs.weather() && !Double.isNaN(wx.temp);
+        if (minute != infoLineAt || infoLinePrefs != Prefs.version || (weather && infoLineWeather != data.weatherAt)) {
+            infoLineAt = minute;
+            infoLinePrefs = Prefs.version;
+            infoLineWeather = data.weatherAt;
+            infoLine = Ui.date(now) + "  " + Ui.clock(now) + (weather ? "  " + HomeData.degrees(wx.temp) : "");
+        }
+        float fade = 1;
+        for (int i = 3; i < 3 + lightButtons.size(); i++) fade = Math.min(fade, 1 - Ui.clamp(topFocus[i].value));
+        if (fade <= 0.01f || infoLine.isEmpty()) return;
+        float width = lQuote.measureText(infoLine);
+        float right = topRects.length > 3 ? topRects[3].left - 26 * k : CONTENT_R * k;
+        // The status icons draw on the title's line, right of it, when they are on: leave them their room.
+        float left = titleRight + (Prefs.statusIcons() ? 3 * (L_STATUS + L_STATUS_GAP) * k : 0);
+        if (right - width < left + 40 * k) return;   // no room: the title and the buttons win
+        int color = lQuote.getColor();
+        lQuote.setColor(Ui.alpha(color, fade));
+        c.drawText(infoLine, right - width, (L_BUTTON_CY + 10) * k, lQuote);
+        lQuote.setColor(color);
     }
 
     private boolean picksOn() {
