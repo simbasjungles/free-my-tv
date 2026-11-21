@@ -3424,23 +3424,21 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         final Context c = getContext().getApplicationContext();
         click.open();
         LOADER.execute(() -> {
-            // On the shelf means shown there: installed and within the limit, as in Settings > Shelf.
+            // On the shelf means shown there: an app that launches or an input the TV lists, within the limit, as
+            // in Settings > Shelf (see ShelfKeys).
             List<String> list = new ArrayList<>(HomeApps.shelfPackages(c));
             PackageManager pm = c.getPackageManager();
-            int max = HomeApps.maxShelf(c), shown = 0;
-            boolean on = false;
-            for (String p : list) {
-                if (shown >= max) break;
-                if (HomeApps.launchIntent(pm, p) == null) continue;
-                shown++;
-                on |= p.equals(it.pkg);
-            }
+            Set<String> launchable = new HashSet<>();
+            for (String p : list) if (HomeApps.launchIntent(pm, p) != null) launchable.add(p);
+            int max = HomeApps.maxShelf(c);
+            List<String> shown = ShelfKeys.resolve(list, launchable, HomeApps.inputKeys(c), max);
+            boolean on = shown.contains(it.pkg);
             final String text;
             list.remove(it.pkg);
             if (on) {
                 text = Ui.trf("Removed from the shelf: {app}", "app", it.label);
             } else {
-                if (shown >= max) {
+                if (shown.size() >= max) {
                     handler.post(() -> showToast(Ui.tr("The shelf is full. Make room in Free My TV › Shelf.")));
                     return;
                 }
@@ -3458,13 +3456,17 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
 
     // MARK: - Moving shelf apps and top buttons
 
+    /** What a person can move on the shelf: an app or an input (both save their place by key, see ShelfKeys). */
+    private static boolean movable(HomeApps.Item it) {
+        return it.pkg != null || it.kind == HomeApps.INPUT || it.kind == HomeApps.LIVE_TV;
+    }
+
     private boolean canReorder() {
         if (sheetOpen || menuOpen) return false;
         if (zone == Z_TOP) return topIndex >= 3 && topIndex < 3 + lightButtons.size() && lightButtons.size() > 1;
         // "Last opened first" places the shelf's apps itself
         if (zone != Z_SHELF || shelfIndex >= shelf.size() || shelf.size() < 2 || Prefs.shelfRecent()) return false;
-        HomeApps.Item it = shelf.get(shelfIndex);
-        return it.kind == HomeApps.APP && it.pkg != null;
+        return movable(shelf.get(shelfIndex));
     }
 
     private void startReorder() {
@@ -3593,7 +3595,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             if (appsStale && running) reloadSoon();
             return;
         }
-        for (HomeApps.Item it : shelf) order.add(it.pkg);
+        for (HomeApps.Item it : shelf) order.add(ShelfKeys.stored(it.pkg, it.key));
         final Context c = getContext().getApplicationContext();
         pendingOrderSaves++;
         LOADER.execute(() -> {
@@ -3851,7 +3853,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         }
         if (group == Z_SHELF) {   // TalkBack's long click lifts the app, as holding OK does
             return !reordering && !menuOpen && !sheetOpen && shelf.size() > 1 && i < shelf.size()
-                    && shelf.get(i).kind == HomeApps.APP && shelf.get(i).pkg != null;
+                    && movable(shelf.get(i));
         }
         return group == Z_WATCH && !menuOpen && continueMode() && i < watching.size();
     }
