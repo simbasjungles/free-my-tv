@@ -119,3 +119,11 @@ count=independent.requests.length;independent.eck.refresh(true);replyBatch(indep
 assert.strictEqual(independent.eck.showcase.list().map(function(m){return m.id;}).join(','),showcaseIds);
 assert.strictEqual(Object.keys(independent.memory).filter(function(k){return k.indexOf('movies.')>=0;}).length,2);
 console.log('EckCoreTest: independent feeds, diversity, shared request/cache reuse, rapid genres, persistence and isolated failures passed.');
+var bundledTest=core();bundledTest.sandbox.location={protocol:'file:'};
+var localResult=null,remoteResult=null;
+bundledTest.eck.request('eck-scenes.json',{},function(err,body){localResult={err:err,body:body};});
+var local=bundledTest.requests[0];local.status=0;local.readyState=4;local.responseText='{"version":2,"scenes":[]}';local.onreadystatechange();
+assert.strictEqual(localResult.err,null);assert.strictEqual(localResult.body.version,2);
+bundledTest.eck.request('https://example.invalid/data',{},function(err){remoteResult=err;});
+var remote=bundledTest.requests[1];remote.status=0;remote.readyState=4;remote.responseText='{}';remote.onreadystatechange();assert(remoteResult,'remote status 0 remains a failure');
+console.log('EckCoreTest: Tizen bundled JSON status 0 accepted; failed remote requests still rejected.');

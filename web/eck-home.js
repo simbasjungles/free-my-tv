@@ -7,7 +7,7 @@
   var catalog = {items: [], index: 0, wanted: null, view: 'movies', genreFocus: 0, imageGeneration: 0};
   var showcase = {items: [], index: 0, wanted: null, imageGeneration: 0, imageTimer: 0, lastImage: '', rotateAt: Date.now() + 30000};
   var genreTabs = [[0, 'Tümü'], [28, 'Aksiyon'], [878, 'Bilim Kurgu'], [35, 'Komedi'], [27, 'Korku'], [53, 'Gerilim'], [18, 'Dram'], [16, 'Animasyon'], [-1, 'Diğer türler']];
-  var modal = null, modalBack = null, modalIndex = 0, menuRows = [], form = null, toastTimer = 0, idleAt = Date.now();
+  var modal = null, modalBack = null, modalIndex = 0, menuRows = [], form = null, toastTimer = 0, idleAt = Date.now(), externalAway = false;
   var saver = null, saverTimer = 0, sceneIndex = 0, saverGeneration = 0, trailerGeneration = 0;
   var pool = ECK.imagePool(2), heroPool = ECK.imagePool(2), scenes = [], sceneBusy = false, lastRefresh = 0, lastWeatherRefresh = Date.now();
   var sceneFeed = 'https://raw.githubusercontent.com/celilkamis-arch/ECK-TV/main/web/eck-scenes.json';
@@ -175,14 +175,35 @@
     }, 180);
   }
   function renderApps() {
-    appsBox.innerHTML = ''; appPage = 0;
+    appsBox.innerHTML = ''; appPage = 0; var signatures = {};
     apps.forEach(function (a, i) {
       var b = button(appsBox, 'eck-app app-' + a.key + (a.icon ? '' : ' no-icon') + (a.available === false ? ' unavailable' : ''), '', function () { row = 3; col = i; focus(); launchApp(a); });
-      b.style.left = (i * 224 + 5) + 'px'; b.style.top = '5px';
+      b.style.left = (i * 224 + 12) + 'px'; b.style.top = '5px';
       b.setAttribute('data-focus', '3:' + i);
       b.setAttribute('aria-label', a.title);
       if (a.icon) b.style.backgroundColor = a.color || '#202a42';
-      if (a.icon) { var img = el('img', '', b); img.src = a.icon; img.alt = ''; img.onerror = function () { b.className += ' no-icon'; img.style.display = 'none'; }; }
+      if (a.icon) {
+        var img = el('img', '', b), fallback = a.icon === a.fallbackIcon; img.alt = '';
+        function localLogo() { if (fallback) return; if (a.fallbackIcon) { fallback = true; img.src = a.fallbackIcon; } }
+        img.onerror = function () { if (!fallback && a.fallbackIcon) { localLogo(); return; } b.className += ' no-icon'; img.style.display = 'none'; };
+        img.onload = function () {
+          if (fallback || b.parentNode !== appsBox) return;
+          // Smart Hub's square app badges are unsuitable for this wide logo row.
+          // Keep a wide installed logo; use the local wordmark for square/padded badges.
+          if (!img.naturalWidth || !img.naturalHeight || img.naturalWidth / img.naturalHeight < 1.4) { localLogo(); return; }
+          try {
+            var canvas = document.createElement('canvas'); canvas.width = canvas.height = 16;
+            var context = canvas.getContext('2d'); context.drawImage(img, 0, 0, 16, 16);
+            var pixels = context.getImageData(0, 0, 16, 16).data, hash = 0;
+            for (var p = 0; p < pixels.length; p++) hash = ((hash << 5) - hash + pixels[p]) | 0;
+            var prior = signatures[hash];
+            // Different services sharing the exact same tiny raster have received Samsung's generic icon.
+            if (prior && prior.key !== a.key) { prior.fallback(); localLogo(); }
+            else signatures[hash] = {key: a.key, fallback: localLogo};
+          } catch (e) { localLogo(); }
+        };
+        img.src = a.icon;
+      }
       el('span', '', b, a.title);
       if (a.available === false) el('small', 'eck-unavailable', b, 'Yüklü değil');
     });
@@ -229,21 +250,18 @@
   function launchApp(a) {
     if (!a) return;
     if (a.available === false || !a.id) { toast(a.title + ' TV’de yüklü değil. Samsung Apps üzerinden yükledikten sonra ECK TV’yi tekrar aç.'); return; }
-    savePosition();
-    TV.launch(a.id, null, function (ok) { if (!ok || TV.name === 'browser') toast(TV.name === 'browser' ? 'Önizleme: ' + a.title : 'Uygulama açılamadı.'); });
+    savePosition(); externalAway = TV.name !== 'browser';
+    TV.launch(a.id, null, function (ok) { if (!ok || TV.name === 'browser') { externalAway = false; toast(TV.name === 'browser' ? 'Önizleme: ' + a.title : 'Uygulama açılamadı.'); } });
   }
   function play(m) {
     if (!m) return;
-    var youtube = apps.filter(function (a) { return /youtube/i.test(a.title) && !/kids/i.test(a.title); })[0];
-    if (!youtube || !youtube.id) { toast('YouTube uygulaması bulunamadı.'); return; }
-    savePosition(); var mine = ++trailerGeneration; toast('Türkçe fragman aranıyor…');
+    savePosition(); var mine = ++trailerGeneration;
     function open(video, query) {
       if (mine !== trailerGeneration || document.hidden) return;
-      TV.youtube(youtube.id, video, query, function (ok) {
-        if (!ok) toast(TV.name === 'browser' ? 'Önizleme: ' + query : 'YouTube bağlantıyı açamadı. Tekrar deneyebilirsin.');
-      });
+      if (!video) { toast('Bu film için oynatılabilir fragman bulunamadı.'); return; }
+      ECKPlayer.open(root, video, function () { idleAt = Date.now(); showcase.rotateAt = Date.now() + 30000; focus(); }, toast);
     }
-    if (demo) open('', ECK.searchQuery(m)); else ECK.trailer(m, open);
+    if (demo) open(m.id === 157336 ? 'zSWdZVtXT7E' : 'YoHD9XEInc0', ''); else ECK.trailer(m, open);
   }
   function activate() {
     idleAt = Date.now();
@@ -253,7 +271,7 @@
       return;
     }
     if (row === 0) {
-      if (col === 0) { savePosition(); TV.launch('source:TV:1', null, function (ok) { if (!ok || TV.name === 'browser') toast(TV.name === 'browser' ? 'Önizleme: TV’nin son yayını açılır.' : 'TV yayını açılamadı.'); }); }
+      if (col === 0) { savePosition(); externalAway = TV.name !== 'browser'; TV.launch('source:TV:1', null, function (ok) { if (!ok || TV.name === 'browser') { externalAway = false; toast(TV.name === 'browser' ? 'Önizleme: TV’nin son yayını açılır.' : 'TV yayını açılamadı.'); } }); }
       if (col === 1) showSaver(); if (col === 2) settings();
     } else if (row === 1) play(selectedMovie());
     else if (row === 6) chooseTab(catalog.genreFocus);
@@ -291,18 +309,19 @@
       {label: 'Görünüm ve ambiyans', value: 'Tema · ekran koruyucu', run: appearanceSettings},
       {label: 'Hava durumu', value: Prefs.city() || 'Şehir seç', run: cityForm},
       {label: 'TMDB anahtarı', value: Prefs.tmdbKey() ? 'Kayıtlı' : 'Ekle', run: keyForm},
-      {label: 'Hakkında', value: 'ECK TV 1.10', run: about}
+      {label: 'Hakkında', value: 'ECK TV 1.11', run: about}
     ]); modalBack = null;
   }
   function filmSettings() {
     menu('Film önerileri', 'Farklı türlerden genel öneriler · 30 saniyede değişir · Film alanındayken durur.', [
-      {label: 'Vitrini yenile', value: 'Genel film önerileri', run: function () { closeModal(); ECK.showcase.refresh(true); }}
+      {label: 'Vitrini yenile', value: 'Genel film önerileri', run: function () { closeModal(); ECK.showcase.refresh(true); }},
+      {label: 'Otomatik film geçişi', value: ECK.read('autoRotate', true) ? 'Açık · 30 saniye' : 'Kapalı', run: function () { ECK.write('autoRotate', !ECK.read('autoRotate', true)); filmSettings(); }}
     ]);
   }
   function appearanceSettings() {
-    menu('Görünüm ve ambiyans', 'Şehir ve uzay · 2 dakika bekleme · 45 saniyede yeni görsel', [
+    menu('Görünüm ve ambiyans', 'Şehir ve doğa · 5 dakika bekleme · 45 saniyede yeni görsel', [
       {label: 'Tema', value: Prefs.theme() === 'dark' ? 'Koyu' : Prefs.theme() === 'light' ? 'Açık' : 'Gündüz / gece', run: themeMenu},
-      {label: 'Ekran koruyucuyu önizle', value: 'Şehir / uzay', run: function () { closeModal(); showSaver(); }}
+      {label: 'Ekran koruyucuyu önizle', value: 'Şehir / doğa', run: function () { closeModal(); showSaver(); }}
     ]);
   }
   function genreMenu() {
@@ -353,38 +372,30 @@
     });
   }
   function about() {
-    menu('ECK TV 1.10', 'Free My TV temel alınarak geliştirildi. Film bilgileri TMDB’den sağlanır; TMDB tarafından onaylanmış değildir.', [
-      {label: 'Görseller', value: 'Unsplash / NASA', run: function () { toast('Şehir: Unsplash · Uzay: NASA Images. Kaynak adı ambiyans ekranında görünür.'); }},
+    menu('ECK TV 1.11', 'Free My TV temel alınarak geliştirildi. Film bilgileri TMDB’den sağlanır; TMDB tarafından onaylanmış değildir.', [
+      {label: 'Görseller', value: 'Şehir ve doğa', run: function () { toast('Fotoğraflar: Unsplash. Kaynak adı ambiyans ekranında görünür.'); }},
       {label: 'Kumanda', value: 'Yönler · OK · Geri', run: function () { toast('↑ ↓ Bölümler · ← → Seç · OK Aç · Geri önceki ekran'); }},
       {label: 'Geri', run: settings}
     ]);
   }
   function validScenes(list) {
     return (list instanceof Array ? list : []).filter(function (s) {
-      return s && typeof s.url === 'string' && /^https:\/\/(images\.unsplash\.com|images-assets\.nasa\.gov)\//.test(s.url);
-    }).slice(0, 12).map(function (s) { return {url: s.url, title: String(s.title || 'Şehir ve uzay').slice(0, 100), source: String(s.source || '').slice(0, 40)}; });
+      return s && (s.category === 'city' || s.category === 'nature') && typeof s.url === 'string' && /^https:\/\/images\.unsplash\.com\//.test(s.url)
+        && !/nasa|galaxy|nebula|planet|space|uzay|gezegen|galaksi|yıldız/i.test(s.title + ' ' + s.source);
+    }).slice(0, 12).map(function (s) { return {url: s.url, title: String(s.title || 'Şehir ve doğa').slice(0, 100), category: s.category, source: String(s.source || '').slice(0, 40)}; });
   }
   function loadScenes() {
     var cached = ECK.read('scenes', null);
-    if (cached && cached.list) scenes = validScenes(cached.list);
+    if (cached && cached.version === 2 && cached.list) scenes = validScenes(cached.list);
+    else { cached = null; scenes = []; ECK.write('scenes', {version: 2, at: 0, list: []}); ECK.write('lastScene', ''); ECK.write('lastSceneStart', ''); }
     function apply(list) {
       var good = validScenes(list); if (!good.length) return;
-      scenes = good; ECK.write('scenes', {at: Date.now(), list: good}); warmScene();
+      scenes = good; ECK.write('scenes', {version: 2, at: Date.now(), list: good}); warmScene();
     }
     function online() {
       if (sceneBusy || document.hidden) return; sceneBusy = true;
       ECK.request(sceneFeed, {}, function (err, data) {
-        sceneBusy = false; if (!err && data) apply(data.scenes);
-        // NASA's public image search needs no account or key. Keep only six thumbnails and their credit.
-        ECK.request('https://images-api.nasa.gov/search?q=nebula&media_type=image&page_size=6', {}, function (e, body) {
-          if (e || !body || !body.collection || document.hidden) return;
-          var items = body.collection.items || [], space = [];
-          items.forEach(function (item) {
-            var links = item.links || [], info = item.data && item.data[0];
-            if (links[0] && info) space.push({url: links[0].href, title: info.title, source: 'NASA'});
-          });
-          if (space.length) apply(scenes.filter(function (s) { return s.source !== 'NASA'; }).slice(0, 6).concat(space));
-        });
+        sceneBusy = false; if (!err && data && data.version === 2) apply(data.scenes);
       });
     }
     ECK.request('eck-scenes.json', {}, function (err, data) {
@@ -403,7 +414,7 @@
     });
   }
   function showSaver() {
-    if (saver || document.hidden) return;
+    if (saver || document.hidden || externalAway || ECKPlayer.active()) return;
     sceneIndex = ECK.sceneStart(scenes, ECK.read('lastSceneStart', ECK.read('lastScene', '')));
     if (scenes.length) ECK.write('lastSceneStart', scenes[sceneIndex].url);
     savePosition(); saver = el('section', 'eck-saver', root); saver.setAttribute('aria-label', 'Ekran koruyucu');
@@ -412,12 +423,13 @@
     var clock = el('div', 'eck-saver-clock', saver, clockText());
     el('span', 'eck-saver-date', clock, formatDate('format|EEEE, MMMM d', Date.now()));
     var w = el('div', 'eck-saver-weather', saver, weatherText()); el('small', '', w, Prefs.city() || '');
-    var credit = el('div', 'eck-saver-credit', saver, 'Şehir ve uzay · Görseller yükleniyor…'), front = b;
+    var credit = el('div', 'eck-saver-credit', saver, 'Şehir ve doğa · Görseller yükleniyor…'), front = b;
     var mine = ++saverGeneration;
     function next(attempts) {
       if (!saver || mine !== saverGeneration || document.hidden) return;
       if (!scenes.length) { credit.textContent = 'Çevrimdışı ambiyans · Görseller için internet bağlantısını kontrol et.'; saverTimer = setTimeout(function () { next(0); }, 45000); return; }
       var scene = scenes[sceneIndex++ % scenes.length];
+      if (scenes.length > 1 && scene.url === ECK.read('lastScene', '')) scene = scenes[sceneIndex++ % scenes.length];
       pool.load(scene.url, function (ok) {
         if (!saver || mine !== saverGeneration || document.hidden) return;
         if (!ok && attempts < Math.min(scenes.length - 1, 3)) { next(attempts + 1); return; }
@@ -438,13 +450,15 @@
     if (saver) root.removeChild(saver); saver = null; idleAt = Date.now(); focus();
   }
   function back() {
+    if (ECKPlayer.active()) { ECKPlayer.close(); return; }
     if (modal) {
       if (modalBack) modalBack(); else closeModal(); return;
     }
     if (row !== 0) { row = 0; col = 0; focus(); } else { savePosition(); TV.back(); }
   }
   function key(e) {
-    var k = e.keyCode; idleAt = Date.now();
+    var k = e.keyCode; idleAt = Date.now(); externalAway = false;
+    if (ECKPlayer.active()) { if (k === TV.keys.back || k === 27 || k === 8) ECKPlayer.close(); else if (k === 13) ECKPlayer.play(); e.preventDefault(); e.stopPropagation(); return; }
     if (saver) { hideSaver(); e.preventDefault(); e.stopPropagation(); return; }
     if (form && document.activeElement === form[0]) {
       if (k === 13 || k === 65376) { form[0].blur(); modalIndex = 1; focusModal(); e.preventDefault(); }
@@ -465,7 +479,7 @@
     });
   }
   function resume() {
-    hideSaver(); restorePosition(); updateFilms(); updateShowcase(); reloadApps(); tick(); showcase.rotateAt = Date.now() + 30000;
+    externalAway = false; hideSaver(); restorePosition(); updateFilms(); updateShowcase(); reloadApps(); tick(); showcase.rotateAt = Date.now() + 30000;
     idleAt = Date.now(); Data.refresh();
     if (!demo && Date.now() - lastRefresh > 6 * 3600000) refreshFeeds(false);
   }
@@ -482,7 +496,7 @@
   Data.refresh(); if (!demo) refreshFeeds(false);
   document.addEventListener('keydown', key); window.addEventListener('resize', fit);
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { savePosition(); hideSaver(); clearTimeout(showcase.imageTimer); showcase.imageGeneration++; trailerGeneration++; return; }
+    if (document.hidden) { savePosition(); if (ECKPlayer.active()) ECKPlayer.close(); hideSaver(); clearTimeout(showcase.imageTimer); showcase.imageGeneration++; trailerGeneration++; return; }
     showcase.lastImage = ''; resume();
   });
   window.addEventListener('appcontrol', resume);
@@ -492,9 +506,9 @@
     if (Date.now() - lastWeatherRefresh >= 60000) { lastWeatherRefresh = Date.now(); Data.refresh(); }
     if (Date.now() >= nextScenesRefresh) { nextScenesRefresh = Date.now() + 86400000; loadScenes(); }
     if (!demo && !modal && Date.now() - lastRefresh >= 6 * 3600000) refreshFeeds(false);
-    if (row === 5 || modal || saver) showcase.rotateAt = Date.now() + 30000;
+    if (row === 5 || modal || saver || externalAway || ECKPlayer.active() || !ECK.read('autoRotate', true)) showcase.rotateAt = Date.now() + 30000;
     else if (Date.now() >= showcase.rotateAt) advanceShowcase(1);
-    if (!modal && !saver && Date.now() - idleAt >= 120000) showSaver();
+    if (!modal && !saver && !externalAway && !ECKPlayer.active() && Date.now() - idleAt >= 300000) showSaver();
   }, 1000);
   window.ECKHome = {move: move, activate: activate, back: back, showSaver: showSaver, hideSaver: hideSaver,
     settings: settings, resume: resume, scenes: function () { return scenes; },

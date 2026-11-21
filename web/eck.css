@@ -15,7 +15,7 @@ body.eck { background: #eceef4; color: #192039; }
 .eck-top button { display: inline-block; width: 148px; height: 58px; margin-left: 12px; border-radius: 29px; background: rgba(110,120,150,0.13); font-size: 24px; text-align: center; position: relative; }
 .eck-top button span { display: inline-block; font-size: 17px; margin-left: 10px; vertical-align: 2px; }
 .eck-top .eck-art { background: linear-gradient(135deg,#6749e8,#d553b4 60%,#ed9b5e); color: white; }
-.eck-viewport { position: absolute; left: 64px; top: 124px; width: 1792px; height: 920px; overflow: hidden; }
+.eck-viewport { position: absolute; left: 64px; top: 124px; width: 1792px; height: 920px; overflow: visible; }
 .eck-content { position: absolute; width: 1792px; height: 920px; }
 .eck-hero { position: absolute; top: 40px; left: 0; width: 1792px; height: 660px; background: #171e33; border-radius: 22px; overflow: hidden; color: #fff; text-align: left; cursor: pointer; }
 .eck-hero-photo { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-size: cover; background-position: center 42%; opacity: 0; transition: opacity 0.6s; }
@@ -40,10 +40,10 @@ body.eck { background: #eceef4; color: #192039; }
 .eck-chip { display: inline-block; height: 49px; line-height: 49px; padding: 0 24px; margin-right: 16px; border-radius: 16px; background: rgba(116,127,160,0.16); font-size: 19px; }
 .eck-app-heading { position: absolute; left: 0; top: 728px; font-size: 23px; margin: 0; }
 .eck-apps { position: absolute; left: 0; top: 770px; width: 1792px; height: 138px; }
-.eck-app { position: absolute; width: 208px; height: 124px; border-radius: 15px; background: #fff; color: #192039; text-align: center; transition: transform 0.18s; -webkit-transition: -webkit-transform 0.18s; overflow: hidden; cursor: pointer; }
+.eck-app { position: absolute; width: 198px; height: 124px; border-radius: 15px; background: #fff; color: #192039; text-align: center; transition: transform 0.15s; -webkit-transition: -webkit-transform 0.15s; overflow: hidden; cursor: pointer; }
 .night .eck-app { background: #e9edf7; }
-.eck-app img { position: absolute; top: 8px; left: 8px; width: 192px; height: 108px; object-fit: contain; }
-.eck-app.app-internet img { left: 76px; top: 12px; width: 56px; height: 56px; }
+.eck-app img { position: absolute; top: 8px; left: 8px; width: 182px; height: 108px; object-fit: contain; }
+.eck-app.app-internet img { left: 71px; top: 12px; width: 56px; height: 56px; }
 .eck-app.app-internet:not(.no-icon) span { display: block; color: #fff; bottom: 20px; font-size: 17px; }
 .eck-app.unavailable img { opacity: 0.45; }
 .eck-unavailable { position: absolute; left: 0; right: 0; bottom: 4px; font-size: 14px; color: #fff; background: rgba(0,0,0,0.8); }
@@ -54,7 +54,9 @@ body.eck { background: #eceef4; color: #192039; }
 .eck-hero.focused { outline: 3px solid #fff !important; outline-offset: -3px; }
 #eck .focused { outline: 3px solid #fff; outline-offset: -3px; }
 #eck .eck-film.focused { transform: scale(1.025); -webkit-transform: scale(1.025); z-index: 2; }
-#eck .eck-app.focused { transform: scale(1.035); -webkit-transform: scale(1.035); }
+#eck .eck-app.focused { transform: scale(1.1); -webkit-transform: scale(1.1); outline: 4px solid #fff; box-shadow: 0 9px 20px rgba(0,0,0,0.42); z-index: 3; }
+.eck-player { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #000; z-index: 40; }
+.eck-player iframe { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 0; }
 .eck-modal { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: rgba(5,9,20,0.97); color: #f4f6ff; z-index: 10; }
 .eck-modal-box { position: absolute; left: 350px; top: 64px; width: 1220px; height: 950px; box-sizing: border-box; padding: 34px 40px; border: 1px solid #323952; border-radius: 28px; background: linear-gradient(140deg,#192239,#101727); }
 .eck-settings-brand { font-size: 18px; letter-spacing: 4px; color: #b8adff; margin-bottom: 20px; }

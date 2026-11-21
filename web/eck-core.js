@@ -23,7 +23,9 @@ var ECK = (function () {
     for (var h in headers) if (headers.hasOwnProperty(h)) xhr.setRequestHeader(h, headers[h]);
     xhr.onreadystatechange = function () {
       if (xhr.readyState !== 4) return;
-      if (xhr.status !== 200) { finish(new Error('connection')); return; }
+      // Tizen's packaged file reads return status 0 even when the bundled JSON was read.
+      var bundled = typeof location !== 'undefined' && location.protocol === 'file:' && !/^(?:[a-z]+:|\/\/)/i.test(url);
+      if (xhr.status !== 200 && !(bundled && xhr.status === 0 && xhr.responseText)) { finish(new Error('connection')); return; }
       try { var body = JSON.parse(xhr.responseText); } catch (e) { finish(new Error('response')); return; }
       finish(null, body);
     };
@@ -130,7 +132,7 @@ var ECK = (function () {
   // Prefer an actual Turkish trailer over an English trailer; reject teasers, clips and non-YouTube entries.
   function bestTrailer(videos) {
     var candidates = (videos || []).filter(function (v) {
-      return v.site === 'YouTube' && v.type === 'Trailer' && /^[A-Za-z0-9_-]{11}$/.test(v.key || '');
+      return v.site === 'YouTube' && v.type === 'Trailer' && v.embeddable !== false && /^[A-Za-z0-9_-]{11}$/.test(v.key || '');
     });
     candidates.sort(function (a, b) {
       function score(v) { return (v.iso_639_1 === 'tr' ? 100 : v.iso_639_1 === 'en' ? 30 : 0) + (v.official ? 15 : 0); }
@@ -191,8 +193,10 @@ var ECK = (function () {
         if (d[0] === 'hbo') return /^(hbo\s*)?max$|^hbo\s*go$/i.test(a.title) || /hbo|wbd|\.max(?:\.|$)/i.test(a.id);
         return d[2].test(s) && (!d[3] || !d[3].test(s));
       });
+      if (d[0] === 'youtube') matches = matches.filter(function (a) { return a.platform !== 'tizen' || /^(9Ur5IzDKqV\.TizenYouTube|111299001912(?:\..*)?)$/.test(a.id); });
+      matches.sort(function (a, b) { return (a.official ? 0 : 1) - (b.official ? 0 : 1); });
       var a = matches[0];
-      return {id: a ? a.id : null, key: d[0], title: d[1], icon: 'icons/' + d[4], color: d[5], available: !!a};
+      return {id: a ? a.id : null, key: d[0], title: d[1], icon: a && a.installedIcon || 'icons/' + d[4], fallbackIcon: 'icons/' + d[4], color: d[5], available: !!a};
     });
   }
   function sceneStart(list, last, random) {

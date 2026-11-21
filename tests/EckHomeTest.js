@@ -1,7 +1,7 @@
 'use strict';
 // Optional DOM integration suite: requires jsdom 26.1 (may be installed outside the repository via NODE_PATH).
 var fs = require('fs'), path = require('path'), assert = require('assert'), JSDOM = require('jsdom').JSDOM;
-function setup(saved, hasKey, startTime) {
+function setup(saved, hasKey, startTime, platform) {
   var dom = new JSDOM(fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8'), {url: 'http://localhost/', runScripts: 'outside-only', pretendToBeVisual: true});
   var w = dom.window, requests = [], launches = [], videos = [], intervals = [], timers = {}, serial = 0, now = startTime || Date.now(), images = [];
   Object.keys(saved || {}).forEach(function (k) { w.localStorage.setItem(k, saved[k]); });
@@ -15,7 +15,7 @@ function setup(saved, hasKey, startTime) {
   w.Prefs = {tmdbKey: function () { return hasKey === false ? '' : 'test-only-placeholder'; }, city: function () { return ''; }, theme: function () { return 'auto'; }};
   w.Data = {weather: null, onChange: function () {}, refresh: function () {}, isNight: function () { return true; }, image: function (p) { return 'https://image.tmdb.org/t/p/w342' + p; }};
   var titles = ['YouTube', 'Netflix', 'Disney+', 'Prime Video', 'HBO Max', 'Internet', 'Apple TV', 'Spotify', 'Extra app'];
-  w.TV = {name: 'browser', keys: {back: 461}, apps: function (cb) { cb(titles.map(function (title, i) { return {id: 'app' + i, title: title}; })); },
+  w.TV = {name: platform || 'browser', keys: {back: 461}, apps: function (cb) { cb(titles.map(function (title, i) { return {id: 'app' + i, title: title}; })); },
     launch: function (id, p, cb) { launches.push(id); cb(true); }, youtube: function (id, video, query, cb) { videos.push({video: video, query: query}); cb(true); }, back: function () {}};
   w.XMLHttpRequest = function () {
     requests.push(this); this.open = function (m, url) { this.url = url; }; this.setRequestHeader = this.send = function () {};
@@ -23,9 +23,10 @@ function setup(saved, hasKey, startTime) {
   };
   w.eval(fs.readFileSync(path.join(__dirname, '../web/eck-core.js'), 'utf8'));
   w.ECK.request = function (url, headers, cb) {
-    if (url === 'eck-scenes.json') cb(null, w.JSON.parse(JSON.stringify({scenes: [{url: 'https://images.unsplash.com/a'}, {url: 'https://images.unsplash.com/b'}]})));
+    if (url === 'eck-scenes.json') cb(null, w.JSON.parse(JSON.stringify({version:2,scenes: [{url: 'https://images.unsplash.com/a',category:'city'}, {url: 'https://images.unsplash.com/b',category:'nature'}]})));
     else cb(new Error('offline'));
   };
+  w.eval(fs.readFileSync(path.join(__dirname, '../web/eck-player.js'), 'utf8'));
   w.eval(fs.readFileSync(path.join(__dirname, '../web/eck-home.js'), 'utf8'));
   return {w: w, requests: requests, videos: videos, images: images, launches: launches, now: function () { return now; },
     advance: function (ms) {
@@ -59,7 +60,9 @@ w.ECKHome.move(0,-1);assert.strictEqual(state(t).row,5);
 upper=state(t).showcase;var n=t.requests.length;w.ECKHome.activate();
 assert(t.requests[n].url.indexOf('/movie/'+upper.id+'/videos')>=0);
 t.requests[n].reply({results:[{site:'YouTube',type:'Trailer',iso_639_1:'tr',key:'abcdefghijk'}]});
-assert.strictEqual(t.videos[0].video,'abcdefghijk');
+assert.strictEqual(w.ECKPlayer.state().video,'abcdefghijk');assert.strictEqual(w.ECKPlayer.state().confirmed,false);
+assert.strictEqual(t.videos.length,0,'no external app/homepage fallback');
+w.ECKHome.back();assert(!w.ECKPlayer.active(),'one Back closes embedded playback');
 var before=state(t);w.ECKHome.resume();assert.deepStrictEqual(state(t),before);
 var restarted=setup(t.saved(),true,t.now());assert.strictEqual(restarted.requests.length,0);
 assert.deepStrictEqual(state(restarted).showcase,state(t).showcase);
@@ -68,6 +71,13 @@ w.ECKHome.settings();upper=state(t).showcase;t.advance(31000);assert.deepStrictE
 w.ECKHome.back();w.ECKHome.showSaver();t.advance(31000);assert.deepStrictEqual(state(t).showcase,upper);
 w.document.dispatchEvent(new w.KeyboardEvent('keydown',{keyCode:13,bubbles:true}));assert(!w.document.querySelector('.eck-saver'));
 var empty=setup(null,false);empty.w.document.querySelector('.eck-hero').click();assert(empty.w.document.querySelector('input[type=password]'));
+var idle=setup();idle.w.ECKHome.move(0,1);idle.advance(299000);assert(!idle.w.document.querySelector('.eck-saver'));
+idle.advance(1001);assert(idle.w.document.querySelector('.eck-saver'),'five minute timeout');
+idle.w.ECKHome.hideSaver();idle.w.ECKHome.move(1,0);idle.advance(200000);idle.w.ECKHome.move(-1,0);idle.advance(200000);assert(!idle.w.document.querySelector('.eck-saver'),'remote resets idle timer');
+var away=setup(null,true,null,'tizen');away.w.ECKHome.move(0,1);away.w.ECKHome.activate();away.advance(310000);assert(!away.w.document.querySelector('.eck-saver'),'external app blocks ambient even before visibility changes');
+var stale=setup({'eck.scenes':JSON.stringify({at:Date.now(),list:[{url:'https://images-assets.nasa.gov/a',source:'NASA',title:'Space'}]}),'eck.lastScene':'old-space'});
+assert(stale.w.ECKHome.scenes().every(function(s){return s.category==='city'||s.category==='nature';}));
+assert.strictEqual(stale.w.ECK.read('lastScene'),'');assert.strictEqual(stale.w.ECK.read('scenes').version,2);
 var icon=fs.readFileSync(path.join(__dirname,'../tizen/icon.png'));
 assert.strictEqual(icon.readUInt32BE(16),117);assert.strictEqual(icon.readUInt32BE(20),117);
 var manifest=fs.readFileSync(path.join(__dirname,'../tizen/config.xml'),'utf8');

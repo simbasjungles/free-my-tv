@@ -269,7 +269,8 @@ var TV = (function () {
   function samsungApps(done) {
     try {
       window.tizen.application.getAppsInfo(function (list) {
-        var out = [];
+        var out = [], iconUse = {};
+        list.forEach(function (a) { if (a.iconPath) iconUse[a.iconPath] = (iconUse[a.iconPath] || 0) + 1; });
         // App ids named in shelf_apps stay even with show false, and are looked up when the list leaves them out:
         // Moonlight, installed in Developer Mode on a 2023 Q60C (Tizen 9), never reached the shelf though Smart Hub
         // lists it. Only whole ids, so a name in shelf_apps can't bring back the platform's hidden pieces.
@@ -277,7 +278,7 @@ var TV = (function () {
         for (var i = 0; i < list.length; i++) {
           var a = list[i];
           if (!a.id || a.id === self || SAMSUNG_HIDDEN.test(a.id) || (a.show === false && ids.indexOf(a.id) < 0)) continue;
-          out.push(samsungApp(a));
+          out.push(samsungApp(a, iconUse[a.iconPath] > 2));
         }
         ids.forEach(function (id) {
           if (out.some(function (x) { return x.id === id; })) return;
@@ -295,9 +296,10 @@ var TV = (function () {
     }
   }
 
-  function samsungApp(a) {
+  function samsungApp(a, sharedIcon) {
     var icon = a.iconPath || '';
     if (icon && icon.indexOf('://') < 0) icon = 'file://' + icon;
+    var installedIcon = !sharedIcon && !/default|placeholder|pinwheel|unknown/i.test(icon) ? icon : '';
     var title = SAMSUNG_TITLES[a.id] || a.name || a.id;
     // Older Smart Hubs (a 2015 JU6075) still list Amazon's app under its old name, with another id.
     if (/^Amazon( Instant)? Video$/i.test(title)) title = 'Prime Video';
@@ -306,7 +308,8 @@ var TV = (function () {
     if (SAMSUNG_ICONS[a.id] || byName) icon = SAMSUNG_ICONS[a.id] || byName;
     var dial = key === 'netflix' ? 'Netflix' : key === 'youtube' ? 'YouTube' : /^(amazon)?primevideo$/.test(key) ? 'Amazon' : '';
     if (dial) samsungDial[a.id] = dial;
-    return {id: a.id, title: title, icon: icon, color: ''};
+    return {id: a.id, title: title, icon: icon, installedIcon: installedIcon, platform: 'tizen',
+      official: /^(9Ur5IzDKqV\.TizenYouTube|RN1MCdNq8t\.Netflix|org\.tizen\.netflix-app|111299001912(?:\..*)?|11101200001(?:\..*)?)$/.test(a.id), color: ''};
   }
 
   /**
@@ -367,7 +370,7 @@ var TV = (function () {
   }
 
   function samsungLaunch(id, done) {
-    var dial = samsungDial[id];
+    var dial = samsungDial[id] || (/Netflix|org\.tizen\.netflix/i.test(id) ? 'Netflix' : '');
     function launch(otherwise) {
       try {
         window.tizen.application.launch(id, function () { if (done) done(true); }, otherwise);
@@ -377,7 +380,8 @@ var TV = (function () {
     }
     function failed() { if (done) done(false); }
     if (tizen34 && dial === 'Netflix') {
-      hubLaunch(NETFLIX_HUB, function (ok) { if (ok) { if (done) done(true); } else launch(function () { dialLaunch(dial, done); }); });
+      // Never fall back to tizen.application.launch on these TVs: it is the known black-screen path.
+      hubLaunch(NETFLIX_HUB, function (ok) { if (ok) { if (done) done(true); } else dialLaunch(dial, done); });
       return;
     }
     // A native id: DIAL first (launch doesn't open those on Tizen 2.3), and launch where DIAL doesn't answer.
@@ -707,21 +711,14 @@ var TV = (function () {
   return {
     name: webos ? 'webos' : samsung ? 'tizen' : 'browser',
 
-    /** Request a particular YouTube video/search. Success means accepted, not proof that YouTube played it. */
+    /** Legacy exact-video handoff only. ECK uses its verified embedded player instead. */
     youtube: function (id, video, query, done) {
-      var url = video ? 'https://www.youtube.com/watch?v=' + encodeURIComponent(video)
-        : 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
-      if (!samsung) { if (done) done(false, url); return; }
-      function open(uri, fallback) {
-        try {
-          var control = new window.tizen.ApplicationControl('http://tizen.org/appcontrol/operation/view', uri);
-          window.tizen.application.launchAppControl(control, id, function () { if (done) done(true, uri); }, fallback);
-        } catch (e) { fallback(); }
-      }
-      open(url, function () {
-        if (video) open('https://www.youtube.com/results?search_query=' + encodeURIComponent(query), function () { if (done) done(false, url); });
-        else if (done) done(false, url);
-      });
+      if (!samsung || !/^[A-Za-z0-9_-]{11}$/.test(video || '') || !/^(9Ur5IzDKqV\.TizenYouTube|111299001912(?:\..*)?)$/.test(id)) { if (done) done(false); return; }
+      var url = 'https://www.youtube.com/watch?v=' + encodeURIComponent(video);
+      try {
+        var control = new window.tizen.ApplicationControl('http://tizen.org/appcontrol/operation/view', url);
+        window.tizen.application.launchAppControl(control, id, function () { if (done) done(false, url, {accepted: true, verified: false}); }, function () { if (done) done(false); });
+      } catch (e) { if (done) done(false); }
     },
 
     /**
