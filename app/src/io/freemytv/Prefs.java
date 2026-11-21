@@ -402,6 +402,11 @@ final class Prefs {
     static boolean coin(int i) { return sp().getBoolean("coin" + i, true); }
     static void setCoin(int i, boolean on) { put("coin" + i, on); }
 
+    /** A coin row's own unit: "USD" shows it in dollars (Binance's USDT) while the other rows keep the TV's
+     *  currency (#486). Empty is the default: the TV's currency, as it was before this setting existed. */
+    static String coinUnit(int i) { return sp().getString("coinunit" + i, ""); }
+    static void setCoinUnit(int i, String unit) { put("coinunit" + i, unit); }
+
     /**
      * Also list the TV's own system apps (Settings, Files, the manufacturer's apps) in All Apps and the shelf editor.
      * Off keeps the list as it always was: the apps people installed, plus the system ones a TV needs there.

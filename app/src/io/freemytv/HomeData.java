@@ -55,9 +55,18 @@ final class HomeData {
     /** The pair that turns USDT into the local currency (USDTCOP for Colombia). */
     private static String fxSymbol() { return "USDT" + CURRENCY; }
 
-    /** The currency and how it's quoted: a cached body from another one must be fetched again, not shown. */
+    /** True when the coin row's own unit is dollars (Binance's USDT): never for the dollar row, and never where
+     *  the TV's currency is dollars already — there the unit would change nothing (#486). */
+    static boolean unitUsd(int i) {
+        return i < 3 && !"USD".equals(CURRENCY) && "USD".equals(Prefs.coinUnit(i));
+    }
+
+    /** The currency, the fallback mode and the rows' units: a cached body from another one must be fetched again,
+     *  not shown. */
     private static String currencyKey() {
-        return CURRENCY + (inFx ? "#fx" : inDollars ? "#usd" : "");
+        StringBuilder units = new StringBuilder();
+        for (int i = 0; i < 3; i++) units.append(unitUsd(i) ? 'U' : '.');
+        return CURRENCY + (inFx ? "#fx" : inDollars ? "#usd" : "") + units;
     }
 
     // Both forecasts in one answer, the next 48 hours and today plus 5 days: Home Settings → Forecast switches without
@@ -149,7 +158,10 @@ final class HomeData {
         int[] coins = active();
         for (int i = 0; i < coins.length; i++) {
             if (inFx && coins[i] == 3) continue;   // the USDT rate below is the dollar's price
-            symbols.append(symbols.length() == 0 ? "" : ",").append("%22").append(COINS[coins[i]]).append(quote()).append("%22");
+            // A row with its own unit in dollars quotes the USDT pair, the one pair every coin lists everywhere;
+            // the others quote the card's currency as before.
+            symbols.append(symbols.length() == 0 ? "" : ",").append("%22").append(COINS[coins[i]])
+                    .append(unitUsd(coins[i]) ? "USDT" : quote()).append("%22");
         }
         if (inFx) symbols.append(symbols.length() == 0 ? "" : ",").append("%22").append(fxSymbol()).append("%22");
         return "/api/v3/ticker/24hr?type=MINI&symbols=%5B" + symbols + "%5D";
@@ -359,7 +371,7 @@ final class HomeData {
                 continue;
             }
             for (int k = 0; k < COINS.length; k++) {
-                if (!symbol.equals(COINS[k] + quote)) continue;
+                if (!symbol.equals(COINS[k] + (unitUsd(k) ? "USDT" : quote))) continue;
                 found++;
                 double last = Double.parseDouble(o.optString("lastPrice", o.optString("price", "NaN")));
                 double open = Double.parseDouble(o.optString("openPrice", "NaN"));
@@ -370,8 +382,9 @@ final class HomeData {
         }
         if (inFx) {
             // The coins came in USDT: the local pair turns them into the currency (and is the dollar card's rate).
+            // A row whose own unit is dollars stays at its USDT price: that is the dollars it asks for.
             if (Double.isNaN(fx) || fx <= 0) throw new Exception("no " + fxSymbol() + " rate");
-            for (int k = 0; k < 3; k++) if (got[k]) prices[k] *= fx;
+            for (int k = 0; k < 3; k++) if (got[k] && !unitUsd(k)) prices[k] *= fx;
             prices[3] = fx;
             changes[3] = fxOpen > 0 ? (fx - fxOpen) / fxOpen * 100 : Double.NaN;
         } else if (found == 0) {
@@ -521,9 +534,17 @@ final class HomeData {
      * symbol and spaces where the language puts them.
      */
     static String brl(double v) {
-        String symbol = currencySymbol();
+        return money(v, currencySymbol());
+    }
+
+    /** A coin row's price in its own unit: dollars where the row says so, the TV's currency elsewhere (#486). */
+    static String coinPrice(int i, double v) {
+        return money(v, unitUsd(i) ? "$" : currencySymbol());
+    }
+
+    private static String money(double v, String symbol) {
         if (Double.isNaN(v)) return symbol + "—";
-        return Ui.once("brl", v, () -> {
+        return Ui.once("money" + symbol, v, () -> {
             DecimalFormat f = (DecimalFormat) NumberFormat.getCurrencyInstance(locale());
             DecimalFormatSymbols s = f.getDecimalFormatSymbols();
             s.setCurrencySymbol(symbol.trim());   // our symbols: ICU would write "US$" outside the US

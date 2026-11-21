@@ -2331,7 +2331,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             String stale = HomeData.staleness(data.pricesAt, 5 * 60_000L);
             staleText = stale.isEmpty() ? Ui.tr("24h change") : Ui.trf("quotes|{ago}", "ago", stale);
             for (int i = 0; i < HomeData.COINS.length; i++) {
-                priceText[i] = HomeData.brl(data.prices[i]);
+                priceText[i] = HomeData.coinPrice(i, data.prices[i]);
                 changeText[i] = HomeData.change(data.changes[i]);
             }
         }
@@ -4019,7 +4019,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         String stale = HomeData.staleness(data.pricesAt, 5 * 60_000L);
         s.append(", ").append(stale.isEmpty() ? Ui.tr("24h change") : Ui.trf("quotes|{ago}", "ago", stale)).append('.');
         for (int i : HomeData.active()) {
-            s.append(' ').append(HomeData.coinName(i)).append(' ').append(HomeData.brl(data.prices[i]));
+            s.append(' ').append(HomeData.coinName(i)).append(' ').append(HomeData.coinPrice(i, data.prices[i]));
             if (!Double.isNaN(data.changes[i])) s.append(", ").append(HomeData.change(data.changes[i]));
             s.append('.');
         }
