@@ -6,56 +6,64 @@
       "category": "city",
       "source": "Unsplash",
       "page": "https://unsplash.com/photos/view-of-istanbul-skyline-with-mosques-and-bosphorus-strait-UM_YUJUGK6g",
-      "url": "https://images.unsplash.com/photo-1763965367191-6455ef032c79?auto=format&fit=crop&w=1920&h=1080&q=80"
+      "url": "https://images.unsplash.com/photo-1763965367191-6455ef032c79?auto=format&fit=crop&w=1920&h=1080&q=80",
+      "fallback": "icons/eck-scene-1.jpg"
     },
     {
       "title": "Tokyo — Gece ışıkları",
       "category": "city",
       "source": "Unsplash",
       "page": "https://unsplash.com/photos/wet-street-at-night-in-tokyo-yVUQlyRlJSw",
-      "url": "https://images.unsplash.com/photo-1601042879364-f3947d3f9c16?auto=format&fit=crop&w=1920&h=1080&q=80"
+      "url": "https://images.unsplash.com/photo-1601042879364-f3947d3f9c16?auto=format&fit=crop&w=1920&h=1080&q=80",
+      "fallback": "icons/eck-scene-2.jpg"
     },
     {
       "title": "New York — Şehir ufku",
       "category": "city",
       "source": "Unsplash",
       "page": "https://unsplash.com/photos/new-york-city-skyline-viewed-from-a-bridge-sMDJ_xFli18",
-      "url": "https://images.unsplash.com/photo-1769011091803-31d2f550d86a?auto=format&fit=crop&w=1920&h=1080&q=80"
+      "url": "https://images.unsplash.com/photo-1769011091803-31d2f550d86a?auto=format&fit=crop&w=1920&h=1080&q=80",
+      "fallback": "icons/eck-scene-3.jpg"
     },
     {
       "title": "Paris — Eyfel ve akşam",
       "category": "city",
       "source": "Unsplash",
       "page": "https://unsplash.com/photos/the-eiffel-tower-illuminated-at-dusk-with-a-clear-sky-z090RHwnLSs",
-      "url": "https://images.unsplash.com/photo-1769374343062-23dd6e672352?auto=format&fit=crop&w=1920&h=1080&q=80"
+      "url": "https://images.unsplash.com/photo-1769374343062-23dd6e672352?auto=format&fit=crop&w=1920&h=1080&q=80",
+      "fallback": "icons/eck-scene-4.jpg"
     },
     {
       "title": "Londra — Thames kıyısı",
       "category": "city",
       "source": "Unsplash",
       "page": "https://unsplash.com/photos/london-skyline-with-gherkin-and-thames-7ojyp-IXW7w",
-      "url": "https://images.unsplash.com/photo-1549483249-f0b359d1e289?auto=format&fit=crop&w=1920&h=1080&q=80"
+      "url": "https://images.unsplash.com/photo-1549483249-f0b359d1e289?auto=format&fit=crop&w=1920&h=1080&q=80",
+      "fallback": "icons/eck-scene-5.jpg"
     },
     {
       "title": "Dağlar ve göl",
       "category": "nature",
       "source": "Unsplash",
       "page": "https://unsplash.com/photos/a-lake-in-front-of-a-mountain-AxSaRriVy0E",
-      "url": "https://images.unsplash.com/photo-1656184554687-016511d620eb?auto=format&fit=crop&w=1920&h=1080&q=80"
+      "url": "https://images.unsplash.com/photo-1656184554687-016511d620eb?auto=format&fit=crop&w=1920&h=1080&q=80",
+      "fallback": "icons/eck-scene-6.jpg"
     },
     {
       "title": "Orman ve şelale",
       "category": "nature",
       "source": "Unsplash",
       "page": "https://unsplash.com/photos/waterfall-on-forest-irY0SH8FZTU",
-      "url": "https://images.unsplash.com/photo-1503095828366-4eafc5ab84d8?auto=format&fit=crop&w=1920&h=1080&q=80"
+      "url": "https://images.unsplash.com/photo-1503095828366-4eafc5ab84d8?auto=format&fit=crop&w=1920&h=1080&q=80",
+      "fallback": "icons/eck-scene-7.jpg"
     },
     {
       "title": "Deniz ve kıyı",
       "category": "nature",
       "source": "Unsplash",
       "page": "https://unsplash.com/photos/coastal-landscape-with-ocean-beach-and-rolling-hills-E1o6iAT17e0",
-      "url": "https://images.unsplash.com/photo-1767567467211-10e6ef1dc46f?auto=format&fit=crop&w=1920&h=1080&q=80"
+      "url": "https://images.unsplash.com/photo-1767567467211-10e6ef1dc46f?auto=format&fit=crop&w=1920&h=1080&q=80",
+      "fallback": "icons/eck-scene-8.jpg"
     }
   ]
 }

@@ -23,7 +23,7 @@ function setup(saved, hasKey, startTime, platform) {
   };
   w.eval(fs.readFileSync(path.join(__dirname, '../web/eck-core.js'), 'utf8'));
   w.ECK.request = function (url, headers, cb) {
-    if (url === 'eck-scenes.json') cb(null, w.JSON.parse(JSON.stringify({version:2,scenes: [{url: 'https://images.unsplash.com/a',category:'city'}, {url: 'https://images.unsplash.com/b',category:'nature'}]})));
+    if (url === 'eck-scenes.json') cb(null, w.JSON.parse(JSON.stringify({version:2,scenes: [{url: 'https://images.unsplash.com/a',category:'city',fallback:'icons/eck-scene-1.jpg'}, {url: 'https://images.unsplash.com/b',category:'nature',fallback:'icons/eck-scene-2.jpg'}]})));
     else cb(new Error('offline'));
   };
   w.eval(fs.readFileSync(path.join(__dirname, '../web/eck-player.js'), 'utf8'));
@@ -83,3 +83,8 @@ assert.strictEqual(icon.readUInt32BE(16),117);assert.strictEqual(icon.readUInt32
 var manifest=fs.readFileSync(path.join(__dirname,'../tizen/config.xml'),'utf8');
 assert(manifest.indexOf('id="ECKTVHome1.ECKTV" package="ECKTVHome1"')>=0);
 console.log('EckHomeTest: single showcase/app row, removed catalog/footer, ECK boot/title/icon, remote navigation, rotation/pause, trailer/resume, live TV and preferences passed.');
+
+var offlineScene=setup();offlineScene.w.ECKHome.showSaver();
+for(var imageIndex=0;imageIndex<offlineScene.images.length&&imageIndex<12;imageIndex++){var image=offlineScene.images[imageIndex];if(image.src.indexOf('https:')===0){if(image.onerror)image.onerror();}else if(image.onload)image.onload();}
+assert(offlineScene.w.document.querySelector('.eck-saver-photo.on').style.backgroundImage.indexOf('icons/eck-scene-')>=0,'bundled photo displays when remote image fails');
+console.log('EckHomeTest: offline city/nature fallback is visible after image server failure.');

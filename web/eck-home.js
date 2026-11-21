@@ -382,7 +382,7 @@
     return (list instanceof Array ? list : []).filter(function (s) {
       return s && (s.category === 'city' || s.category === 'nature') && typeof s.url === 'string' && /^https:\/\/images\.unsplash\.com\//.test(s.url)
         && !/nasa|galaxy|nebula|planet|space|uzay|gezegen|galaksi|yıldız/i.test(s.title + ' ' + s.source);
-    }).slice(0, 12).map(function (s) { return {url: s.url, title: String(s.title || 'Şehir ve doğa').slice(0, 100), category: s.category, source: String(s.source || '').slice(0, 40)}; });
+    }).slice(0, 12).map(function (s) { return {url: s.url, fallback: /^icons\/eck-scene-[1-8]\.jpg$/.test(s.fallback || '') ? s.fallback : '', title: String(s.title || 'Şehir ve doğa').slice(0, 100), category: s.category, source: String(s.source || '').slice(0, 40)}; });
   }
   function loadScenes() {
     var cached = ECK.read('scenes', null);
@@ -399,18 +399,24 @@
       });
     }
     ECK.request('eck-scenes.json', {}, function (err, data) {
-      if (!scenes.length && !err && data) apply(data.scenes);
+      if (!err && data && (!scenes.length || scenes.some(function (s) { return !s.fallback; }))) apply(data.scenes);
       else warmScene();
       if (!cached || Date.now() - cached.at > 86400000 || Date.now() < cached.at) online();
+    });
+  }
+  function loadScene(scene, done) {
+    pool.load(scene.url, function (ok) {
+      if (ok || !scene.fallback) { done(ok, scene.url); return; }
+      pool.load(scene.fallback, function (loaded) { done(loaded, scene.fallback); });
     });
   }
   function warmScene() {
     if (!scenes.length || document.hidden) return;
     var scene = scenes[sceneIndex % scenes.length];
-    pool.load(scene.url, function (ok) {
+    loadScene(scene, function (ok, url) {
       if (!ok || document.hidden) return;
-      root.querySelector('.eck-wall').style.backgroundImage = 'url("' + scene.url + '")';
-      if (!heroMovie()) { heroPhoto.style.backgroundImage = 'url("' + scene.url + '")'; heroPhoto.className = 'eck-hero-photo ready'; }
+      root.querySelector('.eck-wall').style.backgroundImage = 'url("' + url + '")';
+      if (!heroMovie()) { heroPhoto.style.backgroundImage = 'url("' + url + '")'; heroPhoto.className = 'eck-hero-photo ready'; }
     });
   }
   function showSaver() {
@@ -430,15 +436,15 @@
       if (!scenes.length) { credit.textContent = 'Çevrimdışı ambiyans · Görseller için internet bağlantısını kontrol et.'; saverTimer = setTimeout(function () { next(0); }, 45000); return; }
       var scene = scenes[sceneIndex++ % scenes.length];
       if (scenes.length > 1 && scene.url === ECK.read('lastScene', '')) scene = scenes[sceneIndex++ % scenes.length];
-      pool.load(scene.url, function (ok) {
+      loadScene(scene, function (ok, url) {
         if (!saver || mine !== saverGeneration || document.hidden) return;
         if (!ok && attempts < Math.min(scenes.length - 1, 3)) { next(attempts + 1); return; }
         if (ok) {
-          var back = front === a ? b : a; back.style.backgroundImage = 'url("' + scene.url + '")';
+          var back = front === a ? b : a; back.style.backgroundImage = 'url("' + url + '")';
           setClass(back, 'on', true); setClass(front, 'on', false); front = back;
           credit.textContent = scene.title + ' · ' + scene.source;
           ECK.write('lastScene', scene.url);
-          var following = scenes[sceneIndex % scenes.length]; pool.load(following.url, function () {});
+          var following = scenes[sceneIndex % scenes.length]; loadScene(following, function () {});
         } else credit.textContent = 'Bağlantı bekleniyor · Son görüntü korunuyor';
         saverTimer = setTimeout(function () { next(0); }, 45000);
       });
