@@ -379,6 +379,12 @@ final class Prefs {
     static boolean homeAssistant() { return sp().getBoolean("homeAssistant", false); }
     static void setHomeAssistant(boolean on) { put("homeAssistant", on); }
 
+    /** true: the picks' background behind the home screen is the photo lightly blurred (the own-photos treatment,
+     *  480×270, one pass), not the heavy frost (#431). Off keeps the frost, and the drawer's glass is the frost
+     *  either way. */
+    static boolean sharpBackground() { return sp().getBoolean("sharpbackground", false); }
+    static void setSharpBackground(boolean on) { put("sharpbackground", on); }
+
     static boolean quotes() { return sp().getBoolean("quotes", Config.SHOW_CRYPTO); }
     static void setQuotes(boolean on) { put("quotes", on); }
 

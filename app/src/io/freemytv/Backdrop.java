@@ -76,7 +76,9 @@ final class Backdrop {
     /**
      * `own`: one of your photos (Photos). Its background is less blurred than a pick's; behind the clock, date and
      * weather it is whitened (darkened at night) as much as a pick's, so the text stays readable, then less toward the
-     * right, so it still reads as your photo. The glass and the drawer stay as they are.
+     * right, so it still reads as your photo. The glass and the drawer stay as they are. Prefs.sharpBackground()
+     * (#431) gives a pick's backdrop the same background as an own photo's: the lightly blurred 480×270 image in
+     * place of the heavy frost; the drawer's frost and the glass stay as they were.
      */
     static Backdrop make(Bitmap src, boolean forLight, boolean own) {
         // Cropped to 16:9 at the source's resolution first, then filtered down (no step over 2×).
@@ -101,7 +103,7 @@ final class Backdrop {
             int[] lightGlass = whiten(glass.clone(), 0.74f);
             int[] night = darken(frost.clone(), 0.76f);
             int[] nightGlass = darken(glass, 0.56f);
-            if (own) {
+            if (own || Prefs.sharpBackground()) {   // #431: the background sharp, like an own photo's, not the frost
                 int[] sharp = reduce(out, GW, GH, 1, 1);
                 int[] lightBg = ramp(sharp.clone(), 0.82f, 0.45f, true), nightBg = ramp(sharp, 0.76f, 0.5f, false);
                 out.recycle();

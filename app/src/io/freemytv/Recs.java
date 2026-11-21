@@ -616,6 +616,14 @@ final class Recs {
         }
     }
 
+    /** The sharp-background pref changed (#431): the backdrops rebuild from their photos on their next use. */
+    void invalidateBackdrops() {
+        synchronized (images) {
+            images.clear();
+            posters.clear();
+        }
+    }
+
     /**
      * Screensaver: the picks with an app on the TV and an image already on disk, starting with this hour's (the
      * featured one first), never two from the same franchise.
