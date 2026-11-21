@@ -1349,7 +1349,8 @@ public class SettingsActivity extends Activity {
                     Ui.tr("Netflix button"), Ui.tr("YouTube button"), Ui.tr("Prime Video button")};
             if (RemoteKeys.HISENSE) return new String[] {Ui.tr("Prime Video button"), Ui.tr("YouTube button"),
                     Ui.tr("Disney+ button"), Ui.tr("All Apps button"), Ui.tr("Settings button"), Ui.tr("Profile button")};
-            if (RemoteKeys.VESTEL) return new String[] {Ui.tr("Netflix button"), Ui.tr("YouTube button")};
+            if (RemoteKeys.VESTEL) return new String[] {Ui.tr("Netflix button"), Ui.tr("YouTube button"),
+                    Ui.tr("Prime Video button"), Ui.tr("Google Play button")};
             if (RemoteKeys.STEM_NETFLIX) return new String[] {Ui.tr("Netflix button")};
             if (RemoteKeys.KTC) return new String[] {Ui.tr("Tabii button")};
             if (RemoteKeys.XIAOMI_PATCHWALL_ONLY) return new String[] {Ui.tr("PatchWall button")};
@@ -1388,7 +1389,7 @@ public class SettingsActivity extends Activity {
             appPkgs.add("");
             // An empty choice leaves the key to the system's receiver.
             appLabels.add(RemoteKeys.GOOGLE_STREAMER ? Ui.tr("Google default") : RemoteKeys.ONN ? Ui.tr("onn default")
-                    : RemoteKeys.SONY ? Ui.tr("Sony default") : RemoteKeys.XIAOMI || RemoteKeys.XIAOMI_AFKR0
+                    : RemoteKeys.SONY ? Ui.tr("Sony default") : RemoteKeys.VESTEL ? Ui.tr("Vestel default") : RemoteKeys.XIAOMI || RemoteKeys.XIAOMI_AFKR0
                     ? Ui.tr("Xiaomi default") : RemoteKeys.PHILIPS_GTV ? Ui.tr("Philips default") : Ui.tr("Nothing"));
             if (RemoteKeys.JVC_SKYWORTH) {
                 appPkgs.add(Prefs.TV_SHORTCUTS);
@@ -2463,6 +2464,7 @@ public class SettingsActivity extends Activity {
             if (keys) {
                 c.drawText(RemoteKeys.KTC ? Ui.tr("Netflix, YouTube and Prime Video: the TV itself controls those buttons.")
                         : RemoteKeys.SONY ? Ui.tr("Sony default: the button opens what it always did.")
+                        : RemoteKeys.VESTEL ? Ui.tr("Vestel default: the button opens what it always did.")
                         : RemoteKeys.PHILIPS_GTV ? Ui.tr("Philips default: the button opens what it always did.")
                         : RemoteKeys.STEM_NETFLIX || RemoteKeys.JVC_SKYWORTH || RemoteKeys.XIAOMI_AFKR0
                         ? Ui.tr("The other buttons: the TV itself controls them.")
