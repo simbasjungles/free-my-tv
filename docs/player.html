@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="origin"><title>ECK TV fragman oynatıcısı</title>
+<style>html,body,#player{width:100%;height:100%;margin:0;background:#000;overflow:hidden}iframe{border:0}</style></head>
+<body><div id="player"></div><script>
+/* Optional owned HTTP(S) player bridge. No keys, cookies, analytics or persistent storage. */
+(function(){
+  'use strict';
+  var id=location.hash.slice(1),player=null,previous=-1,timer=null,check=null;
+  function report(phase,error,confirmed){parent.postMessage({type:'eck-player',video:id,phase:phase,error:error||0,confirmed:!!confirmed},'*');}
+  function fail(code){clearTimeout(timer);clearInterval(check);report('error',code,false);if(player)try{player.stopVideo();}catch(e){}}
+  if(!/^[A-Za-z0-9_-]{11}$/.test(id)){report('error','video',false);return;}
+  report('loading',0,false);
+  window.onYouTubeIframeAPIReady=function(){
+    player=new YT.Player('player',{width:'100%',height:'100%',videoId:id,playerVars:{autoplay:1,controls:1,playsinline:1,rel:0,disablekb:1,origin:location.protocol+'//'+location.host},events:{
+      onReady:function(e){e.target.playVideo();},onError:function(e){fail(e.data);},onAutoplayBlocked:function(){fail('autoplay');},
+      onStateChange:function(e){if(e.data===0)report('ended',0,true);}
+    }});
+    check=setInterval(function(){try{var time=player.getCurrentTime();if(player.getPlayerState()===1&&player.getVideoData().video_id===id&&previous>=0&&time>previous+0.15){clearTimeout(timer);clearInterval(check);report('playing',0,true);}previous=time;}catch(e){}},1000);
+  };
+  window.addEventListener('message',function(e){if(e.source===parent&&e.data&&e.data.type==='eck-player-command'&&e.data.command==='play'&&player)try{player.playVideo();}catch(ignore){}});
+  document.addEventListener('keydown',function(e){if(e.keyCode===10009||e.keyCode===27||e.keyCode===8){e.preventDefault();report('close',0,false);}});
+  timer=setTimeout(function(){fail('timeout');},20000);
+  var api=document.createElement('script');api.src='https://www.youtube.com/iframe_api';api.onerror=function(){fail('network');};document.head.appendChild(api);
+})();
+</script></body></html>

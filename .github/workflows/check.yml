@@ -41,3 +41,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: tools/check.sh web
+      - name: DOM test dependency (outside the TV package)
+        run: npm install --prefix "$RUNNER_TEMP/eck-dom" --no-audit --no-fund --ignore-scripts jsdom@26.1.0
+      - name: ECK home and trailer player
+        run: |
+          NODE_PATH="$RUNNER_TEMP/eck-dom/node_modules" node tests/EckHomeTest.js
+          NODE_PATH="$RUNNER_TEMP/eck-dom/node_modules" node tests/EckPlayerTest.js

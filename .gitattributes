@@ -1,3 +1,4 @@
 *.sh text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+app/assets/i18n/*.json text eol=lf
