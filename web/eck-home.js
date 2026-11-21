@@ -43,6 +43,8 @@
     var p = ECK.read('position', {}), lower = p.catalog || p, upper = p.showcase || {};
     row = [0, 1, 3, 4, 5, 6].indexOf(p.row) >= 0 ? p.row : 5;
     col = Math.max(0, +p.col || 0);
+    if (row === 4) { row = 3; col += 4; }
+    if (row === 1 || row === 6) { row = 5; col = 0; }
     catalog.index = Math.max(0, +lower.index || 0); catalog.wanted = lower.selected;
     catalog.view = lower.view === 'favourites' ? 'favourites' : 'movies';
     catalog.genreFocus = Math.max(0, Math.min(8, +lower.genreFocus || 0));
@@ -59,24 +61,20 @@
     el('b', '', brand, 'TV');
     status = el('div', 'eck-status', header);
     var top = el('nav', 'eck-top', header);
-    [['✦', 'Ambiyans'], ['⚙', 'Ayarlar']].forEach(function (x, i) {
-      var b = button(top, i === 0 ? 'eck-art' : '', x[0], function () { row = 0; col = i; activate(); });
+    [['▣', 'Canlı TV'], ['✦', 'Ambiyans'], ['⚙', 'Ayarlar']].forEach(function (x, i) {
+      var b = button(top, i === 1 ? 'eck-art' : '', x[0], function () { row = 0; col = i; activate(); });
       b.setAttribute('aria-label', x[1]); el('span', '', b, x[1]); b.setAttribute('data-focus', '0:' + i);
     });
     var viewport = el('div', 'eck-viewport', root); content = el('div', 'eck-content', viewport);
+    el('h2', 'eck-eyebrow', content, 'BU AKŞAM NE İZLESEK?');
     var hero = button(content, 'eck-hero', '', function () { row = 5; col = 0; focus(); activate(); });
     hero.setAttribute('data-focus', '5:0'); hero.setAttribute('aria-label', 'Öne çıkan film');
     heroPhoto = el('div', 'eck-hero-photo', hero); el('div', 'eck-hero-shade', hero);
-    var copy = el('div', 'eck-hero-copy', hero); el('div', 'eck-eyebrow', copy, 'BU AKŞAM NE İZLESEK?');
+    var copy = el('div', 'eck-hero-copy', hero);
     heroTitle = el('h1', '', copy, 'Yeni bir hikâye keşfet.'); heroMeta = el('div', 'eck-meta', copy);
     heroText = el('p', 'eck-description', copy);
-    heading = el('h2', 'eck-heading', content); count = el('div', 'eck-count', content);
-    genreBox = el('nav', 'eck-genres', content); genreBox.setAttribute('aria-label', 'Alt film kataloğu türleri');
-    catalogNote = el('div', 'eck-catalog-note', content); catalogNote.setAttribute('role', 'status');
-    rail = el('div', 'eck-rail', content);
     el('h2', 'eck-app-heading', content, 'Uygulamaların'); appsBox = el('div', 'eck-apps', content);
-    el('div', 'eck-footer', root, '↑ ↓ Bölümler   ·   ← → Seç   ·   OK Aç   ·   Geri Dön');
-    el('div', 'eck-footer-right', root, demo ? 'ÖNİZLEME · ÖRNEK İÇERİK' : 'ECK TV 1.9');
+    var boot = document.getElementById('eck-boot'); if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
   }
   function clockText() { var d = new Date(); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
   function weatherText() { return Data.weather ? Data.degrees(Data.weather.temp) + ' · ' + Data.condition(Data.weather.code, Data.weather.isDay) : 'Hava durumu bekleniyor'; }
@@ -84,7 +82,11 @@
     if (document.hidden) return;
     root.className = Data.isNight(Date.now()) ? 'night' : '';
     document.body.style.background = root.className === 'night' ? '#080c18' : '#eceef4';
-    status.textContent = clockText(); el('small', '', status, weatherText());
+    var city = (Prefs.city() || '').split(','), place = city.length > 1 ? city[1].trim() + ' / ' + city[0].trim() : city[0] || 'Şehir seç';
+    status.textContent = clockText() + '  ·  ' + (Data.weather ? Data.degrees(Data.weather.temp) : '--°') + '  ·  ' + place + '  ';
+    var code = Data.weather ? Data.weather.code : -1;
+    var icon = el('span', 'eck-weather-icon', status, code < 0 ? '◌' : code <= 1 ? (Data.weather.isDay ? '☀' : '☾') : code <= 3 ? '☁' : code >= 95 ? 'ϟ' : code >= 71 && code <= 77 || code === 85 || code === 86 ? '❄' : '☂');
+    icon.setAttribute('role', 'img'); icon.setAttribute('aria-label', Data.weather ? Data.condition(code, Data.weather.isDay) : 'Hava durumu bekleniyor');
     if (saver) {
       var clock = saver.querySelector('.eck-saver-clock'); clock.firstChild.nodeValue = clockText();
       clock.querySelector('.eck-saver-date').textContent = formatDate('format|EEEE, MMMM d', Date.now());
@@ -100,6 +102,7 @@
     ];
   }
   function updateFilms() {
+    if (!rail) return;
     var current = selectedMovie(), wanted = current ? current.id : catalog.wanted;
     catalog.items = catalog.view === 'favourites' ? ECK.favourites() : demo ? demoFilms().filter(function (m) { return !ECK.genre() || m.genres.indexOf(ECK.genre()) >= 0; }) : ECK.list();
     var match = -1; for (var i = 0; i < catalog.items.length; i++) if (catalog.items[i].id === wanted) match = i;
@@ -116,6 +119,7 @@
     updateHero(heroMovie()); savePosition();
   }
   function renderGenres() {
+    if (!genreBox) return;
     genreBox.innerHTML = ''; var chosen = ECK.genre(), first = Math.max(0, Math.min(catalog.genreFocus - 3, genreTabs.length - 7));
     genreTabs.forEach(function (g, i) {
       var active = chosen === g[0] || g[0] === -1 && !genreTabs.some(function (t) { return t[0] === chosen; });
@@ -152,7 +156,8 @@
   }
   function updateHero(m) {
     heroTitle.textContent = m ? m.title : !Prefs.tmdbKey() ? 'Film önerilerini etkinleştir' : 'Yeni bir hikâye keşfet.';
-    heroMeta.textContent = m ? m.year + '  ·  ★ ' + m.rating.toFixed(1) + '  ·  Film' : 'Şehirler, yıldızlar ve sana ait bir ekran.';
+    var names = m ? ECK.genres.filter(function (g) { return (m.genres || []).indexOf(g[0]) >= 0; }).slice(0, 3).map(function (g) { return g[1]; }) : [];
+    heroMeta.textContent = m ? m.year + '  ·  ★ ' + m.rating.toFixed(1) + (names.length ? '  ·  ' + names.join(' / ') : '') : 'Şehirler, yıldızlar ve sana ait bir ekran.';
     heroText.textContent = m ? m.overview || ''
       : ECK.showcase.error() || (ECK.showcase.busy() ? 'Filmler yükleniyor…' : 'Üst öneriler için OK ile tekrar dene.');
     root.querySelector('.eck-hero').setAttribute('aria-label', m ? m.title + ' · YouTube fragmanını aç' : Prefs.tmdbKey() ? 'Önerileri yenile' : 'Film önerilerini etkinleştir');
@@ -172,10 +177,9 @@
   function renderApps() {
     appsBox.innerHTML = ''; appPage = 0;
     apps.forEach(function (a, i) {
-      var appRow = i < 4 ? 3 : 4, appCol = i % 4;
-      var b = button(appsBox, 'eck-app app-' + a.key + (a.icon ? '' : ' no-icon') + (a.available === false ? ' unavailable' : ''), '', function () { row = appRow; col = appCol; focus(); launchApp(a); });
-      b.style.left = (appCol * 448 + 5) + 'px'; b.style.top = (i < 4 ? 5 : 175) + 'px';
-      b.setAttribute('data-focus', appRow + ':' + appCol);
+      var b = button(appsBox, 'eck-app app-' + a.key + (a.icon ? '' : ' no-icon') + (a.available === false ? ' unavailable' : ''), '', function () { row = 3; col = i; focus(); launchApp(a); });
+      b.style.left = (i * 224 + 5) + 'px'; b.style.top = '5px';
+      b.setAttribute('data-focus', '3:' + i);
       b.setAttribute('aria-label', a.title);
       if (a.icon) b.style.backgroundColor = a.color || '#202a42';
       if (a.icon) { var img = el('img', '', b); img.src = a.icon; img.alt = ''; img.onerror = function () { b.className += ' no-icon'; img.style.display = 'none'; }; }
@@ -185,9 +189,9 @@
     if (!apps.length) el('p', '', appsBox, 'Uygulamalar yükleniyor…');
   }
   function columns(r) {
-    if (r === 0) return 2; if (r === 5) return 1;
+    if (r === 0) return 3; if (r === 5) return 1;
     if (r === 1) return catalog.items.length; if (r === 6) return genreTabs.length;
-    return r === 3 || r === 4 ? 4 : 0;
+    return r === 3 ? 8 : 0;
   }
   function focus() {
     var nodes = root.querySelectorAll('.focused'); for (var i = 0; i < nodes.length; i++) setClass(nodes[i], 'focused', false);
@@ -210,7 +214,7 @@
       modalIndex = Math.max(0, Math.min(menuRows.length - 1, modalIndex + (dy || dx))); focusModal(); return;
     }
     if (dy) {
-      var order = [0, 5, 3, 4, 6, 1], next = order.indexOf(row) + dy;
+      var order = [0, 5, 3], next = order.indexOf(row) + dy;
       while (next >= 0 && next < order.length && !columns(order[next])) next += dy;
       if (next >= 0 && next < order.length) { row = order[next]; col = row === 1 ? catalog.index : row === 6 ? catalog.genreFocus : Math.min(col, columns(row) - 1); }
     } else if (row === 1 && catalog.items.length) {
@@ -249,14 +253,15 @@
       return;
     }
     if (row === 0) {
-      if (col === 0) showSaver(); if (col === 1) settings();
+      if (col === 0) { savePosition(); TV.launch('source:TV:1', null, function (ok) { if (!ok || TV.name === 'browser') toast(TV.name === 'browser' ? 'Önizleme: TV’nin son yayını açılır.' : 'TV yayını açılamadı.'); }); }
+      if (col === 1) showSaver(); if (col === 2) settings();
     } else if (row === 1) play(selectedMovie());
     else if (row === 6) chooseTab(catalog.genreFocus);
     else if (row === 5) {
       if (heroMovie()) play(heroMovie());
       else if (!Prefs.tmdbKey()) keyForm();
       else ECK.showcase.refresh(true);
-    } else launchApp(apps[(row === 4 ? 4 : 0) + col]);
+    } else launchApp(apps[col]);
   }
   function closeModal() { if (modal) root.removeChild(modal); modal = null; form = null; menuRows = []; idleAt = Date.now(); focus(); }
   function openModal(title, note) {
@@ -282,19 +287,16 @@
   }
   function settings() {
     menu('Ayarlar', 'Ekranını kendine göre düzenle.', [
-      {label: 'Film önerileri', value: 'Yeni çıkanlar · 30 öneri', run: filmSettings},
+      {label: 'Film önerileri', value: 'Sinematik vitrin', run: filmSettings},
       {label: 'Görünüm ve ambiyans', value: 'Tema · ekran koruyucu', run: appearanceSettings},
       {label: 'Hava durumu', value: Prefs.city() || 'Şehir seç', run: cityForm},
       {label: 'TMDB anahtarı', value: Prefs.tmdbKey() ? 'Kayıtlı' : 'Ekle', run: keyForm},
-      {label: 'Hakkında', value: 'ECK TV 1.9', run: about}
+      {label: 'Hakkında', value: 'ECK TV 1.10', run: about}
     ]); modalBack = null;
   }
   function filmSettings() {
-    menu('Film önerileri', 'Platform ve sinema ayrımı olmadan; yeni filmler önce, eski keşifler sonra.', [
-      {label: 'Alt katalog türü', value: ECK.genre() ? ECK.genres.filter(function (g) { return g[0] === ECK.genre(); })[0][1] : 'Tümü', run: genreMenu},
-      {label: 'Alt kataloğu yenile', value: 'Otomatik · 6 saatte bir', run: function () { catalog.view = 'movies'; closeModal(); ECK.refresh(true); }},
-      {label: 'Üst vitrini yenile', value: 'Bağımsız genel öneriler', run: function () { closeModal(); ECK.showcase.refresh(true); }},
-      {label: catalog.view === 'favourites' ? 'Tüm önerilere dön' : 'Kayıtlı favorilerim', value: ECK.favourites().length + ' film', run: function () { catalog.view = catalog.view === 'favourites' ? 'movies' : 'favourites'; catalog.index = 0; catalog.wanted = null; catalog.items = []; closeModal(); updateFilms(); }}
+    menu('Film önerileri', 'Farklı türlerden genel öneriler · 30 saniyede değişir · Film alanındayken durur.', [
+      {label: 'Vitrini yenile', value: 'Genel film önerileri', run: function () { closeModal(); ECK.showcase.refresh(true); }}
     ]);
   }
   function appearanceSettings() {
@@ -345,13 +347,13 @@
         if (modal !== ownModal) return;
         if (err || !found || !found.length) { toast('Şehir bulunamadı. Tekrar deneyebilirsin.'); return; }
         menu('Şehrini seç', 'Hava durumu için konum seçimi', found.map(function (p) {
-          return {label: p.label, run: function () { Prefs.setCity(p.city, p.lat, p.lon); Data.cityChanged(); settings(); tick(); }};
+          return {label: p.label, run: function () { Prefs.setCity(p.label, p.lat, p.lon); Data.cityChanged(); settings(); tick(); }};
         }));
       });
     });
   }
   function about() {
-    menu('ECK TV 1.9', 'Free My TV temel alınarak geliştirildi. Film bilgileri TMDB’den sağlanır; TMDB tarafından onaylanmış değildir.', [
+    menu('ECK TV 1.10', 'Free My TV temel alınarak geliştirildi. Film bilgileri TMDB’den sağlanır; TMDB tarafından onaylanmış değildir.', [
       {label: 'Görseller', value: 'Unsplash / NASA', run: function () { toast('Şehir: Unsplash · Uzay: NASA Images. Kaynak adı ambiyans ekranında görünür.'); }},
       {label: 'Kumanda', value: 'Yönler · OK · Geri', run: function () { toast('↑ ↓ Bölümler · ← → Seç · OK Aç · Geri önceki ekran'); }},
       {label: 'Geri', run: settings}
@@ -467,7 +469,7 @@
     idleAt = Date.now(); Data.refresh();
     if (!demo && Date.now() - lastRefresh > 6 * 3600000) refreshFeeds(false);
   }
-  function refreshFeeds(force) { lastRefresh = Date.now(); ECK.refresh(force); ECK.showcase.refresh(force); }
+  function refreshFeeds(force) { lastRefresh = Date.now(); ECK.showcase.refresh(force); }
   function advanceShowcase(delta) {
     if (!showcase.items.length) return;
     showcase.index = (showcase.index + delta + showcase.items.length) % showcase.items.length;

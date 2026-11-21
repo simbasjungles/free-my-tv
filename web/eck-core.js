@@ -39,7 +39,7 @@ var ECK = (function () {
   function cleanMovie(m) {
     return {id: +m.id, title: String(m.title || '').slice(0, 160), original: String(m.original_title || '').slice(0, 160),
       year: String(m.release_date || '').slice(0, 4), released: String(m.release_date || '').slice(0, 10), overview: String(m.overview || '').slice(0, 850),
-      backdrop: m.backdrop_path || '', poster: m.poster_path || '', rating: Number(m.vote_average || 0)};
+      backdrop: m.backdrop_path || '', poster: m.poster_path || '', genres: (m.genre_ids || []).slice(0, 3), rating: Number(m.vote_average || 0)};
   }
   function hidden() { var v = read('hidden', []); return v instanceof Array ? v : []; }
   function favourites() { var v = read('favourites', []); return v instanceof Array ? v.slice(0, 80) : []; }

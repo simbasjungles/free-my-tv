@@ -1,5 +1,13 @@
 # ECK TV for Samsung Tizen
 
+## Current home: 1.10 cinematic showcase
+
+The main screen now has one 1792×660 px showcase and one horizontal row of eight app tiles on the 1920×1080 stage. The lower catalog and genre bar described in the historical 1.9 section below are no longer mounted or requested at home. Existing saved genre/favorite data is retained locally. The showcase keeps general suggestions, Left/Right selection, a 30-second rotation paused on focus, and OK-to-trailer with saved return position. Its heading is above the image; a restrained bottom gradient supports the title, year, rating, up to three TMDB genres and two description lines. White focus and slight scaling apply to app tiles. Header shortcuts are Live TV, Ambient and Settings; the clock, temperature, saved city and weather icon share one line. No footer/help/version bar is rendered.
+
+The new ECK TV vector source is `web/icons/eck-brand.svg`, exported to a 512 px web startup asset and the 117 px `tizen/icon.png`. It uses a dark navy field, white lettering and a blue/purple frame. The startup markup in `web/index.html` yields as soon as the ECK home is built; it never waits for TMDB, weather or an artificial timer. The shared legacy home hides this ECK startup element when ECK mode is disabled. Open-source licenses, TMDB attribution, image credits and the Free My TV acknowledgement remain present. The application/package ids and private signing profile are unchanged.
+
+Targeted DOM tests cover the current single-row navigation, removed catalog/footer, ECK boot/title/icon, rotation/pause, trailers/resume, Live TV dispatch, settings and ambient behavior. Browser geometry verified the 660 px image and all eight apps within 1080 px before packaging.
+
 ## 1.9 independent film areas
 
 The featured showcase and lower discovery catalog have independent lists, selected indices, saved movie identities and image generations. The showcase mixes TMDB genres without reading the catalog genre; Left/Right changes only its own movie. It advances every 30 seconds unless focused, hidden, in a modal or in ambient mode. Rotation updates only the showcase DOM, never the catalog selection/window/focus. Each area's OK dispatches its own trailer and preserves its position on return. A missing key opens the local key form. Demo movies remain browser-only and never substitute for real TV recommendations.

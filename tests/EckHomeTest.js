@@ -2,7 +2,7 @@
 // Optional DOM integration suite: requires jsdom 26.1 (may be installed outside the repository via NODE_PATH).
 var fs = require('fs'), path = require('path'), assert = require('assert'), JSDOM = require('jsdom').JSDOM;
 function setup(saved, hasKey, startTime) {
-  var dom = new JSDOM('<body><div id="stage"></div></body>', {url: 'http://localhost/', runScripts: 'outside-only', pretendToBeVisual: true});
+  var dom = new JSDOM(fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8'), {url: 'http://localhost/', runScripts: 'outside-only', pretendToBeVisual: true});
   var w = dom.window, requests = [], launches = [], videos = [], intervals = [], timers = {}, serial = 0, now = startTime || Date.now(), images = [];
   Object.keys(saved || {}).forEach(function (k) { w.localStorage.setItem(k, saved[k]); });
   w.Date.now = function () { return now; };
@@ -40,70 +40,36 @@ function batch(t, start, list, status) { for (var i = 0; i < 3; i++) t.requests[
 function state(t) { return JSON.parse(JSON.stringify(t.w.ECKHome.state())); }
 function down(t, count) { for (var i = 0; i < count; i++) t.w.ECKHome.move(0, 1); }
 var t = setup(), w = t.w;
-assert.strictEqual(t.requests.length, 3, 'initial All and showcase share three HTTP requests');
-batch(t, 0, movies(100, 30));
-assert.strictEqual(w.document.querySelectorAll('.eck-app').length, 8);
-assert.strictEqual(w.document.querySelectorAll('.eck-top button').length, 2);
-assert(!w.document.querySelector('.eck-actions')); assert(!w.document.querySelector('.eck-hero-note'));
-assert.strictEqual(w.document.querySelector('.eck-genre.chosen').textContent, 'Tümü');
-var lower = state(t).catalog;
-t.advance(200);
-var oldHeroImage = t.images.filter(function (img) { return /film100.jpg$/.test(img.src || ''); })[0];
-w.ECKHome.move(1, 0); assert.notStrictEqual(state(t).showcase.id, 100);
-assert.deepStrictEqual(state(t).catalog, lower, 'upper manual movement cannot change lower state');
-t.advance(200);
-var newHeroImage = t.images.filter(function (img) { return (img.src || '').indexOf('/film' + state(t).showcase.id + '.jpg') >= 0; })[0];
-newHeroImage.onload(); oldHeroImage.onload();
-assert(w.document.querySelector('.eck-hero-photo').style.backgroundImage.indexOf('/film' + state(t).showcase.id + '.jpg') >= 0, 'late upper image cannot replace the new one');
-var upper = state(t).showcase, title = w.document.querySelector('h1').textContent;
-t.advance(31000); assert.deepStrictEqual(state(t).showcase, upper, 'rotation pauses while upper focused');
-down(t, 4); assert.strictEqual(state(t).row, 1);
-w.ECKHome.move(1, 0); w.ECKHome.move(1, 0);
-assert.deepStrictEqual(state(t).showcase, upper); assert.strictEqual(w.document.querySelector('h1').textContent, title);
-lower = state(t).catalog;
-var firstCard = w.document.querySelector('.eck-film');
-t.advance(31000); assert.notDeepStrictEqual(state(t).showcase, upper);
-assert.deepStrictEqual(state(t).catalog, lower, 'automatic rotation leaves catalog selection fixed');
-assert.strictEqual(w.document.querySelector('.eck-film'), firstCard, 'rotation does not rebuild or scroll the catalog DOM');
-// Lower and upper trailers each dispatch their own current movie and resume their own positions.
-w.ECKHome.activate(); var n = t.requests.length;
-assert(t.requests[n - 1].url.indexOf('/movie/' + lower.id + '/videos') >= 0);
-t.requests[n - 1].reply({results: [{site: 'YouTube', type: 'Trailer', iso_639_1: 'tr', key: 'abcdefghijk'}]});
-assert.strictEqual(t.videos[0].video, 'abcdefghijk');
-var beforeReturn = state(t); w.ECKHome.resume(); assert.deepStrictEqual(state(t), beforeReturn);
-for (var i = 0; i < 4; i++) w.ECKHome.move(0, -1);
-assert.strictEqual(state(t).row, 5); upper = state(t).showcase;
-w.ECKHome.activate(); n = t.requests.length; assert(t.requests[n - 1].url.indexOf('/movie/' + upper.id + '/videos') >= 0);
-t.requests[n - 1].reply({results: []}); t.requests[t.requests.length - 1].reply({results: []});
-assert(t.videos[1].query.indexOf('Film ' + upper.id) >= 0);
-beforeReturn = state(t); w.ECKHome.resume(); assert.deepStrictEqual(state(t), beforeReturn);
-Object.defineProperty(w.document, 'hidden', {configurable: true, value: true});
-w.document.dispatchEvent(new w.Event('visibilitychange')); t.advance(31000); assert.deepStrictEqual(state(t), beforeReturn, 'hidden app does not rotate');
-Object.defineProperty(w.document, 'hidden', {configurable: true, value: false});
-w.document.dispatchEvent(new w.Event('visibilitychange')); assert.deepStrictEqual(state(t), beforeReturn);
-// Only catalog changes on a real TMDB genre selection; focus resets without moving away from the genre bar.
-down(t, 3); assert.strictEqual(state(t).row, 6);
-w.ECKHome.move(1, 0); n = t.requests.length; w.ECKHome.activate();
-assert.strictEqual(state(t).catalog.genre, 28); assert.strictEqual(state(t).catalog.index, 0);
-assert(t.requests[n].url.indexOf('with_genres=28') >= 0);
-assert.deepStrictEqual(state(t).showcase, upper);
-batch(t, n, movies(500, 30)); down(t, 1); w.ECKHome.move(1, 0);
-assert.strictEqual(state(t).catalog.genre, 28);
-assert.strictEqual(w.document.querySelector('.eck-genre.chosen').textContent, 'Aksiyon');
-lower = state(t).catalog; upper = state(t).showcase;
-// A restart restores the genre, both film identities and lower focus/window from cached metadata without network.
-var restarted = setup(t.saved(), true, t.now()); assert.strictEqual(restarted.requests.length, 0);
-assert.deepStrictEqual(state(restarted).catalog, lower); assert.deepStrictEqual(state(restarted).showcase, upper);
-// Horizontal overflow and additional real genres remain reachable with the remote.
-w.ECKHome.move(0, -1); for (i = 0; i < 8; i++) w.ECKHome.move(1, 0);
-assert.strictEqual(state(t).catalog.genreFocus, 8); w.ECKHome.activate(); assert(w.document.querySelector('.eck-modal'));
-var rows = w.document.querySelectorAll('.eck-menu-row');
-var western = Array.from(rows).filter(function (b) { return b.textContent === 'Western'; })[0];
-n = t.requests.length; western.click(); assert.strictEqual(state(t).catalog.genre, 37); assert.strictEqual(state(t).row, 6);
-batch(t, n, movies(700, 2)); assert.deepStrictEqual(state(t).showcase, upper);
-w.ECKHome.settings(); t.advance(31000); assert.deepStrictEqual(state(t).showcase, upper, 'modal pauses rotation');
-w.ECKHome.back(); w.ECKHome.showSaver(); t.advance(31000); assert.deepStrictEqual(state(t).showcase, upper, 'ambient pauses rotation');
-w.document.dispatchEvent(new w.KeyboardEvent('keydown', {keyCode: 13, bubbles: true})); assert(!w.document.querySelector('.eck-saver'));
-// Empty-key setup remains actionable independently of an empty lower list.
-var empty = setup(null, false); empty.w.document.querySelector('.eck-hero').click(); assert(empty.w.document.querySelector('input[type=password]'));
-console.log('EckHomeTest: six independence scenarios, request reuse, both trailer/resume paths, restart, genre overflow, modal/ambient pause and empty-key setup passed.');
+assert.strictEqual(t.requests.length,3,'only the visible showcase fetches');
+batch(t,0,movies(100,30));
+assert.strictEqual(w.document.querySelectorAll('.eck-app').length,8);
+assert.strictEqual(w.document.querySelectorAll('.eck-top button').length,3);
+assert.strictEqual(w.document.querySelectorAll('.eck-rail,.eck-genres,.eck-heading,.eck-footer,.eck-footer-right').length,0);
+assert(!w.document.querySelector('#eck-boot'),'boot yields immediately to the home screen');
+assert.strictEqual(w.document.title,'ECK TV');
+assert(!w.document.querySelector('.eck-hero').contains(w.document.querySelector('.eck-eyebrow')));
+var upper=state(t).showcase;
+t.advance(31000);assert.deepStrictEqual(state(t).showcase,upper,'focused showcase pauses');
+w.ECKHome.move(1,0);assert.notStrictEqual(state(t).showcase.id,upper.id);
+w.ECKHome.move(0,1);assert.strictEqual(state(t).row,3);
+for(var i=0;i<7;i++)w.ECKHome.move(1,0);
+w.ECKHome.activate();assert.strictEqual(t.launches[0],'app7','all eight apps reachable on one row');
+upper=state(t).showcase;t.advance(31000);assert.notDeepStrictEqual(state(t).showcase,upper,'showcase rotates outside focus');
+w.ECKHome.move(0,-1);assert.strictEqual(state(t).row,5);
+upper=state(t).showcase;var n=t.requests.length;w.ECKHome.activate();
+assert(t.requests[n].url.indexOf('/movie/'+upper.id+'/videos')>=0);
+t.requests[n].reply({results:[{site:'YouTube',type:'Trailer',iso_639_1:'tr',key:'abcdefghijk'}]});
+assert.strictEqual(t.videos[0].video,'abcdefghijk');
+var before=state(t);w.ECKHome.resume();assert.deepStrictEqual(state(t),before);
+var restarted=setup(t.saved(),true,t.now());assert.strictEqual(restarted.requests.length,0);
+assert.deepStrictEqual(state(restarted).showcase,state(t).showcase);
+w.document.querySelector('.eck-top button').click();assert.strictEqual(t.launches[1],'source:TV:1');
+w.ECKHome.settings();upper=state(t).showcase;t.advance(31000);assert.deepStrictEqual(state(t).showcase,upper);
+w.ECKHome.back();w.ECKHome.showSaver();t.advance(31000);assert.deepStrictEqual(state(t).showcase,upper);
+w.document.dispatchEvent(new w.KeyboardEvent('keydown',{keyCode:13,bubbles:true}));assert(!w.document.querySelector('.eck-saver'));
+var empty=setup(null,false);empty.w.document.querySelector('.eck-hero').click();assert(empty.w.document.querySelector('input[type=password]'));
+var icon=fs.readFileSync(path.join(__dirname,'../tizen/icon.png'));
+assert.strictEqual(icon.readUInt32BE(16),117);assert.strictEqual(icon.readUInt32BE(20),117);
+var manifest=fs.readFileSync(path.join(__dirname,'../tizen/config.xml'),'utf8');
+assert(manifest.indexOf('id="ECKTVHome1.ECKTV" package="ECKTVHome1"')>=0);
+console.log('EckHomeTest: single showcase/app row, removed catalog/footer, ECK boot/title/icon, remote navigation, rotation/pause, trailer/resume, live TV and preferences passed.');

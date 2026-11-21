@@ -3,11 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1920, height=1080">
-<title>Free My TV</title>
+<title>ECK TV</title>
+<style>
+#eck-boot { position:fixed; left:0; top:0; width:100%; height:100%; background:#080e1c; color:white; z-index:100; text-align:center; font-family:Arial,sans-serif; }
+#eck-boot div { position:absolute; left:50%; top:50%; width:300px; height:230px; margin:-115px 0 0 -150px; }
+#eck-boot img { width:160px; height:160px; display:block; margin:0 auto 20px; }
+#eck-boot strong { font-size:32px; letter-spacing:3px; }
+</style>
 <link rel="stylesheet" href="home.css">
 <link rel="stylesheet" href="eck.css">
 </head>
 <body>
+<div id="eck-boot" role="status" aria-label="ECK TV açılıyor"><div><img src="icons/eck-brand.png" alt=""><strong>ECK TV</strong></div></div>
 <script>
   // The look the home screen last had, before anything is drawn, so a night start doesn't flash the day one first.
   try {
@@ -52,6 +59,7 @@
   <div id="toast"></div>
 </div>
 <script src="config.js"></script>
+<script>if (!window.CONFIG || !CONFIG.eckHome) document.getElementById('eck-boot').style.display = 'none';</script>
 <script src="coins.js"></script>
 <script src="i18n.js"></script>
 <script src="strings.js"></script>

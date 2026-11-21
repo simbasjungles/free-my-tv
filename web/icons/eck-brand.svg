@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs><linearGradient id="edge" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#37baff"/><stop offset="1" stop-color="#9567ff"/></linearGradient></defs>
+  <rect width="512" height="512" rx="76" fill="#080e1c"/>
+  <rect x="45" y="70" width="422" height="338" rx="44" fill="#0e172a" stroke="url(#edge)" stroke-width="10"/>
+  <text x="252" y="255" fill="#ffffff" font-family="Arial, sans-serif" font-weight="800" font-size="132" text-anchor="middle" letter-spacing="-5">ECK</text>
+  <text x="261" y="336" fill="#ffffff" font-family="Arial, sans-serif" font-weight="700" font-size="58" text-anchor="middle" letter-spacing="12">TV</text>
+  <path d="M208 451h96" fill="none" stroke="url(#edge)" stroke-width="12" stroke-linecap="round"/>
+</svg>
