@@ -2149,10 +2149,13 @@ public class SettingsActivity extends Activity {
                 shelfOrder.addAll(HomeApps.topButtonKeys());
                 rebuildShelfRows(HomeApps.topCandidates());
             } else {
-                // Only the apps the shelf shows: one that was uninstalled would hold a place (and count toward the
-                // limit) without a row to take it off.
+                // Only what the shelf shows: one that was uninstalled would hold a place (and count toward the
+                // limit) without a row to take it off. An input the TV lists counts as shown too (see ShelfKeys).
                 PackageManager pm = getContext().getPackageManager();
-                for (String pkg : HomeApps.shelfPackages(getContext())) if (HomeApps.launchIntent(pm, pkg) != null) shelfOrder.add(pkg);
+                Set<String> inputs = HomeApps.inputKeys(getContext());
+                for (String pkg : HomeApps.shelfPackages(getContext())) {
+                    if (HomeApps.launchIntent(pm, pkg) != null || inputs.contains(pkg)) shelfOrder.add(pkg);
+                }
                 rebuildShelfRows(HomeApps.shelfCandidates(getContext()));
             }
             pickScroll = 0;

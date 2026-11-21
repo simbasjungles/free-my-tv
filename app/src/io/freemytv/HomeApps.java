@@ -185,11 +185,24 @@ final class HomeApps {
     static List<Item> shelf(Context c, boolean extract) {
         List<Item> items = new ArrayList<>();
         PackageManager pm = c.getPackageManager();
-        int max = maxShelf(c);
-        for (String pkg : shelfPackages(c)) {
-            if (items.size() >= max) break;
+        List<String> keys = shelfPackages(c);
+        Map<String, Intent> launches = new HashMap<>();
+        for (String pkg : keys) {
             Intent launch = launchIntent(pm, pkg);
-            if (launch == null) continue;
+            if (launch != null) launches.put(pkg, launch);
+        }
+        // A key without a launch intent may be an input picked in Settings > Shelf (see ShelfKeys).
+        Map<String, Item> inputs = new HashMap<>();
+        if (launches.size() < keys.size()) for (Item it : allInputs(c)) inputs.put(it.key, it);
+        for (String pkg : ShelfKeys.resolve(keys, launches.keySet(), inputs.keySet(), maxShelf(c))) {
+            Item input = inputs.get(pkg);
+            if (input != null) {
+                // The input as the drawer has it (its name, its icon), on the shelf's white-symbol card.
+                input.setTile(symbolTile(c, input.key, input.symbol));
+                items.add(input);
+                continue;
+            }
+            Intent launch = launches.get(pkg);
             ResolveInfo ri = pm.resolveActivity(launch, 0);
             String[] d = known(pkg);
             Item it = new Item();
@@ -256,6 +269,8 @@ final class HomeApps {
         }
         Collections.sort(more, (a, b) -> a[1].toLowerCase(Locale.ROOT).compareTo(b[1].toLowerCase(Locale.ROOT)));
         out.addAll(more);
+        // Inputs (an HDMI port, Live TV) last: rows like any app's, off until picked in Settings > Shelf.
+        for (Item it : allInputs(c)) if (seen.add(it.key)) out.add(new String[] {it.key, it.label});
         return out;
     }
 
@@ -466,6 +481,13 @@ final class HomeApps {
     static List<String[]> inputCandidates(Context c) {
         List<String[]> out = new ArrayList<>();
         for (Item it : allInputs(c)) out.add(new String[] {it.key, it.label});
+        return out;
+    }
+
+    /** The keys of every input the TV lists, shown or not: an input picked on the shelf keeps its place by key. */
+    static Set<String> inputKeys(Context c) {
+        Set<String> out = new HashSet<>();
+        for (Item it : allInputs(c)) out.add(it.key);
         return out;
     }
 
