@@ -255,6 +255,13 @@
             android:authorities="io.freemytv.secrets"
             android:exported="true" />
 
+        <!-- tools/settings.py takes the settings file off the TV and puts it back here where adb can't open the app's folder
+             in Android/data (some Android 11 builds, Fire OS 8); only adb's shell may (BackupFile checks). -->
+        <provider
+            android:name=".BackupFile"
+            android:authorities="io.freemytv.backup"
+            android:exported="true" />
+
         <!-- The sleep timer's minutes left over any app, while the timer runs. A process of its own: a foreground
              service in :home would keep the whole home screen in memory under the app in front. -->
         <service

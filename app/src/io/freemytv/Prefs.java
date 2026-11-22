@@ -164,6 +164,21 @@ final class Prefs {
         return app.getSharedPreferences("settings", Context.MODE_PRIVATE);
     }
 
+    /** For Backup, which exports and imports the person's choices: it writes only what it has checked. */
+    static SharedPreferences store() {
+        return sp();
+    }
+
+    /** Backup wrote settings behind the setters' backs: the screens read them again. */
+    static void changed() {
+        version++;
+    }
+
+    /** Whether Remote Buttons has ever been saved (else every key does its default). */
+    static boolean hasSavedKeys() {
+        return keysFile().exists();
+    }
+
     /**
      * Reads the file again if another process changed it. On Android 11 the screensaver runs in the main process
      * (ScreensaverAlone), which otherwise keeps the values it first read, whatever the settings screen in :home saves.
@@ -682,9 +697,17 @@ final class Prefs {
         }
     }
 
-    static void setKeyApp(int keyCode, String pkg) {
+    /** Whether it was saved. */
+    static boolean setKeyApp(int keyCode, String pkg) {
         StringBuilder sb = new StringBuilder();
         for (int key : KEYS) sb.append(key).append('=').append(key == keyCode ? pkg : keyApp(key)).append('\n');
-        if (writeKeys(sb.toString())) version++;
+        boolean saved = writeKeys(sb.toString());
+        if (saved) version++;
+        return saved;
+    }
+
+    /** Remote Buttons back to its defaults (Backup: the file it restores had none saved). */
+    static void clearKeys() {
+        if (keysFile().delete()) version++;
     }
 }

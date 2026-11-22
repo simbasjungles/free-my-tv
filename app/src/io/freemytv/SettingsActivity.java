@@ -34,6 +34,7 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -1029,6 +1030,8 @@ public class SettingsActivity extends Activity {
             l.add("Ethereum");
             l.add("Solana");
             if (dollar()) l.add(Ui.tr("Dollar"));
+            l.add(Ui.tr("Export settings"));
+            l.add(Ui.tr("Import settings"));
             l.add(Ui.tr("TMDB key"));
             l.add(Ui.tr("Watchmode key"));
             l.add(Ui.tr("Updates"));
@@ -1042,6 +1045,15 @@ public class SettingsActivity extends Activity {
 
         private int keyRow() {
             return updatesRow() - 2;
+        }
+
+        /** The two Backup rows, just before the keys: OK writes or reads freemytv-settings.json. */
+        private int exportRow() {
+            return updatesRow() - 4;
+        }
+
+        private int importRow() {
+            return updatesRow() - 3;
         }
 
         private int watchmodeRow() {
@@ -1136,7 +1148,9 @@ public class SettingsActivity extends Activity {
             if (HOME_ROW >= 0) v[HOME_ROW] = onOff(HomeAssistant.on(getContext()));
             v[QUOTES_ROW] = onOff(Prefs.quotes());
             // No quotes widget, nowhere to show prices: the coins read as off (and stay locked) until it is back on.
-            for (int i = COIN_ROWS; i < v.length - 3; i++) v[i] = onOff(Prefs.quotes() && Prefs.coin(i - COIN_ROWS));
+            for (int i = COIN_ROWS; i < v.length - 5; i++) v[i] = onOff(Prefs.quotes() && Prefs.coin(i - COIN_ROWS));
+            v[v.length - 5] = "›";
+            v[v.length - 4] = "›";
             v[v.length - 3] = keyValue(Recs.key());
             v[v.length - 2] = keyValue(Recs.watchmodeKey());
             v[v.length - 1] = updatesValue();
@@ -1208,12 +1222,50 @@ public class SettingsActivity extends Activity {
                 whyScroll = pickScroll;
                 for (int r = 0; r < n; r++) {
                     String need = need(r);
-                    whyRows[r] = screen == HOME_SETTINGS && pickScroll + r >= COIN_ROWS && pickScroll + r < keyRow() && !Prefs.quotes()
+                    whyRows[r] = screen == HOME_SETTINGS && pickScroll + r >= COIN_ROWS && pickScroll + r < exportRow() && !Prefs.quotes()
                             ? Ui.tr("Turn on the Quotes widget to pick its coins.")
                             : need == null ? null : Capabilities.missing(getContext(), need);
                 }
             }
             return whyRows[i];
+        }
+
+        /** OK on Export settings: writes the file and says where it is. */
+        private void exportSettings() {
+            Context c = getContext().getApplicationContext();
+            new Thread(() -> {   // the file is synced to the flash, which can take a moment on a slow TV
+                int n = Backup.export(c);
+                handler.post(() -> say(n < 0 ? Ui.tr("Couldn't save the settings.")
+                        : Ui.trf("Saved {n} settings. Take the file with tools/settings.py.", "n", n)));
+            }, "export-settings").start();
+        }
+
+        /** OK on Import settings: asks first, since it changes what the screens show right now. */
+        private void askImport() {
+            File f = Backup.file(getContext());
+            if (!f.isFile()) {
+                say(Ui.tr("There is no settings file. Export first, or send one with tools/settings.py."));
+                return;
+            }
+            AlertDialog dialog = new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setTitle(Ui.tr("Import settings"))
+                    .setMessage(Ui.tr("Replace your choices with the ones in the settings file? Keys and photos stay as they are."))
+                    .setPositiveButton(Ui.tr("Import"), (d, which) -> {
+                        int n = Backup.restore(getContext());
+                        HomeData.get(getContext()).settingsChanged();
+                        say(n < 0 ? Ui.tr("That isn't a Free My TV settings file.") : Ui.trf("Restored {n} settings.", "n", n));
+                        invalidate();
+                        spoken.focusMoved();
+                    })
+                    .setNegativeButton(Ui.tr("Cancel"), null)
+                    .show();
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).requestFocus();   // one stray OK keeps what is there
+        }
+
+        private void say(String text) {
+            if (whyToast != null) whyToast.cancel();
+            whyToast = Toast.makeText(getContext(), text, Toast.LENGTH_LONG);
+            whyToast.show();
         }
 
         /** OK on an unavailable row: a toast says why; false if it isn't unavailable. */
@@ -1542,7 +1594,7 @@ public class SettingsActivity extends Activity {
                     return;
                 case QUOTES_ROW: Prefs.setQuotes(!Prefs.quotes()); break;
                 default:
-                    if (row >= keyRow() || !Prefs.quotes()) return;   // the keys and Updates act on OK only
+                    if (row >= exportRow() || !Prefs.quotes()) return;   // Backup, the keys and Updates act on OK only
                     Prefs.setCoin(row - COIN_ROWS, !Prefs.coin(row - COIN_ROWS));
                     break;
             }
@@ -2455,6 +2507,8 @@ public class SettingsActivity extends Activity {
                     : screen == POWER && powerRow() != P_SHOW && unavailable(focus) == null ? Ui.tr("OK opens the list. ← → change the value.")
                     : screen == HOME_SETTINGS && from + focus == POWER_ON_ROW && unavailable(focus) == null
                     ? Ui.tr("Only after a full start, not from standby.")
+                    : screen == HOME_SETTINGS && from + focus == exportRow() ? Ui.tr("OK saves your choices to a file, for tools/settings.py. No keys go in it.")
+                    : screen == HOME_SETTINGS && from + focus == importRow() ? Ui.tr("OK restores your choices from that file.")
                     : screen == HOME_SETTINGS && (from + focus == keyRow() || from + focus == watchmodeRow()) ? Ui.tr("OK: send it from your phone, or type it.")
                     : screen == HOME_SETTINGS && from + focus == updatesRow() ? (Updates.ready(updates, installed)
                     ? Ui.tr("OK installs it; Android asks first.") : Ui.tr("OK checks for a new version."))
@@ -2535,6 +2589,12 @@ public class SettingsActivity extends Activity {
                 openPhotoSources();
             } else if (screen == HOME_SETTINGS && pickScroll + focus == PHOTOS_ROW) {
                 askRemovePhotos();
+                return;
+            } else if (screen == HOME_SETTINGS && pickScroll + focus == exportRow()) {
+                exportSettings();
+                return;
+            } else if (screen == HOME_SETTINGS && pickScroll + focus == importRow()) {
+                askImport();
                 return;
             } else if (screen == HOME_SETTINGS && pickScroll + focus == updatesRow()) {
                 updateNow();
