@@ -498,6 +498,73 @@ var Data = (function () {
     return null;
   }
 
+  // MARK: - Kids picks (kids_picks): rated L or 10 in Brazil, no horror (27), thriller (53) or crime (80)
+
+  var KIDS = CONFIG.kidsPicks === true;
+  var KIDS_RATINGS = {'L': true, 'AL': true, 'LIVRE': true, '10': true};   // AL and Livre are how some list L
+  var KIDS_OUT = [27, 53, 80];
+  var RATING_DAYS = 30, RATINGS_KEPT = 600;
+  var ratings = KIDS ? (stored('ratings') || {}) : {};   // "movie:603" → {ok, at}: what TMDB said, for 30 days
+
+  function badGenre(ids) {
+    for (var i = 0; ids && i < ids.length; i++) if (KIDS_OUT.indexOf(ids[i]) >= 0) return true;
+    return false;
+  }
+
+  /** What TMDB adds to a title's details for its ratings. */
+  function ratingsPart(kind) { return kind === 'movie' ? 'release_dates' : 'content_ratings'; }
+
+  /** Every Brazilian rating TMDB has for it is L or 10, and it has one at least. */
+  function brAllowed(o, kind) {
+    var list = kind === 'movie' ? o.release_dates && o.release_dates.results : o.content_ratings && o.content_ratings.results;
+    var found = false;
+    for (var i = 0; list && i < list.length; i++) {
+      if (list[i].iso_3166_1 !== 'BR') continue;
+      var entries = kind === 'movie' ? list[i].release_dates || [] : [list[i]];
+      for (var j = 0; j < entries.length; j++) {
+        var c = String((kind === 'movie' ? entries[j].certification : entries[j].rating) || '').replace(/^\s+|\s+$/g, '').toUpperCase();
+        if (!c) continue;
+        if (!KIDS_RATINGS[c]) return false;
+        found = true;
+      }
+    }
+    return found;
+  }
+
+  /** Checks a title's details (with its ratings appended) and remembers the answer. */
+  function noteKids(p, o) {
+    var genres = (o.genre_ids || []).slice();
+    for (var i = 0; o.genres && i < o.genres.length; i++) genres.push(o.genres[i].id);
+    var ok = !o.adult && !badGenre(genres) && brAllowed(o, p.kind);
+    ratings[keyOf(p)] = {ok: ok, at: Date.now()};
+    var ids = Object.keys(ratings);
+    if (ids.length > RATINGS_KEPT) {
+      ids.sort(function (a, b) { return ratings[a].at - ratings[b].at; });
+      for (var d = 0; d < ids.length - RATINGS_KEPT; d++) delete ratings[ids[d]];
+    }
+    store('ratings', ratings);
+    return ok;
+  }
+
+  /** Checked and allowed (what isn't checked yet doesn't show). */
+  function kidsOk(p) { var c = ratings[keyOf(p)]; return !!(c && c.ok); }
+
+  /** done(allowed): from what's remembered, else one request to TMDB. A failed one leaves it out, to ask again later. */
+  function kidsCheck(p, done) {
+    var c = ratings[keyOf(p)], t = Date.now();
+    if (c && t >= c.at && t - c.at < RATING_DAYS * 86400000) { done(c.ok); return; }
+    tmdb('/' + p.kind + '/' + p.id + '?include_adult=false&append_to_response=' + ratingsPart(p.kind), function (err, o) {
+      done(!err && !!o && noteKids(p, o));
+    });
+  }
+
+  /** Only what passes, asked one after the other (the TV's network is shared with what's playing). */
+  function kidsOnly(list, done) {
+    if (!KIDS) { done(list); return; }
+    var out = [];
+    each(list, function (p, next) { kidsCheck(p, function (ok) { if (ok) out.push(p); next(); }); }, function () { done(out); });
+  }
+
   function tmdb(path, done, key) {
     key = key || KEY;
     var bearer = key.indexOf('eyJ') === 0;   // read access token (v4) or API key (v3)
@@ -586,7 +653,7 @@ var Data = (function () {
   }
 
   function sourceStamp() {
-    var s = KEY.length + ':' + KEY.slice(-6) + ':' + REGION + (Prefs.hideAnimation() ? ':no-animation' : '');
+    var s = KEY.length + ':' + KEY.slice(-6) + ':' + REGION + (Prefs.hideAnimation() ? ':no-animation' : '') + (KIDS ? ':kids' : '');
     for (var i = 0; i < SERVICES.length; i++) s += usable(SERVICES[i][1]) ? '1' : '0';
     return s;
   }
@@ -603,6 +670,7 @@ var Data = (function () {
     if (!KEY) return list;
     for (var i = 0; i < picks.length; i++) {
       var p = picks[i];
+      if (KIDS && !kidsOk(p)) continue;
       if ((kind === null || kind === p.kind) && (!p.detailed || (p.app && usable(p.app)))) list.push(p);
     }
     if (!list.length) return list;
@@ -655,9 +723,10 @@ var Data = (function () {
 
   /** Genre, runtime or seasons, and the service it's on among the TV's apps. */
   function details(p, done) {
-    tmdb('/' + p.kind + '/' + p.id + '?language=' + lang() + '&append_to_response=watch/providers,images&include_image_language=null,'
-        + I18N.base + ',en', function (err, o) {
+    tmdb('/' + p.kind + '/' + p.id + '?language=' + lang() + '&include_adult=false&append_to_response=watch/providers,images'
+        + (KIDS ? ',' + ratingsPart(p.kind) : '') + '&include_image_language=null,' + I18N.base + ',en', function (err, o) {
       if (err) { done(err); return; }
+      if (KIDS) noteKids(p, o);
       var best = bestBackdrop(o.images);
       if (best) p.backdrop = best;
       if (o.poster_path) p.poster = o.poster_path;
@@ -696,7 +765,7 @@ var Data = (function () {
     p.title = own;
     if (I18N.lang === 'en' || !own || own !== o['original_' + field] || o.original_language === I18N.base
         || o.original_language === 'en') { done(); return; }
-    tmdb('/' + p.kind + '/' + p.id + '?language=en-US', function (err, en) {
+    tmdb('/' + p.kind + '/' + p.id + '?language=en-US&include_adult=false', function (err, en) {
       if (!err && en && en[field]) p.title = en[field];
       done();
     });
@@ -713,6 +782,7 @@ var Data = (function () {
   function addPick(list, o, kind) {
     if (!o.backdrop_path) return;
     if (Prefs.hideAnimation() && animated(o)) return;
+    if (KIDS && (o.adult || badGenre(o.genre_ids))) return;
     list.push({id: o.id, kind: kind, title: kind === 'movie' ? o.title : o.name, backdrop: o.backdrop_path, poster: o.poster_path || '', meta: '', app: null, detailed: false});
   }
 
@@ -735,7 +805,7 @@ var Data = (function () {
   }
 
   function fetchList(done) {
-    tmdb('/watch/providers/movie?language=' + lang() + '&watch_region=' + REGION, function (err, res) {
+    tmdb('/watch/providers/movie?language=' + lang() + '&watch_region=' + REGION + '&include_adult=false', function (err, res) {
       if (err) { done(err); return; }
       var ids = [];
       for (var i = 0; res.results && i < res.results.length; i++) {
@@ -745,28 +815,34 @@ var Data = (function () {
       if (!ids.length) { done(new Error("none of the TV's streaming apps are on TMDB (or switched on in Picks from)")); return; }
       var common = '&language=' + lang() + '&watch_region=' + REGION + '&with_watch_monetization_types=flatrate&include_adult=false'
           + '&sort_by=popularity.desc&with_watch_providers=' + encodeURIComponent(ids.join('|'))
-          + (Prefs.hideAnimation() ? '&without_genres=' + ANIMATION : '');
+          + (Prefs.hideAnimation() || KIDS ? '&without_genres=' + (Prefs.hideAnimation() ? [ANIMATION] : []).concat(KIDS ? KIDS_OUT : []).join(',') : '');
+      // TMDB filters movies by rating itself; shows only here, with kidsOnly (which checks the movies again).
+      var kidsMovies = KIDS ? '&certification_country=BR&certification=' + encodeURIComponent('L|10') : '';
       var hot = {movie: [], tv: []}, fresh = {movie: [], tv: []};
       each(['movie', 'tv'], function (kind, next) {
-        tmdb('/trending/' + kind + '/week?language=' + lang(), function (e, r) {
+        tmdb('/trending/' + kind + '/week?language=' + lang() + '&include_adult=false', function (e, r) {
           var candidates = [];
           for (var j = 0; !e && j < r.results.length && j < 16; j++) addPick(candidates, r.results[j], kind);
-          // Trending is only kept when it's on one of the TV's apps: the details say where.
+          // Trending is only kept when it's on one of the TV's apps: the details say where (and, for kids, its rating).
           each(candidates, function (p, n) {
-            details(p, function (de) { if (!de && p.app) hot[kind].push(p); n(); });
+            details(p, function (de) { if (!de && p.app && (!KIDS || kidsOk(p))) hot[kind].push(p); n(); });
           }, next);
         });
       }, function () {
-        tmdb('/discover/movie?vote_count.gte=30&primary_release_date.gte=' + day(-365) + '&primary_release_date.lte=' + day(0) + common, function (e1, r1) {
+        tmdb('/discover/movie?vote_count.gte=30&primary_release_date.gte=' + day(-365) + '&primary_release_date.lte=' + day(0) + common + kidsMovies, function (e1, r1) {
           for (var j = 0; !e1 && j < r1.results.length; j++) addPick(fresh.movie, r1.results[j], 'movie');
           tmdb('/discover/tv?vote_count.gte=20&air_date.gte=' + day(-90) + '&air_date.lte=' + day(0) + common, function (e2, r2) {
             for (var k = 0; !e2 && k < r2.results.length; k++) addPick(fresh.tv, r2.results[k], 'tv');
-            var list = [], seen = {};
-            alternate(list, seen, hot.movie, hot.tv, 24);
-            alternate(list, seen, fresh.movie, fresh.tv, 24);
-            if (!list.length) { done(new Error('TMDB returned no recommendations')); return; }
-            picks = list;
-            done(null);
+            kidsOnly(fresh.movie, function (movies) {
+              kidsOnly(fresh.tv, function (shows) {
+                var list = [], seen = {};
+                alternate(list, seen, hot.movie, hot.tv, 24);
+                alternate(list, seen, movies, shows, 24);
+                if (!list.length) { done(new Error('TMDB returned no recommendations')); return; }
+                picks = list;
+                done(null);
+              });
+            });
           });
         });
       });

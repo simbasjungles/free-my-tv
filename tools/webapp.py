@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import translate  # noqa: E402  (the catalogues and the keys the web app uses)
 
 GENERIC = {'tmdbKey': '', 'tmdbRegion': '', 'latitude': '', 'longitude': '', 'city': '', 'language': 'auto',
-           'currency': '', 'temperature': 'auto', 'theme': 'auto', 'showCrypto': True, 'hideAnimation': False, 'hideApps': [],
+           'currency': '', 'temperature': 'auto', 'theme': 'auto', 'showCrypto': True, 'hideAnimation': False, 'kidsPicks': False, 'hideApps': [],
            'shelfApps': [], 'drawerFirst': False, 'openPicksIn': 'apps', 'clockFormat': 'auto'}
 
 
@@ -63,6 +63,8 @@ def read_config(path):
         'theme': values.get('theme', 'auto') or 'auto',
         'showCrypto': values.get('show_crypto', 'true').lower() != 'false',
         'hideAnimation': values.get('hide_animation', 'false').lower() == 'true',
+        # Picks only rated L or 10 in Brazil, without horror, thriller or crime. Not in Home Settings: kids can't undo it.
+        'kidsPicks': values.get('kids_picks', 'false').lower() == 'true',
         'hideApps': [s.strip() for s in values.get('hide_apps', '').split(',') if s.strip()],
         # Where Home Settings' Picks from switches start, as on Android (Prefs.offServices): netflix, prime, disney...
         'hideServices': [s.strip().lower() for s in values.get('hide_services', '').split(',') if s.strip()],
