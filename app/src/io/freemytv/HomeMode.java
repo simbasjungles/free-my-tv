@@ -444,6 +444,7 @@ final class HomeMode {
         if (!RemoteKeys.supported() || !FREE.equals(state(app).optString("mode"))) return;
         try (Adb adb = Adb.connect(app, 10_000, null)) {
             remoteService(app, adb, RemoteKeys.serviceWanted());
+            volumeWatch(adb, volumeWatchWanted());
         } catch (IOException e) {
             AppLog.w("remote buttons service: " + e.getMessage());
         }
@@ -679,6 +680,7 @@ final class HomeMode {
                 }
             }
             wakeWatch(adb, true);
+            volumeWatch(adb, volumeWatchWanted());
             notice(c, Capabilities.screensaver(c)
                     ? Ui.trf("Free My TV is on: new home screen and screensaver, {n} apps turned off.", "n", disabled.size())
                     : Ui.trf("Free My TV is on: new home screen, {n} apps turned off.", "n", disabled.size()));
@@ -741,6 +743,7 @@ final class HomeMode {
                 AppLog.w("remote buttons service: " + e.getMessage());
             }
             wakeWatch(adb, false);
+            volumeWatch(adb, false);
             SleepTimer.stop(c);
             adb.shell("appops set " + PKG + " SYSTEM_ALERT_WINDOW default");   // SleepOverlay's, if it was allowed
             Capabilities.forget(c, Capabilities.OVERLAY);                       // asked again next time
@@ -883,6 +886,7 @@ final class HomeMode {
                 // The screensaver first: if that fails, the revert isn't marked done and the next try does it again.
                 restoreScreensaver(adb, s);
                 wakeWatch(adb, false);
+                volumeWatch(adb, false);
                 SleepTimer.stop(app);   // its row shows Unavailable from now on
                 try {
                     nowPlaying(app, adb, false);   // and so does Now Playing's
@@ -1044,6 +1048,7 @@ final class HomeMode {
                     fixed.add(Ui.tr("the home screen"));
                 }
                 wakeWatch(adb, !reverted);   // again after a restart, which ends it (running already: left alone)
+                volumeWatch(adb, !reverted && volumeWatchWanted());
                 // Whole component names: ".ScreensaverAlone" (Android 11 to 12L) contains ".Screensaver" (the others).
                 List<String> savers = Arrays.asList(adb.shell("settings get secure screensaver_components").trim().split(","));
                 if (Config.SCREENSAVER && !reverted && !savers.contains(DREAM)) {
@@ -1179,6 +1184,58 @@ final class HomeMode {
     /** Only process numbers count: a TV without pgrep answers with an error. */
     private static boolean wakeRunning(Adb adb) throws IOException {
         return adb.shell("pgrep -f " + WAKE_MATCH).trim().matches("\\d+(\\s+\\d+)*");
+    }
+
+    // MARK: - TCL: a held Volume key (#543)
+
+    /**
+     * With the remote buttons' key filter on (RemoteKeyService), the filter hands every key back to the system as a new
+     * event, and the system doesn't repeat those: a held Volume key moves the volume one step. The service never sees
+     * those keys (TCL's window manager handles them before the filter), so the repeat comes from adb's shell instead: a
+     * loop reads the remote's key events with getevent and, 0.4 s after a Volume key goes down (the system's own delay),
+     * sends the key again every 0.03 s plus the time `input` takes, until it comes up, any other key goes down, or
+     * 200 steps have passed (a key-up that never came can't leave the volume running). The first step is the system's
+     * own. The key is sent with `input keyevent`, through the window manager, so HDMI-CEC and ARC volume follow as they
+     * do for the remote. Started with Free My TV mode on TCL when the key service is on, and ended with Original; its
+     * name is in its command line, so pgrep finds only it, and it is its own session: stopping kills the whole group.
+     */
+    private static final String VOLUME = "freemytv-volume";
+    private static final String VOLUME_MATCH = "'freemytv-volum[e]'";
+    private static final String VOLUME_LOOP = "trap \"\" HUP; F=/data/local/tmp/" + VOLUME + "; n=0;"
+            + " getevent -l </dev/null | while read -r d t k v; do [ \"$t\" = EV_KEY ] || continue; rm -f $F.*;"
+            + " case \"$k\" in KEY_VOLUMEUP) c=KEYCODE_VOLUME_UP;; KEY_VOLUMEDOWN) c=KEYCODE_VOLUME_DOWN;; *) continue;; esac;"
+            + " [ \"$v\" = DOWN ] || continue; n=$((n+1)); : > $F.$n;"
+            + " ( sleep 0.4; i=0; while [ -f $F.$n ] && [ $i -lt 200 ]; do input keyevent $c; i=$((i+1)); sleep 0.03; done )"
+            + " </dev/null >/dev/null 2>&1 & done";
+
+    /** Starts the loop once, or stops it. Only logs: what called it goes on either way. */
+    static void volumeWatch(Adb adb, boolean on) {
+        try {
+            String running = adb.shell("pgrep -f " + VOLUME_MATCH).trim();
+            boolean there = running.matches("\\d+(\\s+\\d+)*");
+            if (!on) {
+                if (!there) return;
+                for (String pid : running.split("\\s+")) adb.shell("kill -- -" + pid);   // its group: getevent too
+                adb.shell("rm -f /data/local/tmp/" + VOLUME + ".*");
+                AppLog.w("volume watch off");
+                return;
+            }
+            if (there) return;
+            adb.shell("trap \"\" HUP; setsid sh -c '" + VOLUME_LOOP + "' " + VOLUME + " </dev/null >/dev/null 2>&1 &");
+            boolean up = adb.shell("pgrep -f " + VOLUME_MATCH).trim().matches("\\d+(\\s+\\d+)*");
+            AppLog.w(up ? "volume watch on: a held Volume key repeats (#543)" : "volume watch didn't start");
+        } catch (IOException e) {
+            AppLog.w("volume watch: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Whether the loop is wanted: TCL's Android 14 and newer (where it was measured) with the key service on: without
+     * the service the system repeats the key itself, and on another firmware that may be so too, which two repeats would
+     * double.
+     */
+    static boolean volumeWatchWanted() {
+        return RemoteKeys.TCL && android.os.Build.VERSION.SDK_INT >= 34 && RemoteKeys.serviceWanted();
     }
 
     // MARK: - Continue Watching's permission

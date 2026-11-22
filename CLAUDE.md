@@ -419,6 +419,15 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   Android 11 (`RemoteKeys.FILTER_SAFE`): there any key filter makes the TV act on a volume key twice (one press moves
   2 steps and a held key gets stuck, #325; turning off only our service fixed it), so the buttons work only where they
   reach our home screen's window.
+  On TCL's Google TV 14 (a Smart TV Pro 55C805, G08, Android 14 tested; also #543's 85C8K) the filter breaks the other half of
+  the volume key: a held Volume key moves one step, because the keys the filter hands back aren't repeated, and the
+  service never sees them (TCL's window manager handles volume before the filter: `onKeyEvent` gets HOME and the app
+  buttons, not VOLUME_UP). With the service off the system repeats it itself (a step every 0.1 s after 0.4 s; `dumpsys
+  audio`'s `setStreamVolumeIndex`). So `HomeMode.volumeWatch` runs a loop in adb's shell (`freemytv-volume`, its own
+  session, started and stopped like the Hikeen `wakeWatch`): `getevent -l` for KEY_VOLUMEUP/DOWN, then `input keyevent` every
+  0.03 s plus its own time after 0.4 s, until the key-up, another key or 200 steps. `cmd media_session volume --adj`
+  does nothing on this TV; `input keyevent` is 0.05 s and goes through the window manager, so HDMI-CEC follows. Only where
+  `RemoteKeys.TCL`, Android 14 and newer, `serviceWanted()`. Test by holding the remote's key, not with `adb shell input`, which skips the filter.
   Vestel (F&U and other store brands; MediaTek, Android TV 14 tested) maps its Netflix button to `KEYCODE_STEM_1`, a
   global key (`dumpsys window policy` lists them) that the key filter sees first; its YouTube, Prime Video and Google
   Play buttons stay with the system. The stock lists needed no Vestel entries.
