@@ -985,13 +985,13 @@ public class SettingsActivity extends Activity {
         private static final String[] UNITS = {"auto", "C", "F"}, THEMES = {"auto", "light", "dark"},
                 CLOCKS = {"auto", "24", "12"};
         /** Home Settings: language, temperature, theme, clock, my photos, sounds, top of the screen, picks, Continue
-         *  Watching's apps, watch from the screensaver, Android apps, status icons, Recent Apps, at power-on, Live TV button, weather, city, forecast,
+         *  Watching's apps, watch from the screensaver, Android apps, status icons, Bluetooth audio, Recent Apps, at power-on, Live TV button, weather, city, forecast,
          *  now playing, Home Assistant (only on builds with its address), quotes, one row per coin, then the TMDB and Watchmode keys and
          *  updates (the last row). */
         private static final int CLOCK_ROW = 3, PHOTOS_ROW = 4, TOP_ROW = 6, PICKS_ROW = 7, WATCH_ROW = 8,
-                SAVER_ROW = 9, ANDROID_APPS_ROW = 10, STATUS_ICONS_ROW = 11, RECENTS_ROW = 12, POWER_ON_ROW = 13,
-                LIVE_BUTTON_ROW = 14, WEATHER_ROW = 15, CITY_ROW = 16, FORECAST_ROW = 17, PLAYING_ROW = 18,
-                HOME_ROW = Config.HOME_ASSISTANT ? 19 : -1, QUOTES_ROW = Config.HOME_ASSISTANT ? 20 : 19, COIN_ROWS = QUOTES_ROW + 1;
+                SAVER_ROW = 9, ANDROID_APPS_ROW = 10, STATUS_ICONS_ROW = 11, BLUETOOTH_ROW = 12, RECENTS_ROW = 13,
+                POWER_ON_ROW = 14, LIVE_BUTTON_ROW = 15, WEATHER_ROW = 16, CITY_ROW = 17, FORECAST_ROW = 18, PLAYING_ROW = 19,
+                HOME_ROW = Config.HOME_ASSISTANT ? 20 : -1, QUOTES_ROW = Config.HOME_ASSISTANT ? 21 : 20, COIN_ROWS = QUOTES_ROW + 1;
         /** No "home" on Xiaomi TVs: their remote sends one Home press as a burst of presses (HomeView.BURST_MS). */
         private static final String[] RECENTS = RemoteKeys.XIAOMI ? new String[] {"off", "drawer"}
                 : new String[] {"off", "drawer", "home"};
@@ -1016,6 +1016,7 @@ public class SettingsActivity extends Activity {
             l.add(Ui.tr("Watch from the screensaver"));
             l.add(Ui.tr("Android apps"));
             l.add(Ui.tr("Status icons"));   // before the weather widget: City and Forecast are the widget's
+            l.add(Ui.tr("Bluetooth audio"));
             l.add(Ui.tr("Recent Apps"));
             l.add(Ui.tr("At power-on"));
             l.add(Ui.tr("Live TV button"));
@@ -1129,6 +1130,7 @@ public class SettingsActivity extends Activity {
             v[LIVE_BUTTON_ROW] = liveButtonValue();
             v[ANDROID_APPS_ROW] = onOff(Prefs.androidApps());
             v[STATUS_ICONS_ROW] = onOff(Prefs.statusIcons());
+            v[BLUETOOTH_ROW] = onOff(Prefs.bluetoothAudio());
             v[WEATHER_ROW] = onOff(Prefs.weather());
             v[CITY_ROW] = !cityStatus.isEmpty() ? cityStatus : Prefs.city().isEmpty() ? "—" : Prefs.city();
             v[FORECAST_ROW] = Prefs.forecast().equals("days") ? Ui.tr("Next days") : Ui.tr("Next hours");
@@ -1180,6 +1182,7 @@ public class SettingsActivity extends Activity {
                 case HOME_SETTINGS:
                     return pickScroll + i == PLAYING_ROW ? Capabilities.NEED_LISTENER
                             : pickScroll + i == HOME_ROW ? Capabilities.NEED_HOME_ASSISTANT
+                            : pickScroll + i == BLUETOOTH_ROW ? Capabilities.NEED_BLUETOOTH
                             : pickScroll + i == POWER_ON_ROW ? Capabilities.NEED_LIVE_TV
                             : pickScroll + i == LIVE_BUTTON_ROW ? Capabilities.NEED_HDMI
                             : pickScroll + i == SAVER_ROW ? Capabilities.NEED_SCREENSAVER : null;
@@ -1527,6 +1530,9 @@ public class SettingsActivity extends Activity {
                     if (on) requestBluetooth();
                     break;
                 }
+                case BLUETOOTH_ROW:   // the drawer reads the paired speakers while it's open
+                    Prefs.setBluetoothAudio(!Prefs.bluetoothAudio());
+                    return;
                 case WEATHER_ROW: Prefs.setWeather(!Prefs.weather()); break;
                 case CITY_ROW: return;
                 case FORECAST_ROW:   // both are in memory: nothing to fetch

@@ -294,6 +294,10 @@ final class Prefs {
     static boolean statusIcons() { return sp().getBoolean("statusicons", false); }
     static void setStatusIcons(boolean on) { put("statusicons", on); }
 
+    /** The drawer's Bluetooth audio group: paired speakers and headphones, connected or not (off by default). */
+    static boolean bluetoothAudio() { return sp().getBoolean("bluetoothaudio", false); }
+    static void setBluetoothAudio(boolean on) { put("bluetoothaudio", on); }
+
     // MARK: - City
 
     static String city() { return sp().getString("city", Place.city()).trim(); }

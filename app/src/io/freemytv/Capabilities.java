@@ -24,13 +24,16 @@ final class Capabilities {
     static final String NEED_ADB = "adb", NEED_REMOTE_BUTTONS = "remote-buttons", NEED_OVERLAY = OVERLAY,
             NEED_LIVE_TV = "live-tv", NEED_LISTENER = LISTENER, NEED_SWITCH = "switch",
             NEED_HOME_ASSISTANT = "home-assistant", NEED_APP_STORE = "app-store", NEED_SCREENSAVER = "screensaver",
-            NEED_INPUTS = "inputs", NEED_HDMI = "hdmi";
+            NEED_INPUTS = "inputs", NEED_HDMI = "hdmi", NEED_BLUETOOTH = "bluetooth";
 
     /** null where this TV has what `need` names; else why not, and what would change it, for the person to read. */
     static String missing(Context c, String need) {
         switch (need) {
             case NEED_ADB:
                 return adb(c) ? null : Ui.tr("Needs Free My TV mode: turn it on in Home Screen.");
+            case NEED_BLUETOOTH:   // Home Settings > Bluetooth audio: a Bluetooth chip, and the TV's own ADB to connect through
+                return !c.getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_BLUETOOTH)
+                        ? Ui.tr("This TV has no Bluetooth.") : missing(c, NEED_ADB);
             case NEED_REMOTE_BUTTONS:
                 return remoteButtons() ? null : Ui.tr("This TV's remote has no app buttons that Free My TV knows.");
             case NEED_OVERLAY:
