@@ -294,6 +294,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private List<HomeApps.Item> drawerItems = new ArrayList<>();
     private int drawerInputs;          // how many leading items are inputs (the rest are shortcuts)
     private int drawerHome;            // where the Home Assistant tiles start (the list's size without them)
+    private int drawerBt;              // where the Bluetooth audio tiles start (drawerHome when there are none)
     private Spring[] drawerFocus = new Spring[0];
     private RectF[] drawerRects = new RectF[0];
     private final RectF weatherCard = new RectF(), quotesCard = new RectF();
@@ -745,6 +746,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         Choreographer.getInstance().removeFrameCallback(this);
         handler.removeCallbacks(tick);
         handler.removeCallbacks(homeTick);
+        handler.removeCallbacks(bluetoothTick);
         handler.removeCallbacks(reloadSoon);
         handler.removeCallbacks(bars);
         playing.stop();
@@ -2033,11 +2035,13 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private static List<HomeApps.Item> drawerList(Context c) {
         List<HomeApps.Item> list = HomeApps.orderedInputs(c);
         list.addAll(HomeApps.drawerShortcuts(c));
+        list.addAll(BluetoothAudio.items());   // empty unless on in Home Settings, and until the drawer has read the speakers
         list.addAll(HomeAssistant.items(c));   // empty unless configured and on in Home Settings
         return list;
     }
 
     private void setDrawerItems(List<HomeApps.Item> list) {
+        String focusKey = drawerIndex >= 0 && drawerIndex < drawerItems.size() ? drawerItems.get(drawerIndex).key : null;
         int inputs = 0;
         while (inputs < list.size() && (list.get(inputs).kind == HomeApps.INPUT || list.get(inputs).kind == HomeApps.LIVE_TV)) inputs++;
         boolean same = list.size() == drawerItems.size();
@@ -2046,9 +2050,15 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         }
         int home = inputs;
         while (home < list.size() && list.get(home).kind != HomeApps.HOME_ASSISTANT) home++;
+        int bt = inputs;
+        while (bt < home && list.get(bt).kind != HomeApps.BLUETOOTH) bt++;
         drawerItems = list;
         drawerInputs = inputs;
+        drawerBt = bt;
         drawerHome = home;
+        if (focusKey != null) {   // a group that comes or goes before the focused tile must not move the focus to another one
+            for (int i = 0; i < list.size(); i++) if (list.get(i).key.equals(focusKey)) { drawerIndex = i; break; }
+        }
         if (drawerFocus.length != list.size()) {
             drawerFocus = new Spring[list.size()];
             drawerRects = new RectF[list.size()];
@@ -2067,11 +2077,12 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         int n = drawerItems.size();
         float left = MARGIN * k, right = CONTENT_R * k;
         float gap = 18 * k, groupGap = 56 * k;
-        int groups = Math.max(1, (drawerInputs > 0 ? 1 : 0) + (drawerHome > drawerInputs ? 1 : 0) + (n > drawerHome ? 1 : 0));
+        int groups = Math.max(1, (drawerInputs > 0 ? 1 : 0) + (drawerBt > drawerInputs ? 1 : 0) + (drawerHome > drawerBt ? 1 : 0)
+                + (n > drawerHome ? 1 : 0));
         float tw = Math.min(230 * k, (right - left - Math.max(0, n - groups) * gap - (groups - 1) * groupGap) / Math.max(1, n));
         float x = left, top = ROW_TOP * k;
         for (int i = 0; i < n; i++) {
-            if ((i == drawerInputs || i == drawerHome) && i > 0) x += groupGap - gap;
+            if ((i == drawerInputs || i == drawerBt || i == drawerHome) && i > 0) x += groupGap - gap;
             drawerRects[i].set(x, top, x + tw, top + ROW_H * k);
             snap(drawerRects[i]);
             x += tw + gap;
@@ -2104,6 +2115,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         for (int i = 0; i < drawerFocus.length; i++) drawerFocus[i].snap(i == drawerIndex ? 1 : 0);
         drawerDirty = true;
         readHome();
+        readBluetooth();
     }
 
     private void closeDrawer() {
@@ -2112,7 +2124,42 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         zone = Z_SHELF;
         for (Spring f : drawerFocus) f.snap(0);   // the drawer goes away: its focus doesn't need to animate
         handler.removeCallbacks(homeTick);
+        handler.removeCallbacks(bluetoothTick);
         if (!shelf.isEmpty() && drawerIndex < drawerRects.length) shelfIndex = nearest(tileRects, drawerRects[drawerIndex].centerX());
+    }
+
+    // MARK: - Bluetooth audio tiles
+
+    /** Reads the paired speakers now and every BluetoothAudio.REFRESH_MS while the drawer is open (and the row is on). */
+    private final Runnable bluetoothTick = this::readBluetooth;
+
+    private void readBluetooth() {
+        handler.removeCallbacks(bluetoothTick);
+        if (!running || !drawerOpen || !Prefs.bluetoothAudio()) return;
+        BluetoothAudio.refresh(getContext(), this::bluetoothChanged);
+        handler.postDelayed(bluetoothTick, BluetoothAudio.REFRESH_MS);
+    }
+
+    /** The list or a state changed: the group is rebuilt in place (it sits before the Home Assistant tiles). */
+    private void bluetoothChanged() {
+        int ha = drawerItems.size();
+        for (int i = 0; i < drawerItems.size(); i++) if (drawerItems.get(i).kind == HomeApps.HOME_ASSISTANT) { ha = i; break; }
+        List<HomeApps.Item> list = new ArrayList<>();
+        for (int i = 0; i < ha; i++) if (drawerItems.get(i).kind != HomeApps.BLUETOOTH) list.add(drawerItems.get(i));
+        list.addAll(BluetoothAudio.items());
+        list.addAll(drawerItems.subList(ha, drawerItems.size()));
+        setDrawerItems(list);
+        drawerDirty = true;
+        wake();
+    }
+
+    private void pressBluetooth(HomeApps.Item it) {
+        BluetoothAudio.toggle(getContext(), it.address, ok -> {
+            if (!ok) showToast(Ui.trf("Couldn't change {device}.", "device", it.label));
+            bluetoothChanged();
+            readBluetooth();
+        });
+        bluetoothChanged();   // the tile shows its new state at once
     }
 
     // MARK: - Home Assistant tiles
@@ -2191,7 +2238,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         pricePaint.setColor(drawerInk(0.95f));
         float titleBase = ROW_TITLE * k;
         if (drawerInputs > 0) c.drawText(Ui.tr("Inputs"), drawerRects[0].left + 4 * k, titleBase, rowTitle);
-        if (drawerInputs < drawerHome) c.drawText(Ui.tr("Shortcuts"), drawerRects[drawerInputs].left + 4 * k, titleBase, rowTitle);
+        if (drawerInputs < drawerBt) c.drawText(Ui.tr("Shortcuts"), drawerRects[drawerInputs].left + 4 * k, titleBase, rowTitle);
+        if (drawerBt < drawerHome) c.drawText(Ui.tr("Bluetooth"), drawerRects[drawerBt].left + 4 * k, titleBase, rowTitle);
         if (drawerHome < drawerItems.size()) c.drawText("Home Assistant", drawerRects[drawerHome].left + 4 * k, titleBase, rowTitle);
         int top = -1;
         for (int i = 0; i < drawerItems.size(); i++) if (drawerFocus[i].value > 0.02f && (top < 0 || drawerFocus[i].value > drawerFocus[top].value)) top = i;
@@ -2221,7 +2269,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             fill.setColor(Ui.alpha(WHITE, f));
             c.drawRoundRect(cell, r, r, fill);
         }
-        boolean off = it.kind == HomeApps.INPUT && !it.connected
+        boolean off = (it.kind == HomeApps.INPUT || it.kind == HomeApps.BLUETOOTH) && !it.connected
                 || it.kind == HomeApps.HOME_ASSISTANT && it.control != null && !it.control.on();
         int ink = blend(tone(off ? 0xFF8E8E93 : L_INK, off ? 0x6BFFFFFF : 0xF2FFFFFF), INK, f);
         Symbols.draw(getContext(), c, it.symbol, cx, cell.top + cell.height() * 0.4f, 34 * k * s, ink);
@@ -3371,6 +3419,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             pressHome(it);
             return;
         }
+        if (it.kind == HomeApps.BLUETOOTH) {
+            pressBluetooth(it);
+            return;
+        }
         if (it.kind == HomeApps.ALL_APPS) {
             openSheet();
             return;
@@ -3966,6 +4018,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private static String label(List<HomeApps.Item> list, int i) {
         if (i < 0 || i >= list.size() || list.get(i).label == null) return "";
         HomeApps.Item it = list.get(i);
+        if (it.kind == HomeApps.BLUETOOTH) {
+            return Ui.trf("{name}, {state}", "name", it.label, "state", it.connected ? Ui.tr("Connected") : Ui.tr("Not connected"));
+        }
         if (it.kind == HomeApps.HOME_ASSISTANT && it.control != null && it.control.hasOnOff()) {
             return Ui.trf("{name}, {state}", "name", it.label, "state", it.control.on() ? Ui.tr("On") : Ui.tr("Off"));
         }

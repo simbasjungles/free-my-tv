@@ -63,6 +63,8 @@ final class HomeApps {
     static final int RECENTS = 8;
     /** A Home Assistant entity in the drawer (HomeAssistant): OK calls its service, nothing opens. */
     static final int HOME_ASSISTANT = 9;
+    /** A paired Bluetooth speaker or headphones in the drawer (BluetoothAudio): OK connects or disconnects it. */
+    static final int BLUETOOTH = 10;
     /** Image size of each card (16:9; on screen it shows up to ~330 px wide). */
     static final int TILE_W = 384, TILE_H = 216;
 
@@ -80,6 +82,7 @@ final class HomeApps {
         float logoScale = 1; // size tweak by eye (compact logos need more)
         boolean connected = true;
         HomeAssistant.Control control;   // HOME_ASSISTANT: the entity it shows and calls
+        String address;     // BLUETOOTH: the device's address; `connected` says whether it is
 
         void setTile(Bitmap b) {
             tile = b;
@@ -360,6 +363,14 @@ final class HomeApps {
     static Item homeAssistant(HomeAssistant.Control ctl, String symbol) {
         Item it = shortcut(HOME_ASSISTANT, "ha:" + ctl.entity, ctl.name, symbol);
         it.control = ctl;
+        return it;
+    }
+
+    /** A paired Bluetooth audio device in the drawer (BluetoothAudio.items). */
+    static Item bluetooth(String address, String name, boolean connected) {
+        Item it = shortcut(BLUETOOTH, "bt:" + address, name, "speaker");
+        it.address = address;
+        it.connected = connected;
         return it;
     }
 
