@@ -4,7 +4,7 @@
     python3 tizen/install.py 192.168.1.50              # install or update, then open it
     python3 tizen/install.py 192.168.1.50 --uninstall  # remove it
 
-First build and sign it: python3 tizen/build.py --sign <profile> (see CLAUDE.md). Before the first install, on the
+First build and sign it: python3 tizen/build.py --sign <profile> (see guide/install-samsung.md). Before the first install, on the
 TV: open Apps, type 1 2 3 4 5 on the remote, turn Developer mode on with this computer's IP as Host PC IP, and
 restart the TV.
 
