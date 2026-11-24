@@ -666,6 +666,25 @@ var TV = (function () {
     }
   }
 
+  /*
+   * Smart Hub, as a running app. Measured on a 2024 QN55S90DAGXZD (Tizen 9.0): pressing Home starts
+   * `com.samsung.tv.homeupdateview`, which ends again a few seconds later. It went up at every Home press and at no
+   * other moment, so its start is a second way to know Home was pressed, next to the server's `visible`.
+   */
+  var HOME_VIEW = 'com.samsung.tv.homeupdateview';
+
+  /** done(true | false) whether Smart Hub's view runs, done(null) if the list can't be read. */
+  function homeUp(done) {
+    try {
+      window.tizen.application.getAppsContext(function (contexts) {
+        for (var i = 0; i < contexts.length; i++) {
+          if (contexts[i].appId === HOME_VIEW) { done(true); return; }
+        }
+        done(false);
+      }, function () { done(null); });
+    } catch (e) { done(null); }
+  }
+
   function watchBack(id) {
     stopWatch();
     if (!back.on || !id) return;
@@ -676,11 +695,19 @@ var TV = (function () {
     back.waits = 0;
     back.gone = 0;
     back.asking = false;
-    back.timer = setInterval(function () {
-      // Back here, or the app never came to the front (20 s): nothing to watch. Until then it may still be opening.
-      if (!document.hidden) { if (back.away || ++back.waits > 50) stopWatch(); return; }
-      back.away = true;
-      if (back.asking) return;   // one question at a time: the TV is slow to answer while Smart Hub opens
+    back.wasUp = null;
+    back.homeAsking = false;
+
+    /*
+     * One question, and the confirmation right behind it. A hidden page's timers are held to once a second (Chromium
+     * throttles them; the 400 ms below only holds while the page shows), but an XMLHttpRequest's callback isn't: asking
+     * again from inside it answers in about 30 ms. It matters, because for some apps the server says "not visible" for
+     * a single second and then says "visible" again while they draw on behind Smart Hub (HBO Max and Disney+ on a 2024
+     * Tizen 9 TV): a confirmation that waits for the next second misses that window and the home screen never comes
+     * back. Still two readings, so one stray "not visible" in the middle of a film doesn't bring it over.
+     */
+    function ask() {
+      if (!back.timer || back.asking) return;
       if (++back.asks > 50 && !back.seen) { stopWatch(); return; }   // it never showed (20 s): nothing to watch
       back.asking = true;
       visible(back.ids, function (on) {
@@ -688,9 +715,28 @@ var TV = (function () {
         if (!back.timer) return;
         if (on === null) { stopWatch(); return; }   // the server doesn't know it: left alone
         if (on === true) { back.seen = true; back.gone = 0; return; }
-        // Twice in a row: one "not visible" in the middle of a film must not bring the home screen over it.
-        if (on === false && back.seen && document.hidden && ++back.gone >= 2) { stopWatch(); comeBack(); }
+        if (on === false && back.seen && document.hidden) {
+          if (++back.gone >= 2) { stopWatch(); comeBack(); return; }
+          ask();   // now, not next second: the window can be that short
+        }
       });
+    }
+
+    back.timer = setInterval(function () {
+      // Back here, or the app never came to the front (20 s): nothing to watch. Until then it may still be opening.
+      if (!document.hidden) { if (back.away || ++back.waits > 50) stopWatch(); return; }
+      back.away = true;
+      // Smart Hub going up says Home was pressed even when the server keeps calling the app visible.
+      if (back.seen && !back.homeAsking) {
+        back.homeAsking = true;
+        homeUp(function (up) {
+          back.homeAsking = false;
+          if (!back.timer || up === null) return;
+          if (up === true && back.wasUp === false && document.hidden) { stopWatch(); comeBack(); return; }
+          back.wasUp = up;   // only its start counts, so one already up when the app opened is left alone
+        });
+      }
+      ask();
     }, 400);
   }
 
