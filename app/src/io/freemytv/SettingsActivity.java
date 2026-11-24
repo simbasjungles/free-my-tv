@@ -304,7 +304,7 @@ public class SettingsActivity extends Activity {
                 }
                 @Override public int focused() { return focus + 1; }
                 @Override public void focus(int id) {
-                    if (screen == HOME_SETTINGS && pickScroll + focus == TOP_ROW && id - 1 != focus) commitWatch();
+                    if (screen == HOME_SETTINGS && full(pickScroll + focus) == TOP_ROW && id - 1 != focus) commitWatch();
                     focus = id - 1;
                     invalidate();
                 }
@@ -869,7 +869,7 @@ public class SettingsActivity extends Activity {
 
         /** As the arrows and TalkBack do: leaving "Top of the screen" on Continue Watching asks for its permission. */
         private void leaveTopRow(int row) {
-            if (screen == HOME_SETTINGS && pickScroll + focus == TOP_ROW && row != TOP_ROW) commitWatch();
+            if (screen == HOME_SETTINGS && full(pickScroll + focus) == TOP_ROW && row != shownRow(TOP_ROW)) commitWatch();
         }
 
         private void wheel(int dir) {
@@ -882,7 +882,7 @@ public class SettingsActivity extends Activity {
             } else if (dir < 0 && focus > 0) {
                 focus--;
             }
-            if (screen == HOME_SETTINGS && before == TOP_ROW && pickScroll + focus != TOP_ROW) commitWatch();
+            if (screen == HOME_SETTINGS && before == shownRow(TOP_ROW) && pickScroll + focus != shownRow(TOP_ROW)) commitWatch();
             invalidate();
             spoken.focusMoved();
         }
@@ -891,14 +891,14 @@ public class SettingsActivity extends Activity {
             boolean down = e.getAction() == KeyEvent.ACTION_DOWN;
             switch (e.getKeyCode()) {
                 case KeyEvent.KEYCODE_DPAD_UP:
-                    if (down && screen == HOME_SETTINGS && pickScroll + focus == TOP_ROW) commitWatch();
+                    if (down && screen == HOME_SETTINGS && full(pickScroll + focus) == TOP_ROW) commitWatch();
                     if (down && focus > 0) focus--;
                     else if (down && scrolling() && pickScroll > 0) pickScroll--;
                     invalidate();
                     spoken.focusMoved();
                     return true;
                 case KeyEvent.KEYCODE_DPAD_DOWN:
-                    if (down && screen == HOME_SETTINGS && pickScroll + focus == TOP_ROW) commitWatch();
+                    if (down && screen == HOME_SETTINGS && full(pickScroll + focus) == TOP_ROW) commitWatch();
                     if (down && focus < rowCount() - 1) focus++;
                     else if (down && scrolling() && pickScroll + rowCount() < listSize()) pickScroll++;
                     invalidate();
@@ -938,31 +938,27 @@ public class SettingsActivity extends Activity {
                             if (screen == PICKER && pickFor == PICK_ALBUM) {
                                 openPhotoSources();
                             } else if (screen == PICKER && pickFor == PICK_PHOTOS) {
-                                showSettingsRow(PHOTOS_ROW);
+                                showSettingsRow(shownRow(PHOTOS_ROW));
                             } else if (screen == PICKER && pickFor <= PICK_SLEEP) {
                                 focus = powerFocus(pickFor == PICK_SLEEP ? P_SLEEP : P_WHERE);
                                 pickScroll = 0;   // the picker's scroll isn't this short list's
                                 screen = POWER;
                             } else if (screen == PICKER && (pickFor == PICK_CITY || pickFor == PICK_LANGUAGE)) {
-                                showSettingsRow(pickFor == PICK_CITY ? CITY_ROW : 0);
+                                showSettingsRow(pickFor == PICK_CITY ? shownRow(CITY_ROW) : 0);
                             } else if (screen == PICKER) {
                                 focus = pickFor - 1;
                                 screen = REMOTE_KEYS;
                             } else if (screen == TMDB_KEY) {
                                 closeKeyScreen();
                             } else if (screen == PICKS) {
-                                focus = PICKS_ROW;
-                                pickScroll = 0;
-                                screen = HOME_SETTINGS;
+                                showSettingsRow(shownRow(PICKS_ROW));
                             } else if (screen == PICK_FROM) {
                                 countServicesOff();
                                 pickScroll = 0;   // the Picks screen has a few rows
                                 focus = 1;
                                 screen = PICKS;
                             } else if (screen == WATCH_APPS) {
-                                focus = WATCH_ROW;   // on the list's first screen
-                                pickScroll = 0;
-                                screen = HOME_SETTINGS;
+                                showSettingsRow(shownRow(WATCH_ROW));
                             } else {
                                 focus = screen == HOME_SETTINGS ? 2 : screen == SHELF_EDIT
                                         ? (editingTop ? 4 : editingInputs ? 5 : 3)
@@ -982,16 +978,18 @@ public class SettingsActivity extends Activity {
 
         // MARK: - Home Settings and Remote Buttons
 
-        private static final String[] UNITS = {"auto", "C", "F"}, THEMES = {"auto", "light", "dark"},
+        private static final String[] UNITS = {"auto", "C", "F"}, THEMES = {"auto", "light", "dark", "schedule"},
                 CLOCKS = {"auto", "24", "12"};
-        /** Home Settings: language, temperature, theme, clock, my photos, sounds, top of the screen, picks, Continue
-         *  Watching's apps, watch from the screensaver, Android apps, status icons, Recent Apps, at power-on, Live TV button, weather, city, forecast,
-         *  now playing, Home Assistant (only on builds with its address), quotes, one row per coin, then the TMDB and Watchmode keys and
-         *  updates (the last row). */
-        private static final int CLOCK_ROW = 3, PHOTOS_ROW = 4, TOP_ROW = 6, PICKS_ROW = 7, WATCH_ROW = 8,
-                SAVER_ROW = 9, ANDROID_APPS_ROW = 10, STATUS_ICONS_ROW = 11, RECENTS_ROW = 12, POWER_ON_ROW = 13,
-                LIVE_BUTTON_ROW = 14, WEATHER_ROW = 15, CITY_ROW = 16, FORECAST_ROW = 17, PLAYING_ROW = 18,
-                HOME_ROW = Config.HOME_ASSISTANT ? 19 : -1, QUOTES_ROW = Config.HOME_ASSISTANT ? 20 : 19, COIN_ROWS = QUOTES_ROW + 1;
+        /** Home Settings: language, temperature, theme, its two times (only with the Schedule theme), clock, my photos,
+         *  sounds, top of the screen, picks, Continue Watching's apps, watch from the screensaver, Android apps, status
+         *  icons, Recent Apps, at power-on, Live TV button, weather, city, forecast, now playing, Home Assistant (only on
+         *  builds with its address), quotes, one row per coin, then the TMDB and Watchmode keys and updates (the last
+         *  row). These are the full list's numbers: `full` and `shownRow` convert from and to the rows on screen. */
+        private static final int DARK_FROM_ROW = 3, DARK_UNTIL_ROW = 4, CLOCK_ROW = 5, PHOTOS_ROW = 6, SOUNDS_ROW = 7,
+                TOP_ROW = 8, PICKS_ROW = 9, WATCH_ROW = 10, SAVER_ROW = 11, ANDROID_APPS_ROW = 12, STATUS_ICONS_ROW = 13,
+                RECENTS_ROW = 14, POWER_ON_ROW = 15, LIVE_BUTTON_ROW = 16, WEATHER_ROW = 17, CITY_ROW = 18,
+                FORECAST_ROW = 19, PLAYING_ROW = 20,
+                HOME_ROW = Config.HOME_ASSISTANT ? 21 : -1, QUOTES_ROW = Config.HOME_ASSISTANT ? 22 : 21, COIN_ROWS = QUOTES_ROW + 1;
         /** No "home" on Xiaomi TVs: their remote sends one Home press as a burst of presses (HomeView.BURST_MS). */
         private static final String[] RECENTS = RemoteKeys.XIAOMI ? new String[] {"off", "drawer"}
                 : new String[] {"off", "drawer", "home"};
@@ -1002,11 +1000,40 @@ public class SettingsActivity extends Activity {
             return "BRL".equals(Place.currency());
         }
 
+        private static boolean schedule() {
+            return Prefs.theme().equals("schedule");
+        }
+
+        /** Dark from and Dark until are on the list only with the Schedule theme: the number of a shown row, in the full list. */
+        private static int full(int shown) {
+            return schedule() || shown < DARK_FROM_ROW ? shown : shown + 2;
+        }
+
+        private static int shownRow(int full) {
+            return schedule() || full < DARK_FROM_ROW ? full : full - 2;
+        }
+
+        private static String[] shown(String[] all) {
+            if (schedule()) return all;
+            List<String> l = new ArrayList<>(java.util.Arrays.asList(all));
+            l.subList(DARK_FROM_ROW, DARK_UNTIL_ROW + 1).clear();
+            return l.toArray(new String[0]);
+        }
+
+        private static String minutes(int m) {
+            java.util.Calendar c = java.util.Calendar.getInstance();
+            c.set(java.util.Calendar.HOUR_OF_DAY, m / 60);
+            c.set(java.util.Calendar.MINUTE, m % 60);
+            return Ui.time(c.getTimeInMillis());
+        }
+
         private String[] settingLabels() {
             List<String> l = new ArrayList<>();
             l.add(Ui.tr("Language"));
             l.add(Ui.tr("Temperature"));
             l.add(Ui.tr("Theme"));
+            l.add(Ui.tr("Dark from"));
+            l.add(Ui.tr("Dark until"));
             l.add(Ui.tr("Clock"));
             l.add(Ui.tr("My Photos"));
             l.add(Ui.tr("Navigation sounds"));
@@ -1032,7 +1059,7 @@ public class SettingsActivity extends Activity {
             l.add(Ui.tr("TMDB key"));
             l.add(Ui.tr("Watchmode key"));
             l.add(Ui.tr("Updates"));
-            return l.toArray(new String[0]);
+            return shown(l.toArray(new String[0]));
         }
 
         /** The Updates row: the last one, after the coins and the keys. */
@@ -1100,21 +1127,23 @@ public class SettingsActivity extends Activity {
         }
 
         private String[] settingValues() {
-            String[] labels = settingLabels();
-            String[] v = new String[labels.length];
+            String[] v = new String[settingLabels().length + (schedule() ? 0 : 2)];
             String lang = Prefs.language();
             v[0] = lang.equals("auto") ? Ui.tr("Automatic") : Ui.languageName(lang);
             String unit = Prefs.temperature();
             v[1] = unit.equals("C") ? "°C" : unit.equals("F") ? "°F" : Ui.tr("unit|Automatic");
             String theme = Prefs.theme();
-            v[2] = theme.equals("light") ? Ui.tr("Light") : theme.equals("dark") ? Ui.tr("Dark") : Ui.tr("Automatic");
+            v[2] = theme.equals("light") ? Ui.tr("Light") : theme.equals("dark") ? Ui.tr("Dark")
+                    : theme.equals("schedule") ? Ui.tr("Schedule") : Ui.tr("Automatic");
+            v[DARK_FROM_ROW] = minutes(Prefs.darkFrom());
+            v[DARK_UNTIL_ROW] = minutes(Prefs.darkUntil());
             int photos = Photos.files(getContext()).size();
             v[PHOTOS_ROW] = photos == 0 ? Ui.tr("photos|None")
                     : Prefs.photos() ? Ui.plural("plural|one:{n} photo|other:{n} photos", photos) : Ui.tr("Off");
             if (ImmichPhotos.configured(getContext())) v[PHOTOS_ROW] = immichPhotosValue(photos);
             String clock = Prefs.clockFormat();
             v[CLOCK_ROW] = clock.equals("24") ? Ui.tr("24 hours") : clock.equals("12") ? Ui.tr("12 hours") : Ui.tr("Automatic");
-            v[5] = onOff(Prefs.sounds());
+            v[SOUNDS_ROW] = onOff(Prefs.sounds());
             v[PICKS_ROW] = "›";   // opens its own screen: Picks per tab and Picks from
             v[SAVER_ROW] = onOff(Prefs.saverWatch());
             String top = Prefs.topContent();
@@ -1140,7 +1169,7 @@ public class SettingsActivity extends Activity {
             v[v.length - 3] = keyValue(Recs.key());
             v[v.length - 2] = keyValue(Recs.watchmodeKey());
             v[v.length - 1] = updatesValue();
-            return v;
+            return shown(v);
         }
 
         /**
@@ -1178,11 +1207,11 @@ public class SettingsActivity extends Activity {
                             : i == 6 ? Capabilities.NEED_REMOTE_BUTTONS
                             : i == 7 ? Capabilities.NEED_ADB : null;
                 case HOME_SETTINGS:
-                    return pickScroll + i == PLAYING_ROW ? Capabilities.NEED_LISTENER
-                            : pickScroll + i == HOME_ROW ? Capabilities.NEED_HOME_ASSISTANT
-                            : pickScroll + i == POWER_ON_ROW ? Capabilities.NEED_LIVE_TV
-                            : pickScroll + i == LIVE_BUTTON_ROW ? Capabilities.NEED_HDMI
-                            : pickScroll + i == SAVER_ROW ? Capabilities.NEED_SCREENSAVER : null;
+                    return full(pickScroll + i) == PLAYING_ROW ? Capabilities.NEED_LISTENER
+                            : full(pickScroll + i) == HOME_ROW ? Capabilities.NEED_HOME_ASSISTANT
+                            : full(pickScroll + i) == POWER_ON_ROW ? Capabilities.NEED_LIVE_TV
+                            : full(pickScroll + i) == LIVE_BUTTON_ROW ? Capabilities.NEED_HDMI
+                            : full(pickScroll + i) == SAVER_ROW ? Capabilities.NEED_SCREENSAVER : null;
                 case POWER: {
                     int id = powerRows()[i];
                     return id == P_WHERE ? Capabilities.NEED_OVERLAY : null;
@@ -1208,7 +1237,7 @@ public class SettingsActivity extends Activity {
                 whyScroll = pickScroll;
                 for (int r = 0; r < n; r++) {
                     String need = need(r);
-                    whyRows[r] = screen == HOME_SETTINGS && pickScroll + r >= COIN_ROWS && pickScroll + r < keyRow() && !Prefs.quotes()
+                    whyRows[r] = screen == HOME_SETTINGS && full(pickScroll + r) >= COIN_ROWS && pickScroll + r < keyRow() && !Prefs.quotes()
                             ? Ui.tr("Turn on the Quotes widget to pick its coins.")
                             : need == null ? null : Capabilities.missing(getContext(), need);
                 }
@@ -1427,7 +1456,7 @@ public class SettingsActivity extends Activity {
         /** Changes the focused row's value one step (OK and → go forward, ← goes back). */
         private void adjust(int dir) {
             // Refused or without Free My TV mode, Now Playing can still be turned off (and the refusal is then forgotten).
-            boolean turnOff = screen == HOME_SETTINGS && pickScroll + focus == PLAYING_ROW && Prefs.nowPlaying();
+            boolean turnOff = screen == HOME_SETTINGS && full(pickScroll + focus) == PLAYING_ROW && Prefs.nowPlaying();
             if (unavailable(focus) != null && !turnOff) return;
             if (screen == PICKS) {
                 if (focus == 0) {
@@ -1465,7 +1494,7 @@ public class SettingsActivity extends Activity {
                 HomeMode.ensureRemoteService(getContext(), 3_000);   // all on Nothing: the service goes off
                 return;
             }
-            int row = pickScroll + focus;
+            int row = full(pickScroll + focus);
             switch (row) {
                 case 0: break;   // OK opens the language picker.
                 case 1: {
@@ -1477,6 +1506,7 @@ public class SettingsActivity extends Activity {
                     int at = java.util.Arrays.asList(THEMES).indexOf(Prefs.theme());
                     Prefs.setTheme(THEMES[(at + dir + THEMES.length) % THEMES.length]);
                     SleepOverlay.update(getContext());   // the pill's glass follows
+                    whyRows = null;   // the two time rows come or go, so the rows below change places
                     break;
                 }
                 case PHOTOS_ROW:
@@ -1484,12 +1514,18 @@ public class SettingsActivity extends Activity {
                     if (Photos.files(getContext()).isEmpty()) return;
                     Prefs.setPhotos(!Prefs.photos());
                     return;
+                case DARK_FROM_ROW:
+                    Prefs.setDarkFrom((Prefs.darkFrom() + dir * 30 + 1440) % 1440);
+                    break;
+                case DARK_UNTIL_ROW:
+                    Prefs.setDarkUntil((Prefs.darkUntil() + dir * 30 + 1440) % 1440);
+                    break;
                 case CLOCK_ROW: {
                     int at = java.util.Arrays.asList(CLOCKS).indexOf(Prefs.clockFormat());
                     Prefs.setClockFormat(CLOCKS[(at + dir + CLOCKS.length) % CLOCKS.length]);
                     break;
                 }
-                case 5: Prefs.setSounds(!Prefs.sounds()); break;
+                case SOUNDS_ROW: Prefs.setSounds(!Prefs.sounds()); break;
                 case PICKS_ROW: return;
                 case SAVER_ROW: Prefs.setSaverWatch(!Prefs.saverWatch()); break;
                 case TOP_ROW: {
@@ -1542,7 +1578,7 @@ public class SettingsActivity extends Activity {
                     return;
                 case QUOTES_ROW: Prefs.setQuotes(!Prefs.quotes()); break;
                 default:
-                    if (row >= keyRow() || !Prefs.quotes()) return;   // the keys and Updates act on OK only
+                    if (pickScroll + focus >= keyRow() || !Prefs.quotes()) return;   // the keys and Updates act on OK only
                     Prefs.setCoin(row - COIN_ROWS, !Prefs.coin(row - COIN_ROWS));
                     break;
             }
@@ -1973,7 +2009,7 @@ public class SettingsActivity extends Activity {
             // Also when it's the same choice: My Photos turned off earlier (before the key came) is on again
             Prefs.setPhotos(!"default".equals(source));
             ImmichPhotos.syncIfDue(getContext(), null);   // the new source starts coming now, not at the next home screen
-            showSettingsRow(PHOTOS_ROW);
+            showSettingsRow(shownRow(PHOTOS_ROW));
         }
 
         private void searchCity(String name) {
@@ -2423,7 +2459,7 @@ public class SettingsActivity extends Activity {
                 rowRect.set(LIST_X * k, y, LIST_R * k, y + LIST_ROW_H * k);
                 float f = drawRowBackground(c, i);
                 rowLabel.setColor(blend(0xF2FFFFFF, INK, f));
-                boolean locked = unavailable(i) != null, watchOff = !keys && from + i == WATCH_ROW && watchLocked();
+                boolean locked = unavailable(i) != null, watchOff = !keys && full(from + i) == WATCH_ROW && watchLocked();
                 if (locked) values[from + i] = Ui.tr("Unavailable");
                 rowValue.setColor(blend(locked ? 0x59FFFFFF : 0xB3FFFFFF, locked ? 0x591C1C1E : 0xB31C1C1E, f));
                 if (watchOff) rowValue.setColor(blend(0x59FFFFFF, 0x591C1C1E, f));
@@ -2431,7 +2467,7 @@ public class SettingsActivity extends Activity {
                 float base = rowRect.centerY() + Ui.halfCap(rowLabel);
                 c.drawText(labels[from + i], rowRect.left + 30 * k, base, rowLabel);
                 float right = rowRect.right - 30 * k;
-                if (!keys && !locked && from + i == WATCH_ROW) {
+                if (!keys && !locked && full(from + i) == WATCH_ROW) {
                     float cw = Symbols.width(getContext(), "chevron_right", 22 * k);
                     Symbols.draw(getContext(), c, "chevron_right", right - cw / 2, rowRect.centerY(), 22 * k,
                             blend(watchOff ? 0x33FFFFFF : 0x66FFFFFF, watchOff ? 0x331C1C1E : 0x991C1C1E, f));
@@ -2447,13 +2483,13 @@ public class SettingsActivity extends Activity {
             // A list longer than the screen says where we are in it, as the app picker does. Photos say where they come
             // from; on the Sleep Timer screen, the timer and Position open a list on OK.
             String where = rows < labels.length ? (from + focus + 1) + " / " + labels.length + "  ·  " : "";
-            c.drawText(where + (screen == HOME_SETTINGS && from + focus == PHOTOS_ROW ? (ImmichPhotos.configured(getContext())
+            c.drawText(where + (screen == HOME_SETTINGS && full(from + focus) == PHOTOS_ROW ? (ImmichPhotos.configured(getContext())
                     ? Ui.tr("OK chooses where they come from: default, Immich or an album.")
                     : Photos.files(getContext()).isEmpty()
                     ? Ui.tr("Send them from a computer: see “Your own photos” in the README.")
                     : Ui.tr("OK removes them; the arrows turn them on or off."))
                     : screen == POWER && powerRow() != P_SHOW && unavailable(focus) == null ? Ui.tr("OK opens the list. ← → change the value.")
-                    : screen == HOME_SETTINGS && from + focus == POWER_ON_ROW && unavailable(focus) == null
+                    : screen == HOME_SETTINGS && full(from + focus) == POWER_ON_ROW && unavailable(focus) == null
                     ? Ui.tr("Only after a full start, not from standby.")
                     : screen == HOME_SETTINGS && (from + focus == keyRow() || from + focus == watchmodeRow()) ? Ui.tr("OK: send it from your phone, or type it.")
                     : screen == HOME_SETTINGS && from + focus == updatesRow() ? (Updates.ready(updates, installed)
@@ -2495,7 +2531,7 @@ public class SettingsActivity extends Activity {
                 String[] city = cities.get(pickScroll + focus);
                 Prefs.setCity(city[1], city[2], city[3]);
                 HomeData.get(c).settingsChanged();
-                showSettingsRow(CITY_ROW);
+                showSettingsRow(shownRow(CITY_ROW));
             } else if (screen == PICKER && (pickFor == PICK_PHOTOS || pickFor == PICK_ALBUM)) {
                 pickPhotoSource();
             } else if (screen == PICKER && pickFor <= PICK_SLEEP) {
@@ -2521,19 +2557,19 @@ public class SettingsActivity extends Activity {
                 toggleWatchApp();
                 invalidate();
                 return;
-            } else if (screen == HOME_SETTINGS && pickScroll + focus == WATCH_ROW) {
+            } else if (screen == HOME_SETTINGS && full(pickScroll + focus) == WATCH_ROW) {
                 if (watchLocked()) return;
                 openWatchApps();
             } else if (screen == REMOTE_KEYS) {
                 openPicker(focus + 1);
             } else if (screen == HOME_SETTINGS && pickScroll + focus == 0) {
                 openPicker(PICK_LANGUAGE);
-            } else if (screen == HOME_SETTINGS && pickScroll + focus == CITY_ROW) {
+            } else if (screen == HOME_SETTINGS && full(pickScroll + focus) == CITY_ROW) {
                 askCity();
                 return;
-            } else if (screen == HOME_SETTINGS && pickScroll + focus == PHOTOS_ROW && ImmichPhotos.configured(getContext())) {
+            } else if (screen == HOME_SETTINGS && full(pickScroll + focus) == PHOTOS_ROW && ImmichPhotos.configured(getContext())) {
                 openPhotoSources();
-            } else if (screen == HOME_SETTINGS && pickScroll + focus == PHOTOS_ROW) {
+            } else if (screen == HOME_SETTINGS && full(pickScroll + focus) == PHOTOS_ROW) {
                 askRemovePhotos();
                 return;
             } else if (screen == HOME_SETTINGS && pickScroll + focus == updatesRow()) {
@@ -2546,7 +2582,7 @@ public class SettingsActivity extends Activity {
                 invalidate();
                 spoken.focusMoved();
                 return;
-            } else if (screen == HOME_SETTINGS && pickScroll + focus == PICKS_ROW) {
+            } else if (screen == HOME_SETTINGS && full(pickScroll + focus) == PICKS_ROW) {
                 countServicesOff();
                 screen = PICKS;
                 pickScroll = 0;   // this list is short: it draws from row 0
