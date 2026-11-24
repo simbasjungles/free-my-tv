@@ -554,6 +554,10 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   doors, gates, doors or a cover with no class), once its class is read. The UI thread never reads the token file
   (`itemsNow`, `onNow`). Redirects aren't followed. The address goes through `lan_server` in `build.sh`: plain HTTP
   only to the local network.
+- All Apps folders (`Folders`, saved as JSON in `Prefs.folders()`; kind `HomeApps.FOLDER`): `HomeApps.groupFolders` turns the
+  app list into folder tiles plus the apps that are in none; they exist only in All Apps (the shelf and the picks use the
+  packages). Holding OK in All Apps opens `HomeView.showAppMenu` (put on or take off the shelf, move, new folder; rename or
+  delete on a folder), which holding OK did by toggling the shelf only.
 - What's playing (`NowPlaying`) comes from the apps' media sessions, which Android hands only to an allowed notification
   listener. A listener could read every notification, so ours follows Home Settings' *Now Playing widget* (off by
   default): turning it on allows it through ADB (`HomeMode.nowPlayingAccess`, `cmd notification allow_listener`; the

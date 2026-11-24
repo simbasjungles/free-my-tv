@@ -451,6 +451,15 @@ final class Prefs {
     static boolean shelfRecent() { return sp().getBoolean("shelfRecent", false); }
     static void setShelfRecent(boolean on) { put("shelfRecent", on); }
 
+    /** The folders of All Apps, as the JSON Folders reads ("[]" until one is made). */
+    static String folders() {
+        return sp().getString("folders", "[]");
+    }
+
+    static void setFolders(String json) {
+        put("folders", json);
+    }
+
     // MARK: - Sleep timer
 
     /** When the sleep timer ends (System.currentTimeMillis); SleepTimer's alarm says whether it's still on. */

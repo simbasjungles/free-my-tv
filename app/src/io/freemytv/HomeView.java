@@ -2,6 +2,7 @@ package io.freemytv;
 
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.bluetooth.BluetoothA2dp;
 import android.bluetooth.BluetoothAdapter;
@@ -50,6 +51,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityManager;
 import android.view.accessibility.AccessibilityNodeProvider;
+import android.widget.EditText;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -302,7 +304,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private int drawerIndex;
 
     // "All Apps" sheet
-    private List<HomeApps.Item> others = new ArrayList<>();
+    private List<HomeApps.Item> others = new ArrayList<>();   // what All Apps shows now: the root list, or a folder's apps
+    private List<HomeApps.Item> rootOthers = new ArrayList<>();
+    private HomeApps.Item openFolder;
+    private final RectF folderCell = new RectF();
     private Spring[] gridFocus = new Spring[0];
     private String[] gridLabels;
     private final Spring sheet = new Spring(0.38f, 0.9f, 0);
@@ -2468,6 +2473,14 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     // MARK: - "All Apps" sheet
 
     private void setOthers(List<HomeApps.Item> list) {
+        rootOthers = list;
+        HomeApps.Item inside = null;
+        if (openFolder != null) for (HomeApps.Item it : list) if (it.kind == HomeApps.FOLDER && it.key.equals(openFolder.key)) inside = it;
+        openFolder = inside;
+        showOthers(inside == null ? list : inside.children);
+    }
+
+    private void showOthers(List<HomeApps.Item> list) {
         others = list;
         gridFocus = new Spring[list.size()];
         for (int i = 0; i < gridFocus.length; i++) gridFocus[i] = new Spring(0.3f, 0.82f, 0);
@@ -2521,6 +2534,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     private void openSheet() {
+        if (openFolder != null) {
+            openFolder = null;
+            showOthers(rootOthers);
+        }
         sheetOpen = true;
         gridIndex = 0;
         scroll.snap(0);
@@ -2531,6 +2548,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     private void closeSheet() {
+        if (openFolder != null) {
+            openFolder = null;
+            showOthers(rootOthers);
+        }
         sheetOpen = false;
         sheet.target = 0;
         retarget(false);
@@ -2559,7 +2580,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private void drawSheet(Canvas c) {
         c.drawColor(0xA8000000);
         float shift = scroll.value * GRID_ROW * k;
-        c.drawText(Ui.tr("All Apps"), w / 2f, 124 * k - shift, sheetTitle);
+        c.drawText(openFolder != null ? openFolder.label : Ui.tr("All Apps"), w / 2f, 124 * k - shift, sheetTitle);
         int n = others.size();
         if (gridLabels == null || gridLabels.length != n) {
             gridLabels = new String[n];
@@ -2597,7 +2618,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             shadow.setColor(Ui.alpha(0xFF000000, 0.55f * fc));
             shadows.draw(c, tmp, r, SHADOW_BLUR * k, shadow);
         }
-        if (it.tile != null) roundImage(c, it.tile, it.tileShader, cell, r);
+        if (it.kind == HomeApps.FOLDER) drawFolderFace(c, it, cell, r);
+        else if (it.tile != null) roundImage(c, it.tile, it.tileShader, cell, r);
         if (f > 0.01f) {
             float bh = base.height();
             if (cardSheen == null || cardSheenH != bh) {
@@ -2732,7 +2754,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             final List<HomeApps.Item> recent = from != null ? Recent.order(c, from) : null;
             final List<HomeApps.Item> st = statusList(c);
             final List<HomeApps.Item> d = drawerList(c);
-            final List<HomeApps.Item> o = apps ? HomeApps.others(c) : null;
+            final List<HomeApps.Item> o = apps ? HomeApps.groupFolders(HomeApps.others(c)) : null;
             final List<HomeApps.Item> top = apps ? HomeApps.topButtons(c) : null;   // they change with Prefs too
             // Only read when it's shown: with the picks or the clock, Continue Watching costs nothing.
             final String mode = Prefs.topContent();
@@ -3112,7 +3134,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                         okDown = true;
                         okHeld = false;
                         handler.removeCallbacks(holdStart);
-                        holdArmed = sheetOpen ? canToggleShelf(gridIndex) : canReorder() || canHold();
+                        holdArmed = sheetOpen ? canHold(gridIndex) : canReorder() || canHold();
                         if (holdArmed) handler.postDelayed(holdStart, HOLD_MS);
                     } else if (okDown && holdArmed && e.isLongPress()) {
                         hold();
@@ -3146,7 +3168,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     private void back() {
-        if (sheetOpen) {
+        if (sheetOpen && openFolder != null) {
+            leaveFolder();
+        } else if (sheetOpen) {
             closeSheet();
         } else if (zone == Z_DRAWER || zone == WIDGETS) {
             closeDrawer();
@@ -3371,6 +3395,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             pressHome(it);
             return;
         }
+        if (it.kind == HomeApps.FOLDER) {
+            enterFolder(it);
+            return;
+        }
         if (it.kind == HomeApps.ALL_APPS) {
             openSheet();
             return;
@@ -3389,7 +3417,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
 
     private void hold() {
         if (sheetOpen) {
-            toggleShelf();
+            showAppMenu();   // the shelf, and the folders
         } else if (canReorder()) {
             startReorder();
         } else if (canHold()) {
@@ -3404,7 +3432,120 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private void a11yHold() {
         if (SystemClock.uptimeMillis() - toggledAt < 1000) return;
         if (okDown) okHeld = true;     // the remote's release must not open the app
-        toggleShelf();
+        showAppMenu();
+    }
+
+    // MARK: - Folders in All Apps
+
+    private void enterFolder(HomeApps.Item folder) {
+        openFolder = folder;
+        showOthers(folder.children);
+        gridIndex = 0;
+        scroll.snap(0);
+        retargetGrid(true);
+        gridDirty = true;
+    }
+
+    private void leaveFolder() {
+        HomeApps.Item folder = openFolder;
+        openFolder = null;
+        showOthers(rootOthers);
+        gridIndex = Math.max(0, rootOthers.indexOf(folder));
+        scroll.snap(0);
+        retargetGrid(true);
+        gridDirty = true;
+    }
+
+    /** An app, or a folder, can be held for its menu. */
+    private boolean canHold(int i) {
+        if (!sheetOpen || i >= others.size()) return false;
+        HomeApps.Item it = others.get(i);
+        return it.kind == HomeApps.FOLDER || (it.kind == HomeApps.APP && it.pkg != null);
+    }
+
+    /** The folder tile: glass, with its first six apps as small cards. */
+    private void drawFolderFace(Canvas c, HomeApps.Item folder, RectF cellRect, float r) {
+        fill.setShader(null);
+        fill.setColor(0x40FFFFFF);
+        c.drawRoundRect(cellRect, r, r, fill);
+        float gap = cellRect.width() * 0.04f, mw = (cellRect.width() - 4 * gap) / 3, mh = mw * 9 / 16;
+        float top = cellRect.top + (cellRect.height() - (2 * mh + gap)) / 2;
+        int n = Math.min(6, folder.children.size());
+        for (int i = 0; i < n; i++) {
+            HomeApps.Item child = folder.children.get(i);
+            float x = cellRect.left + gap + (i % 3) * (mw + gap), y = top + (i / 3) * (mh + gap);
+            folderCell.set(x, y, x + mw, y + mh);
+            if (child.tile != null) roundImage(c, child.tile, child.tileShader, folderCell, mw * 0.14f);
+        }
+    }
+
+    /** Holding OK in All Apps: the shelf, and the folders (new, into, out of; rename and delete on a folder). */
+    private void showAppMenu() {
+        handler.removeCallbacks(holdStart);
+        holdArmed = false;
+        if (!canHold(gridIndex)) return;
+        okHeld = true;
+        final HomeApps.Item it = others.get(gridIndex);
+        final List<String> labels = new ArrayList<>();
+        final List<Runnable> actions = new ArrayList<>();
+        if (it.kind == HomeApps.FOLDER) {
+            labels.add(Ui.tr("Rename folder"));
+            actions.add(() -> askFolderName(it.label, name -> {
+                if (!Folders.rename(it.label, name)) showToast(Ui.tr("There is already a folder with that name."));
+                else refreshApps();
+            }));
+            labels.add(Ui.tr("Delete folder"));
+            actions.add(() -> { Folders.delete(it.label); refreshApps(); });
+        } else {
+            final Context app = getContext().getApplicationContext();
+            final boolean onShelf = HomeApps.shelfPackages(app).contains(it.pkg);
+            labels.add(onShelf ? Ui.tr("Take off the shelf") : Ui.tr("Put on the shelf"));
+            actions.add(this::toggleShelf);
+            final String in = Folders.folderOf(it.pkg);
+            if (in != null) {
+                labels.add(Ui.tr("Take out of the folder"));
+                actions.add(() -> { Folders.take(it.pkg); refreshApps(); });
+            }
+            for (Folders.Folder f : Folders.load()) {
+                if (f.name.equals(in)) continue;
+                final String name = f.name;
+                labels.add(Ui.trf("Move to {folder}", "folder", name));
+                actions.add(() -> { Folders.put(it.pkg, name); refreshApps(); });
+            }
+            labels.add(Ui.tr("New folder…"));
+            actions.add(() -> askFolderName("", name -> { Folders.put(it.pkg, name); refreshApps(); }));
+        }
+        new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(it.label)
+                .setItems(labels.toArray(new String[0]), (d, which) -> actions.get(which).run())
+                .setNegativeButton(Ui.tr("Cancel"), null)
+                .show();
+    }
+
+    private void askFolderName(String initial, Consumer<String> done) {
+        final EditText field = new EditText(activity);
+        field.setSingleLine(true);
+        field.setText(initial);
+        field.setSelectAllOnFocus(true);
+        field.setHint(Ui.tr("Folder name"));
+        new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(Ui.tr("Folder name"))
+                .setView(field)
+                .setPositiveButton(Ui.tr("OK"), (d, which) -> {
+                    String name = field.getText().toString().trim();
+                    if (!name.isEmpty()) done.accept(name);
+                })
+                .setNegativeButton(Ui.tr("Cancel"), null)
+                .show();
+    }
+
+    /** The folders changed: the list is read again at once (also while All Apps is open). */
+    private void refreshApps() {
+        final Context c = getContext().getApplicationContext();
+        LOADER.execute(() -> {
+            final List<HomeApps.Item> o = HomeApps.groupFolders(HomeApps.others(c));
+            handler.post(() -> setOthers(o));
+        });
     }
 
     private boolean canToggleShelf(int i) {
