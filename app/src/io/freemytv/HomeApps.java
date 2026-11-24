@@ -63,6 +63,8 @@ final class HomeApps {
     static final int RECENTS = 8;
     /** A Home Assistant entity in the drawer (HomeAssistant): OK calls its service, nothing opens. */
     static final int HOME_ASSISTANT = 9;
+    /** A folder in All Apps: `children` are its apps. */
+    static final int FOLDER = 12;
     /** Image size of each card (16:9; on screen it shows up to ~330 px wide). */
     static final int TILE_W = 384, TILE_H = 216;
 
@@ -80,6 +82,7 @@ final class HomeApps {
         float logoScale = 1; // size tweak by eye (compact logos need more)
         boolean connected = true;
         HomeAssistant.Control control;   // HOME_ASSISTANT: the entity it shows and calls
+        List<Item> children;   // FOLDER: the apps in it
 
         void setTile(Bitmap b) {
             tile = b;
@@ -618,6 +621,27 @@ final class HomeApps {
             for (int i = 1; i < group.length; i++) if (n.contains(group[i])) return group[0];
         }
         return "hdmi";
+    }
+
+    /** All Apps with the folders: each folder (one that has an app on this TV) first, then the apps that are in none. */
+    static List<Item> groupFolders(List<Item> all) {
+        List<Item> out = new ArrayList<>();
+        Set<String> inFolder = new HashSet<>();
+        for (Folders.Folder f : Folders.load()) {
+            Item folder = new Item();
+            folder.kind = FOLDER;
+            folder.key = "folder:" + f.name;
+            folder.label = f.name;
+            folder.children = new ArrayList<>();
+            for (String pkg : f.pkgs) {
+                for (Item it : all) if (pkg.equals(it.pkg)) folder.children.add(it);
+            }
+            if (folder.children.isEmpty()) continue;
+            for (Item it : folder.children) inFolder.add(it.pkg);
+            out.add(folder);
+        }
+        for (Item it : all) if (!inFolder.contains(it.pkg)) out.add(it);
+        return out;
     }
 
     /** Installed, enabled TV apps that are not on the home screen (the TV's Settings is among them), plus our own. */
