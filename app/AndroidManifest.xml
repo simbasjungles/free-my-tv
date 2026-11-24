@@ -181,6 +181,18 @@
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
             android:theme="@style/FreeMyTV.Home" />
 
+        <!-- My Photos (Home Settings): each photo, its place, in the screensaver or not, the home screen's. -->
+        <activity
+            android:name=".PhotosActivity"
+            android:process=":home"
+            android:exported="false"
+            android:label="Free My TV"
+            android:taskAffinity="io.freemytv.settings"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/FreeMyTV.Home" />
+
         <!-- The quick settings panel the remote's Settings button opens in Free My TV mode (RemoteKeys), over what's
              playing: a window on the left of the screen, not the whole screen. -->
         <activity

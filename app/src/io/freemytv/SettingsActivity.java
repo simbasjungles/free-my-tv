@@ -1898,22 +1898,6 @@ public class SettingsActivity extends Activity {
 
         // MARK: - My Photos (sent from a computer: tools/photos.py)
 
-        /** OK on My Photos: asks, then deletes them all. */
-        private void askRemovePhotos() {
-            int n = Photos.files(getContext()).size();
-            if (n == 0) return;
-            AlertDialog dialog = new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                    .setTitle(Ui.plural("plural|one:Remove {n} photo?|other:Remove {n} photos?", n))
-                    .setPositiveButton(Ui.tr("Remove"), (d, which) -> {
-                        Photos.removeAll(getContext());
-                        invalidate();
-                        spoken.focusMoved();
-                    })
-                    .setNegativeButton(Ui.tr("Cancel"), null)
-                    .show();
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).requestFocus();   // one stray OK keeps them
-        }
-
         // MARK: - My Photos from an Immich server (ImmichPhotos)
 
         private boolean albumsAsked;
@@ -2451,7 +2435,7 @@ public class SettingsActivity extends Activity {
                     ? Ui.tr("OK chooses where they come from: default, Immich or an album.")
                     : Photos.files(getContext()).isEmpty()
                     ? Ui.tr("Send them from a computer: see “Your own photos” in the README.")
-                    : Ui.tr("OK removes them; the arrows turn them on or off."))
+                    : Ui.tr("OK opens them; the arrows turn them on or off."))
                     : screen == POWER && powerRow() != P_SHOW && unavailable(focus) == null ? Ui.tr("OK opens the list. ← → change the value.")
                     : screen == HOME_SETTINGS && from + focus == POWER_ON_ROW && unavailable(focus) == null
                     ? Ui.tr("Only after a full start, not from standby.")
@@ -2534,7 +2518,8 @@ public class SettingsActivity extends Activity {
             } else if (screen == HOME_SETTINGS && pickScroll + focus == PHOTOS_ROW && ImmichPhotos.configured(getContext())) {
                 openPhotoSources();
             } else if (screen == HOME_SETTINGS && pickScroll + focus == PHOTOS_ROW) {
-                askRemovePhotos();
+                // My Photos: each one, its place, in the screensaver or not, the home screen's (PhotosActivity)
+                if (!Photos.files(getContext()).isEmpty()) activity.startActivity(new Intent(activity, PhotosActivity.class));
                 return;
             } else if (screen == HOME_SETTINGS && pickScroll + focus == updatesRow()) {
                 updateNow();
