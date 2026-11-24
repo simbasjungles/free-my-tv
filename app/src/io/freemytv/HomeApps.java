@@ -57,6 +57,8 @@ final class HomeApps {
     private HomeApps() {}
 
     static final int APP = 0, LIVE_TV = 1, INPUT = 2, ALL_APPS = 3, SETTINGS = 4, ANDROID_SETTINGS = 5, DEVICE = 6;
+    /** Control Center (the numbers stay clear of Recent Apps 8, Home Assistant 9 and folders 12). */
+    static final int CONTROL = 30;
     /** The "HDMI Inputs" button: opens the bottom drawer on the inputs (the home screen handles it). */
     static final int INPUTS = 7;
     /** The Recent Apps switcher (the home screen opens it). */
@@ -261,10 +263,11 @@ final class HomeApps {
 
     // MARK: - Top buttons (the round ones at the top right)
 
-    static final String TOP_LIVE = "live", TOP_INPUTS = "inputs", TOP_SETTINGS = "settings", TOP_RECENTS = "recents", TOP_STORE = "store";
+    static final String TOP_LIVE = "live", TOP_INPUTS = "inputs", TOP_SETTINGS = "settings", TOP_RECENTS = "recents", TOP_STORE = "store",
+            TOP_CONTROL = "control";
     static final List<String> TOP_DEFAULT = Collections.unmodifiableList(java.util.Arrays.asList(TOP_LIVE, TOP_INPUTS, TOP_SETTINGS));
-    /** What can be a top button: the default three, and Recent Apps and App Store for whoever adds them. */
-    static final List<String> TOP_ALL = Collections.unmodifiableList(java.util.Arrays.asList(TOP_LIVE, TOP_INPUTS, TOP_SETTINGS, TOP_RECENTS, TOP_STORE));
+    /** What can be a top button: the default three, and Recent Apps, App Store and Control Center for whoever adds them. */
+    static final List<String> TOP_ALL = Collections.unmodifiableList(java.util.Arrays.asList(TOP_LIVE, TOP_INPUTS, TOP_SETTINGS, TOP_RECENTS, TOP_STORE, TOP_CONTROL));
     static final int MAX_TOP = TOP_ALL.size();
 
     /** The keys of the top buttons, in order (Settings > Top Buttons; by default Live TV, HDMI Inputs, Settings). */
@@ -322,6 +325,7 @@ final class HomeApps {
             case TOP_INPUTS: return action(INPUTS, TOP_INPUTS, Ui.tr("HDMI Inputs"), "hdmi");
             case TOP_RECENTS: return action(RECENTS, TOP_RECENTS, Ui.tr("Recent Apps"), "recents");
             case TOP_STORE: return action(APP, TOP_STORE, Ui.tr("App Store"), "store");
+            case TOP_CONTROL: return action(CONTROL, TOP_CONTROL, Ui.tr("Control Center"), "tune");
             default: return action(SETTINGS, TOP_SETTINGS, Ui.tr("light|Settings"), "settings");
         }
     }
@@ -721,6 +725,19 @@ final class HomeApps {
                 return false;
             }
         }
+    }
+
+    /** Puts the TV in standby: the sleep key, through the TV's own ADB (an app can't press it). `failed` runs if it can't. */
+    static void sleep(Context c, Runnable failed) {
+        Context app = c.getApplicationContext();
+        new Thread(() -> {
+            try (Adb adb = Adb.connect(app, 10_000, null)) {
+                adb.shell("input keyevent KEYCODE_SLEEP");
+            } catch (IOException e) {
+                AppLog.w("sleep: " + e.getMessage());
+                failed.run();
+            }
+        }, "sleep").start();
     }
 
     /**

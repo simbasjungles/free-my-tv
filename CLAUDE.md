@@ -554,6 +554,13 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   doors, gates, doors or a cover with no class), once its class is read. The UI thread never reads the token file
   (`itemsNow`, `onNow`). Redirects aren't followed. The address goes through `lan_server` in `build.sh`: plain HTTP
   only to the local network.
+- Control Center (`ControlCenter`, kind `HomeApps.CONTROL`, over a `ScreenBlur` copy of the window) is a Top
+  Buttons choice, never a default: glass tiles for Sleep (`HomeApps.sleep`: the sleep key through the TV's ADB, like the
+  Sleep Timer), Wi-Fi and Bluetooth (they only open the TV's own screens: nothing here changes the network or pairs a
+  device), Inputs (a tray of `HomeApps.allInputs`), Settings and round buttons (voice, cast or All Apps, dark mode,
+  Live TV). Dark mode sets the theme to light or dark at once and tints the blur, with no second copy of the screen.
+  Its numbers are the 1920 × 1080 ones measured off the tvOS Launcher's own control center. Its symbols are `cc_wifi` and
+  `cc_bluetooth` (the status icons keep `wifi` and `bluetooth`).
 - What's playing (`NowPlaying`) comes from the apps' media sessions, which Android hands only to an allowed notification
   listener. A listener could read every notification, so ours follows Home Settings' *Now Playing widget* (off by
   default): turning it on allows it through ADB (`HomeMode.nowPlayingAccess`, `cmd notification allow_listener`; the

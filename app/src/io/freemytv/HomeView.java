@@ -110,7 +110,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private static final long TOAST_MS = 6000, FADE_MS = 800;
     /** Blur radii of the shadow and shadowDeep paints (Shadows needs them to draw the same blur on older TVs). */
     private static final float SHADOW_BLUR = 26, DEEP_BLUR = 30;
-    private static final int SKY = 0, HERO = 1, STATUS = 2, PLATTER = 3, TILES = 4, DRAWER = 5, SHEET = 6, TOAST = 7, MENU = 8, RECENT = 9;
+    private static final int SKY = 0, HERO = 1, STATUS = 2, PLATTER = 3, TILES = 4, DRAWER = 5, SHEET = 6, TOAST = 7, MENU = 8, RECENT = 9, CONTROL = 10;
     private static final int Z_STATUS = 0, Z_HERO = 1, Z_SHELF = 2, Z_DRAWER = 3;
     private static final ExecutorService LOADER = Executors.newSingleThreadExecutor();
     // Light design (the L_ constants): title, tab bar, three recommendation cards and the shelf.
@@ -158,8 +158,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         @Override public void hold(int id) { if (recentsOpen()) recents.closeFocused(); else if (sheetOpen) a11yHold(); else if (canReorder()) startReorder(); else showMenu(); }
     });
     private final RectF a11yRect = new RectF();
-    private final Layer sky, heroLayer, status, platter, tiles, drawerLayer, sheetLayer, toastLayer, menuLayer, recentLayer;
+    private final Layer sky, heroLayer, status, platter, tiles, drawerLayer, sheetLayer, toastLayer, menuLayer, recentLayer, controlLayer;
     private RecentApps recents;
+    private ControlCenter control;
     private int zone = Z_SHELF;
 
     // Night look (like Apple's "Automatic" appearance): darker from sunset to sunrise, with a 2 s transition.
@@ -414,6 +415,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                 case SHEET: drawSheet(c); break;
                 case MENU: drawMenu(c); break;
                 case RECENT: if (recents != null) recents.draw(c, w, h); break;
+                case CONTROL: if (control != null) control.draw(c, night, w, h); break;
                 default: drawToast(c); break;
             }
             scene.setOffset(0, 0);
@@ -635,17 +637,19 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         toastLayer = new Layer(a, TOAST);
         menuLayer = new Layer(a, MENU);
         recentLayer = new Layer(a, RECENT);
+        controlLayer = new Layer(a, CONTROL);
         // Hardware layers on the GPU: only the one that changed is redrawn; moving, fading and scaling stay cheap.
         // Not on Android 8 to 11: on older GPUs (a Mi Box 3's Mali-450) redrawing and compositing a big layer on every
         // frame cost more than drawing straight to the screen (measured: focus on the picks 33 → 12 ms a frame, the
         // drawer 19 → 17 ms).
         for (View v : new View[] {heroLayer, status, platter, tiles, drawerLayer, sheetLayer}) v.setLayerType(Ui.LEGACY ? LAYER_TYPE_NONE : LAYER_TYPE_HARDWARE, null);
-        for (View v : new View[] {sky, heroLayer, status, platter, tiles, drawerLayer, sheetLayer, menuLayer, toastLayer, recentLayer}) {
+        for (View v : new View[] {sky, heroLayer, status, platter, tiles, drawerLayer, sheetLayer, menuLayer, toastLayer, recentLayer, controlLayer}) {
             v.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);   // TalkBack reads the items (Spoken)
             addView(v);
         }
         setContentDescription("Free My TV");
         recentLayer.setVisibility(INVISIBLE);
+        controlLayer.setVisibility(INVISIBLE);
         drawerLayer.setVisibility(INVISIBLE);
         menuLayer.setVisibility(INVISIBLE);
         for (int i = 0; i < topFocus.length; i++) {
@@ -739,6 +743,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         handler.removeCallbacks(bgFollow);
         cancelReorder(true);
         if (recents != null) recents.closeNow();
+        if (control != null) control.close();
         handler.removeCallbacks(holdStart);
         okHeld = holdArmed = false;
         closeMenu(true);
@@ -856,6 +861,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         measure(menuLayer, width, height);
         measure(toastLayer, width, Math.round(220 * kk));   // full width: a toast may sit right of a long title
         measure(recentLayer, width, height);
+        measure(controlLayer, width, height);
         setMeasuredDimension(width, height);
     }
 
@@ -878,6 +884,8 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         sheetLayer.setPivotY(height / 2f);
         place(toastLayer, 0, 0);
         recentLayer.layout(0, 0, width, height);
+        place(toastLayer, (width - toastLayer.getMeasuredWidth()) / 2, 0);
+        controlLayer.layout(0, 0, width, height);
     }
 
     private static void place(View v, int x, int y) {
@@ -1033,6 +1041,14 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             if (recentMoving) recentLayer.invalidate();   // idle, the cards are drawn once
             setUnderRecents(recents.covering());
         }
+        boolean controlMoving = control != null && control.step(dt);
+        if (control != null) {
+            if (control.visible() != (controlLayer.getVisibility() == VISIBLE)) {
+                controlLayer.setVisibility(control.visible() ? VISIBLE : INVISIBLE);
+                status.invalidate();   // the focused button's name comes back
+            }
+            if (controlMoving) controlLayer.invalidate();
+        }
 
         if (drawerMoving || sheetMoving || motionDirty) updateMotion();
         // Opening and closing the drawer only moves the cached layers: redrawing the glass on every frame made the TV
@@ -1061,7 +1077,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         // Busy: something is moving, or the sheet or the drawer is open.
         boolean busy = tilesMoving || statusMoving || heroMoving || drawerItemsMoving || gridMoving || drawerMoving
                 || menuMoving || sheetMoving || toastFading || heroFading || bgFading || nightMoving || tintMoving || sheetOpen
-                || sheet.value > 0.001f || recentMoving || drawerOpen || drawer.value > 0.001f || toast != null || !toasts.isEmpty();
+                || sheet.value > 0.001f || recentMoving || controlMoving || (control != null && control.visible()) || drawerOpen || drawer.value > 0.001f || toast != null || !toasts.isEmpty();
         idle = !busy;
         if (busy) Choreographer.getInstance().postFrameCallback(this);
         else Choreographer.getInstance().postFrameCallbackDelayed(this, 1000);
@@ -3079,6 +3095,11 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             openRecents();
             return true;
         }
+        if (control != null && control.visible()) {
+            boolean handled = control.key(e);
+            controlLayer.invalidate();
+            return handled;
+        }
         if (reordering) return reorderKey(e, down);
         int code = e.getKeyCode();
         if (down && code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER
@@ -3310,6 +3331,56 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         });
     }
 
+    /** Copies the screen small, blurs it, and opens the Control Center over it (without the copy, over a dark veil). */
+    private void openControl() {
+        if (control == null) {
+            control = new ControlCenter(activity, new ControlCenter.Host() {
+                @Override public boolean night() { return nightTarget; }
+                @Override public void settings() { handler.post(() -> openIn(HomeApps.settings())); }
+                @Override public void liveTv() { handler.post(() -> openIn(HomeApps.action(HomeApps.LIVE_TV, "live", Ui.tr("light|Live TV"), "live_tv"))); }
+                @Override public void allApps() { handler.post(HomeView.this::openSheet); }
+                @Override public void repaint() { controlLayer.postInvalidate(); handler.post(HomeView.this::wake); }
+                @Override public void themeChanged() {
+                    handler.post(() -> {
+                        checkNight(false);   // at once, not faded
+                        invalidateAll();
+                        wake();
+                        // The pills tint the blur toward the new theme with a short spring: no second copy of the screen
+                        // (that made the pills blink), and under that much blur the tint is what the copy would show.
+                        if (control != null) control.themeSwitched(nightTarget);
+                        controlLayer.invalidate();
+                    });
+                }
+                @Override public void open(HomeApps.Item item) { handler.post(() -> openIn(item)); }
+            }, k);
+        }
+        int at = lightButtons.size() - 1;   // the Control Center's own top button (wherever Top Buttons put it)
+        for (int i = 0; i < lightButtons.size(); i++) if (lightButtons.get(i).kind == HomeApps.CONTROL) at = i;
+        final RectF button = new RectF(topRects[3 + at]);
+        final Runnable show = () -> {
+            control.open(button);
+            controlLayer.setVisibility(VISIBLE);
+            controlLayer.invalidate();
+            status.invalidate();   // the focused button's name goes away
+            wake();
+        };
+        captureControl(show);
+    }
+
+    /** Copies the screen blurred (ScreenBlur) and hands it to the Control Center; then runs `then`. */
+    private void captureControl(Runnable then) {
+        ScreenBlur.capture(activity, handler, blurred -> {
+            if (blurred != null) control.setBackdrop(blurred, nightTarget);
+            then.run();
+        });
+    }
+
+    private void openIn(HomeApps.Item item) {
+        if (!HomeApps.open(activity, item, this, getWidth() / 2, getHeight() / 2, 1, 1)) {
+            showToast(Ui.trf("Couldn't open {app}.", "app", item.label));
+        }
+    }
+
     private void activate() {
         wake();
         if (reordering) {   // TalkBack's click while moving an app: drop it
@@ -3377,6 +3448,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         }
         if (it.kind == HomeApps.INPUTS) {
             openInputs();
+            return;
+        }
+        if (it.kind == HomeApps.CONTROL) {
+            openControl();
             return;
         }
         boolean opened = HomeApps.open(activity, it, this, Math.round(r.left), Math.round(r.top),
@@ -4866,7 +4941,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
             }
             Symbols.draw(getContext(), c, it.symbol, cell.centerX(), cell.centerY(), 27 * k * s,
                     blend(tone(L_INK, 0xEBFFFFFF), L_INK, f));
-            if (f > 0.01f) {
+            if (f > 0.01f && (control == null || !control.visible())) {
                 String label = it.label;
                 float half = lTip.measureText(label) / 2;
                 float x = Math.min(r.centerX(), CONTENT_R * k - half);

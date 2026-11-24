@@ -24,6 +24,8 @@ MAP = {
     "accessibility": ("accessibility_new", 0),
     "lightbulb": ("lightbulb", 1), "toggle": ("toggle_on", 1), "fan": ("mode_fan", 1), "blinds": ("blinds", 1),
     "bolt": ("bolt", 1), "smart_button": ("smart_button", 1),
+    "cc_wifi": ("wifi", 0), "cc_bluetooth": ("bluetooth", 0), "power": ("power_settings_new", 0), "mic": ("mic", 1),
+    "tune": ("tune", 0), "login": ("login", 0),
 }
 
 
