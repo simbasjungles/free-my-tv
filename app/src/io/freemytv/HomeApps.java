@@ -378,6 +378,13 @@ final class HomeApps {
         return shortcut(SETTINGS, "settings", Ui.tr("Settings"), "settings");
     }
 
+    /** The TV's Bluetooth settings, on the home screen. */
+    static Item bluetoothSettings() {
+        Item item = shortcut(DEVICE, "bluetooth-settings", Ui.tr("Bluetooth"), "bluetooth");
+        item.intent = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
+        return item;
+    }
+
     /** Shortcuts in the bottom drawer. */
     static List<Item> drawerShortcuts(Context c) {
         List<Item> items = new ArrayList<>();

@@ -1535,6 +1535,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     private static List<HomeApps.Item> statusList(Context c) {
         List<HomeApps.Item> list = new ArrayList<>();
         list.addAll(HomeApps.shortcuts(c));
+        list.add(HomeApps.bluetoothSettings());
         list.add(HomeApps.settings());
         return list;
     }
