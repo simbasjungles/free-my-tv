@@ -68,6 +68,8 @@ var Prefs = (function () {
     language: function () { return pick('language', CONFIG.language || 'auto'); },
     temperature: function () { return pick('temperature', CONFIG.temperature || 'auto'); },
     theme: function () { return pick('theme', CONFIG.theme || 'auto'); },
+    darkFrom: function () { return pick('darkFrom', 1140); },
+    darkUntil: function () { return pick('darkUntil', 390); },
     weather: function () { return pick('weather', true); },
     /** OK on the screensaver opens the title it shows, in its app; any other key only closes it (off by default). */
     saverWatch: function () { return pick('saverWatch', false) === true; },
@@ -866,6 +868,10 @@ var Data = (function () {
       if (theme === 'dark') return true;
       if (theme === 'light') return false;
       var d = new Date(at), mins = d.getHours() * 60 + d.getMinutes();
+      if (theme === 'schedule') {
+        var from = Prefs.darkFrom(), until = Prefs.darkUntil();
+        return from <= until ? mins >= from && mins < until : mins >= from || mins < until;
+      }
       function hm(t, fallback) { if (!t) return fallback; var x = new Date(t); return x.getHours() * 60 + x.getMinutes(); }
       var rise = hm(weather && weather.sunrise, 360), set = hm(weather && weather.sunset, 1080);
       return mins < rise || mins >= set;

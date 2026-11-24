@@ -376,6 +376,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   Built with `--generic`, the place values are empty and `Place` fills them from the TV's time zone
   (`app/assets/zones.json`, written by `tools/make_zones.py` with `web/zones.js`).
   What the person changes on the TV (`Prefs`: Home Settings, Shelf, Remote Buttons, Sleep Timer) wins over those first values.
+  Home Settings' *Dark from* and *Dark until* rows exist only with the Schedule theme: the `*_ROW` constants are the full
+  list's numbers, `full()` and `shownRow()` convert from and to the rows on screen (`keyRow()`, `updatesRow()` and the
+  focus are always the shown ones).
 - `ImmichPhotos` (with `immich_server` and the key sent to that TV; without the key My Photos is unchanged): every 6
   hours, on the home screen's resume, a random choice from the server (`POST /api/search/random`, or one album,
   `Prefs.photoSource`) is downloaded one photo at a time into `Photos.privateInbox` and imported right away, so at most

@@ -32,6 +32,7 @@ public class SleepOverlay extends Service {
     private BitmapDrawable moon;
     private GradientDrawable pill;
     private long endsAt, sunrise, sunset;
+    private int darkFrom, darkUntil;
     private String theme = "auto", language;
 
     /** Settings > Sleep Timer > Position: the top center first, then around the screen. */
@@ -60,6 +61,7 @@ public class SleepOverlay extends Service {
         HomeData.Weather w = HomeData.get(c).weather;
         Intent i = new Intent(c, SleepOverlay.class).putExtra("endsAt", Prefs.sleepAt()).putExtra("place", Prefs.sleepPlace())
                 .putExtra("theme", Prefs.theme()).putExtra("sunrise", w.sunrise).putExtra("sunset", w.sunset)
+                .putExtra("darkFrom", Prefs.darkFrom()).putExtra("darkUntil", Prefs.darkUntil())
                 .putExtra("language", Prefs.language());
         boolean wanted = Prefs.sleepShown() && SleepTimer.minutesLeft(c) > 0;
         if (wanted && Settings.canDrawOverlays(c)) {
@@ -102,7 +104,7 @@ public class SleepOverlay extends Service {
             }
             view.setText(Ui.trf("Off in {time}", "time", SleepTimer.duration((int) ((endsAt - now + 59_999) / 60_000))));
             // The home screen's glass: white with dark ink by day, smoked with light ink at night (Settings > Theme).
-            boolean night = HomeData.isNight(theme, now, sunrise, sunset);
+            boolean night = HomeData.isNight(theme, now, sunrise, sunset, darkFrom, darkUntil);
             int ink = night ? 0xEBFFFFFF : 0xFF1D1D1F;
             view.setTextColor(ink);
             moon.setTint(ink);
@@ -156,6 +158,8 @@ public class SleepOverlay extends Service {
         theme = intent.getStringExtra("theme");
         sunrise = intent.getLongExtra("sunrise", 0);
         sunset = intent.getLongExtra("sunset", 0);
+        darkFrom = intent.getIntExtra("darkFrom", 19 * 60);
+        darkUntil = intent.getIntExtra("darkUntil", 6 * 60 + 30);
         int gravity = GRAVITY[intent.getIntExtra("place", 0) % PLACES];
         if (layout.gravity != gravity) {
             layout.gravity = gravity;

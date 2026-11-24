@@ -282,11 +282,20 @@ final class Prefs {
         put("servicesOff", list.length() > 1 ? list.substring(1, list.length() - 1) : "");
     }
 
-    /** "auto" (dark from sunset to sunrise), "light" or "dark". */
+    /** "auto" (dark from sunset to sunrise), "light", "dark" or "schedule" (dark between two times of day). */
     static String theme() {
         String v = sp().getString("theme", Config.THEME.trim());
-        return v.equals("light") || v.equals("dark") ? v : "auto";
+        return v.equals("light") || v.equals("dark") || v.equals("schedule") ? v : "auto";
     }
+
+    /** The schedule's start and end, in minutes since midnight (the end may be earlier: dark across midnight). */
+    static int darkFrom() { return sp().getInt("darkFrom", 19 * 60); }
+
+    static int darkUntil() { return sp().getInt("darkUntil", 6 * 60 + 30); }
+
+    static void setDarkFrom(int m) { put("darkFrom", m); }
+
+    static void setDarkUntil(int m) { put("darkUntil", m); }
 
     static void setTheme(String v) { put("theme", v); }
 

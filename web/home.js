@@ -892,8 +892,8 @@
         step: function (d) { if (d >= 0) openLanguages(); }},
       {label: tr('Temperature'), value: unit === 'C' ? '°C' : unit === 'F' ? '°F' : tr('unit|Automatic'),
         step: function (d) { cycle('temperature', ['auto', 'C', 'F'], unit, d); renderPanels(); }},
-      {label: tr('Theme'), value: theme === 'light' ? tr('Light') : theme === 'dark' ? tr('Dark') : auto,
-        step: function (d) { cycle('theme', ['auto', 'light', 'dark'], theme, d); checkNight(); }},
+      {label: tr('Theme'), value: theme === 'light' ? tr('Light') : theme === 'dark' ? tr('Dark') : theme === 'schedule' ? tr('Schedule') : auto,
+        step: function (d) { cycle('theme', ['auto', 'light', 'dark', 'schedule'], theme, d); checkNight(); }},
       {label: tr('Clock'), value: clock === '24' ? tr('24 hours') : clock === '12' ? tr('12 hours') : auto,
         step: function (d) {
           cycle('clockFormat', ['auto', '24', '12'], clock, d);
@@ -958,7 +958,17 @@
     rows.push({label: tr('Shelf'), value: '›', shelf: true, step: function (d) { if (d >= 0) openShelfEdit(); }});
     rows.push({label: tr('About this TV'), value: '›', about: true, step: function (d) { if (d >= 0) openAbout(); }});
     if (TV.canOpenSettings) rows.push({label: tr('TV Settings'), value: '›', step: function (d) { if (d >= 0) tvSettings(); }});
+    if (theme === 'schedule') {
+      rows.splice(3, 0, {label: tr('Dark from'), value: clockText(Prefs.darkFrom()),
+        step: function (d) { Prefs.set('darkFrom', (Prefs.darkFrom() + (d || 1) * 30 + 1440) % 1440); checkNight(); }},
+        {label: tr('Dark until'), value: clockText(Prefs.darkUntil()),
+        step: function (d) { Prefs.set('darkUntil', (Prefs.darkUntil() + (d || 1) * 30 + 1440) % 1440); checkNight(); }});
+    }
     return rows;
+  }
+
+  function clockText(m) {
+    return new Date(2000, 0, 1, Math.floor(m / 60), m % 60).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
   }
 
   function cycle(name, values, current, d) {
