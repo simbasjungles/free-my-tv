@@ -69,8 +69,11 @@ final class Backdrop {
         nightImage = nightBg == null ? null : Bitmap.createBitmap(nightBg, bw, bh, Bitmap.Config.ARGB_8888);
     }
 
-    static Backdrop make(Bitmap src, boolean forLight) {
-        return make(src, forLight, false);
+    /** Radius of the box blur behind the home screen, for Prefs.blur(): low, medium (how it always was), high. */
+    private static final int[] BLUR_RADIUS = {1, 3, 6};
+
+    static Backdrop make(Bitmap src, boolean forLight, int blur) {
+        return make(src, forLight, false, blur);
     }
 
     /**
@@ -79,6 +82,10 @@ final class Backdrop {
      * right, so it still reads as your photo. The glass and the drawer stay as they are.
      */
     static Backdrop make(Bitmap src, boolean forLight, boolean own) {
+        return make(src, forLight, own, Prefs.blur());
+    }
+
+    private static Backdrop make(Bitmap src, boolean forLight, boolean own, int blur) {
         // Cropped to 16:9 at the source's resolution first, then filtered down (no step over 2×).
         Bitmap crop = center(src, (float) W / H);
         if (crop != src) src.recycle();
@@ -95,7 +102,7 @@ final class Backdrop {
             // The wide card is far wider than the photo: its strip comes off the bottom (under the card's text), not
             // half off the top.
             Bitmap wide = card(out, WIDE_W, WIDE_H, 0);
-            int[] frost = reduce(out, FW, FH, 3, 3);
+            int[] frost = reduce(out, FW, FH, BLUR_RADIUS[blur], 3);
             int[] light = whiten(frost.clone(), 0.82f);
             int[] glass = reduce(out, GW, GH, 2, 2);
             int[] lightGlass = whiten(glass.clone(), 0.74f);

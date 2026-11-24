@@ -206,6 +206,7 @@ final class Recs {
     private volatile long listAt;
     private volatile boolean fetching;
     private volatile String error = "";
+    private volatile int blur = 1;      // Prefs.blur() when the images were built
     private volatile boolean light;     // light design: builds only the cards (all three tabs' cards fit in memory)
     private volatile long failedAt, keyStamp, traktStamp, linkRetryAt;
     private volatile String listLanguage = "";   // language used for the saved titles, genres and texts
@@ -604,6 +605,16 @@ final class Recs {
                 notifyListeners();
             }
         });
+    }
+
+    /** Background blur (Prefs.blur()): the ready images are rebuilt with it. */
+    void setBlur(int value) {
+        if (value == blur) return;
+        blur = value;
+        synchronized (images) {
+            images.clear();
+            posters.clear();
+        }
     }
 
     /** Home screen design: the ready images are rebuilt for it (the light design uses cards, not the whole photo). */
@@ -1393,8 +1404,9 @@ final class Recs {
             if (b == null) throw new IOException("unreadable image");
             AppLog.w("backdrop \u201c" + p.title + "\u201d: " + bounds.outWidth + "×" + bounds.outHeight + " → " + Backdrop.W + "×" + Backdrop.H);
             boolean forLight = light;
-            Backdrop backdrop = Backdrop.make(b, forLight);
-            if (forLight != light) return;   // the design changed midway: this one is stale
+            int level = blur;
+            Backdrop backdrop = Backdrop.make(b, forLight, level);
+            if (forLight != light || level != blur) return;   // the design changed midway: this one is stale
             Poster poster = forLight ? loadPoster(p) : null;
             synchronized (images) {
                 images.put(p.backdrop, backdrop);

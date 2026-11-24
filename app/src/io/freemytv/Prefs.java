@@ -294,6 +294,11 @@ final class Prefs {
     static boolean statusIcons() { return sp().getBoolean("statusicons", false); }
     static void setStatusIcons(boolean on) { put("statusicons", on); }
 
+    /** Background blur: 0 low, 1 medium (how it always was), 2 high. */
+    static int blur() { return Math.max(0, Math.min(2, sp().getInt("blur", 1))); }
+
+    static void setBlur(int v) { put("blur", v); }
+
     // MARK: - City
 
     static String city() { return sp().getString("city", Place.city()).trim(); }
