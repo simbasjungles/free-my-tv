@@ -582,6 +582,8 @@
     img.onload = function () {
       if (bgUrl !== url) return;
       var canvas = $(next), ctx = canvas.getContext('2d');
+      canvas.width = 96 >> Prefs.blur();   // 96, 48 or 24 wide: the smaller, the blurrier once stretched
+      canvas.height = Math.round(canvas.width * 9 / 16);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       setClass(canvas, 'on', true);
       setClass($(bgFront), 'on', false);
@@ -894,6 +896,8 @@
         step: function (d) { cycle('temperature', ['auto', 'C', 'F'], unit, d); renderPanels(); }},
       {label: tr('Theme'), value: theme === 'light' ? tr('Light') : theme === 'dark' ? tr('Dark') : auto,
         step: function (d) { cycle('theme', ['auto', 'light', 'dark'], theme, d); checkNight(); }},
+      {label: tr('Background blur'), value: [tr('Low'), tr('Medium'), tr('High')][Prefs.blur()],
+        step: function (d) { Prefs.set('blur', (Prefs.blur() + (d || 1) + 3) % 3); var u = bgUrl; bgUrl = null; backdrop(u); }},
       {label: tr('Clock'), value: clock === '24' ? tr('24 hours') : clock === '12' ? tr('12 hours') : auto,
         step: function (d) {
           cycle('clockFormat', ['auto', '24', '12'], clock, d);
