@@ -30,6 +30,11 @@ import java.util.concurrent.Executors;
  * also drops its GPS and other tags), and the original is deleted. While they are on (Home Settings > My Photos), the screensaver shows them
  * instead of the picks' photos, in the order they came, and without picks (no TMDB key) one of them is the home
  * screen's background, a new one every hour.
+ *
+ * My Photos (PhotosActivity) keeps your choices in photos/choices.txt, beside the photos: their order, which ones stay
+ * out of the screensaver, the one picked for the home screen, how long each shows and whether they're shuffled. A file
+ * in the folder, written whole and renamed into place, so the screensaver's process (main, on Android 11) sees a change
+ * as the home screen's does: the rename moves the folder's time, which files() checks.
  */
 final class Photos {
     private Photos() {}
@@ -91,7 +96,18 @@ final class Photos {
     private static long listedStamp = -1;
     private static List<File> listed = new ArrayList<>();
 
-    /** The imported photos, in the order they came (one stat of the folder while nothing changed). */
+    // What choices.txt says (read with the listing).
+    private static final java.util.Set<String> hidden = new java.util.HashSet<>();
+    private static String homeName = "";
+    private static boolean homeOff, shuffled;
+    private static int slideSeconds;
+
+    /** How long each photo can show in the screensaver, in seconds; the first is the default (the picks' 30 s). */
+    static final int[] SLIDES = {30, 60, 120, 300, 600, 1800};
+
+    private static final String CHOICES = "choices.txt";
+
+    /** The imported photos, in your order, then the ones that came since (one stat of the folder while nothing changed). */
     static synchronized List<File> files(Context c) {
         File d = dir(c);
         long stamp = d.exists() ? d.lastModified() : 0;
@@ -100,10 +116,156 @@ final class Photos {
             File[] all = d.listFiles();
             if (all != null) for (File f : all) if (f.getName().endsWith(".jpg")) out.add(f);
             Collections.sort(out);
+            readChoices(d, out);
             listed = out;
             listedStamp = stamp;
         }
         return listed;
+    }
+
+    /** Reads choices.txt into the fields, and puts `files` (sorted by name) in its order. */
+    private static void readChoices(File d, List<File> files) {
+        hidden.clear();
+        homeName = "";
+        homeOff = shuffled = false;
+        slideSeconds = SLIDES[0];
+        List<String> order = new ArrayList<>();
+        File f = new File(d, CHOICES);
+        if (f.isFile()) {
+            try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(new FileInputStream(f), "UTF-8"))) {
+                for (String line; (line = r.readLine()) != null; ) {
+                    line = line.trim();
+                    if (line.startsWith("slide=")) {
+                        try {
+                            slideSeconds = Math.max(10, Integer.parseInt(line.substring(6)));
+                        } catch (NumberFormatException ignored) {}
+                    } else if (line.equals("shuffle")) {
+                        shuffled = true;
+                    } else if (line.equals("home=off")) {
+                        homeOff = true;
+                    } else if (line.startsWith("home=")) {
+                        homeName = line.substring(5);
+                    } else if (line.startsWith("off ")) {
+                        String name = line.substring(4);
+                        hidden.add(name);
+                        order.add(name);
+                    } else if (line.endsWith(".jpg")) {
+                        order.add(line);
+                    }
+                }
+            } catch (IOException e) {
+                AppLog.w("photos: can't read " + CHOICES + ": " + e.getMessage());
+            }
+        }
+        if (order.isEmpty()) return;
+        final java.util.Map<String, Integer> place = new java.util.HashMap<>();
+        for (int i = 0; i < order.size(); i++) place.put(order.get(i), i);
+        // Listed ones in their place; new ones after them, in the order they came (sort is stable).
+        Collections.sort(files, (a, b) -> {
+            Integer pa = place.get(a.getName()), pb = place.get(b.getName());
+            return Integer.compare(pa == null ? Integer.MAX_VALUE : pa, pb == null ? Integer.MAX_VALUE : pb);
+        });
+    }
+
+    /** Writes the choices for `order` (the photos as My Photos shows them); the folder's new time tells the others. */
+    private static synchronized void writeChoices(Context c, List<File> order, java.util.Set<String> off, String home,
+                                                  boolean noHome, int slide, boolean shuffle) {
+        File d = dir(c);
+        StringBuilder b = new StringBuilder();
+        b.append("slide=").append(slide).append('\n');
+        if (shuffle) b.append("shuffle\n");
+        if (noHome) b.append("home=off\n");
+        else if (!home.isEmpty()) b.append("home=").append(home).append('\n');
+        for (File f : order) b.append(off.contains(f.getName()) ? "off " : "").append(f.getName()).append('\n');
+        File part = new File(d, CHOICES + ".part");
+        try (OutputStream os = new FileOutputStream(part)) {
+            os.write(b.toString().getBytes("UTF-8"));
+        } catch (IOException e) {
+            AppLog.w("photos: can't write " + CHOICES + ": " + e.getMessage());
+            part.delete();
+            return;
+        }
+        if (!part.renameTo(new File(d, CHOICES))) part.delete();
+        listedStamp = -1;   // read again now: the folder's time may not have moved within the same second
+        // The home screen's photo may be another one now: built at once (backdrop() compares it with the one built), so
+        // it's ready, or nearly, when the home screen comes back.
+        if (homeOn(c)) backdrop(c, null);
+    }
+
+    /** In the screensaver (not left out in My Photos). */
+    static synchronized boolean inSaver(Context c, File f) {
+        files(c);
+        return !hidden.contains(f.getName());
+    }
+
+    /** The photo picked for the home screen, or null: then one of them, a new one every hour (or none: homeOff). */
+    static synchronized File homePhoto(Context c) {
+        for (File f : files(c)) if (f.getName().equals(homeName)) return f;
+        return null;
+    }
+
+    /** My Photos > Home background: Off (the plain background behind the home screen). */
+    static synchronized boolean homeOff(Context c) {
+        files(c);
+        return homeOff;
+    }
+
+    static synchronized int slideSeconds(Context c) {
+        files(c);
+        return slideSeconds;
+    }
+
+    static synchronized boolean shuffled(Context c) {
+        files(c);
+        return shuffled;
+    }
+
+    private static void save(Context c, List<File> order) {
+        writeChoices(c, order, hidden, homeName, homeOff, slideSeconds, shuffled);
+    }
+
+    static synchronized void setInSaver(Context c, File f, boolean on) {
+        List<File> order = new ArrayList<>(files(c));
+        java.util.Set<String> off = new java.util.HashSet<>(hidden);
+        if (on) off.remove(f.getName()); else off.add(f.getName());
+        writeChoices(c, order, off, homeName, homeOff, slideSeconds, shuffled);
+    }
+
+    /** `f` behind the home screen, or null: back to a new one every hour. */
+    static synchronized void setHomePhoto(Context c, File f) {
+        files(c);
+        writeChoices(c, new ArrayList<>(listed), hidden, f == null ? "" : f.getName(), false, slideSeconds, shuffled);
+    }
+
+    static synchronized void setHomeOff(Context c, boolean off) {
+        files(c);
+        writeChoices(c, new ArrayList<>(listed), hidden, off ? "" : homeName, off, slideSeconds, shuffled);
+    }
+
+    static synchronized void setSlideSeconds(Context c, int seconds) {
+        files(c);
+        writeChoices(c, new ArrayList<>(listed), hidden, homeName, homeOff, seconds, shuffled);
+    }
+
+    static synchronized void setShuffled(Context c, boolean on) {
+        files(c);
+        writeChoices(c, new ArrayList<>(listed), hidden, homeName, homeOff, slideSeconds, on);
+    }
+
+    /** Saves the order My Photos shows (after a move). */
+    static synchronized void setOrder(Context c, List<File> order) {
+        files(c);
+        save(c, order);
+    }
+
+    /** Deletes one photo (and its place in the choices). */
+    static synchronized void remove(Context c, File f) {
+        List<File> order = new ArrayList<>(files(c));
+        order.remove(f);
+        f.delete();
+        java.util.Set<String> off = new java.util.HashSet<>(hidden);
+        off.remove(f.getName());
+        writeChoices(c, order, off, homeName.equals(f.getName()) ? "" : homeName, homeOff, slideSeconds, shuffled);
     }
 
     /** On in Home Settings and something imported. */
@@ -111,16 +273,21 @@ final class Photos {
         return Prefs.photos() && !files(c).isEmpty();
     }
 
-    /** For the screensaver: the photos as picks (no title, no caption). */
+    /** Behind the home screen: on, and My Photos' Home background isn't Off. */
+    static boolean homeOn(Context c) {
+        return on(c) && !homeOff(c);
+    }
+
+    /** For the screensaver: the photos in it as picks (no title, no caption), in your order. */
     static List<Recs.Pick> picks(Context c) {
         List<Recs.Pick> out = new ArrayList<>();
         if (!on(c)) return out;
-        List<File> list = files(c);
-        for (int i = 0; i < list.size(); i++) {
+        for (File f : files(c)) {
+            if (!inSaver(c, f)) continue;
             Recs.Pick p = new Recs.Pick();
             p.kind = "photo";
-            p.id = i;
-            p.photo = list.get(i);
+            p.id = f.getName().hashCode();   // by name: a photo keeps its key when others move or leave
+            p.photo = f;
             out.add(p);
         }
         return out;
@@ -131,6 +298,8 @@ final class Photos {
     private static final ExecutorService worker = Executors.newSingleThreadExecutor();
     private static final Handler main = new Handler(Looper.getMainLooper());
     private static File built, building;
+    /** Who asked while it was being built: all are told once it's ready (the home screen redraws then). */
+    private static final java.util.Set<Runnable> readyWaiters = new java.util.LinkedHashSet<>();
     private static Backdrop backdrop;
 
     /**
@@ -138,30 +307,37 @@ final class Photos {
      * built). When the hour changes, the previous one stays until the new one is ready; then `ready` runs.
      */
     static synchronized Backdrop backdrop(Context c, Runnable ready) {
-        if (!on(c)) {
+        if (!homeOn(c)) {
             backdrop = null;
             built = null;
             return null;
         }
         List<File> list = files(c);
-        File want = list.get((int) ((System.currentTimeMillis() / 3_600_000L) % list.size()));
+        File chosen = homePhoto(c);
+        File want = chosen != null ? chosen : list.get((int) ((System.currentTimeMillis() / 3_600_000L) % list.size()));
+        if (ready != null && !want.equals(built)) readyWaiters.add(ready);   // told when it's done, even if built for another
         if (!want.equals(built) && !want.equals(building)) {
             building = want;
             worker.execute(() -> {
                 Backdrop b = null;
+                long t0 = android.os.SystemClock.uptimeMillis();
                 try {
                     Bitmap src = BitmapFactory.decodeFile(want.getPath());
                     if (src != null) b = Backdrop.make(src, true, true);
+                    AppLog.w("photos: background " + want.getName() + " ready in " + (android.os.SystemClock.uptimeMillis() - t0) + " ms");
                 } catch (RuntimeException | OutOfMemoryError e) {
                     AppLog.w("photos: background from " + want.getName() + ": " + e.getMessage());
                 }
+                List<Runnable> tell;
                 synchronized (Photos.class) {
                     building = null;
+                    tell = new ArrayList<>(readyWaiters);
+                    readyWaiters.clear();
                     if (b == null) return;
                     backdrop = b;
                     built = want;
                 }
-                main.post(ready);
+                main.post(() -> { for (Runnable r : tell) r.run(); });
             });
         }
         return backdrop;
