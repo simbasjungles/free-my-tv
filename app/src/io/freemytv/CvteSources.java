@@ -14,14 +14,34 @@ import java.util.List;
  * This class turns that list into the drawer's rows, with no Android and no vendor class: the fields come by
  * reflection, the values as plain strings, so it can be tested on its own.
  */
-public final class CvteSources {
+final class CvteSources {
     /** The categories the Spec makes rows of (RF1); everything else, MEDIA included, stays out. */
     static final String TV = "INPUTSOURCE_TV", AV = "INPUTSOURCE_AV", HDMI = "INPUTSOURCE_HDMI";
     static final String CONNECTED = "INPUT_STATUS_CONNECTED";
 
     private CvteSources() {}
 
-    public static final class Source {
+    /**
+     * Whether the firmware's AIDL library (cn.cvte.tv.api) is on this TV: it is what the CVTE path calls, and
+     * without it the path must stay off and today's behaviour stand (AC6). Answered once, since a library cannot
+     * appear while the process lives; a library that is there but broken counts as absent, so the home screen
+     * never goes down with it.
+     */
+    static boolean firmwarePresent() {
+        if (present == null) {
+            try {
+                Class.forName("com.cvte.tv.api.aidl.ITvApiManager");
+                present = Boolean.TRUE;
+            } catch (Throwable t) {
+                present = Boolean.FALSE;
+            }
+        }
+        return present.booleanValue();
+    }
+
+    private static Boolean present;
+
+    static final class Source {
         public final int id;
         public final String name, category, status, appPackageName;
 
@@ -33,21 +53,21 @@ public final class CvteSources {
             this.appPackageName = appPackageName;
         }
 
-        public boolean connected() {
+        boolean connected() {
             return CONNECTED.equals(status);
         }
 
-        public boolean liveTv() {
+        boolean liveTv() {
             return TV.equals(category);
         }
 
         /** A port the drawer can open: an HDMI or an AV input. */
-        public boolean isPort() {
+        boolean isPort() {
             return HDMI.equals(category) || AV.equals(category);
         }
 
         /** The port number the firmware put in the name ("HDMI 2" -> 2), 0 when the name has no number. */
-        public int port() {
+        int port() {
             if (name == null) return 0;
             int end = name.length();
             while (end > 0 && Character.isDigit(name.charAt(end - 1))) end--;
@@ -63,7 +83,7 @@ public final class CvteSources {
          * The drawer's key, the one Settings > Inputs saves ("live", "hdmi1"...). A port the firmware names without
          * a number falls back to the source id, which is at least stable on that firmware.
          */
-        public String key() {
+        String key() {
             if (liveTv()) return "live";
             String prefix = HDMI.equals(category) ? "hdmi" : AV.equals(category) ? "av" : null;
             if (prefix == null) return null;
@@ -73,7 +93,7 @@ public final class CvteSources {
     }
 
     /** One entity of the firmware's list, read through its public fields. */
-    public static Source from(Object entity) {
+    static Source from(Object entity) {
         if (entity == null) return null;
         int id = 0;
         String name = null, category = null, status = null, appPackageName = null;
@@ -105,7 +125,7 @@ public final class CvteSources {
     }
 
     /** The firmware's list as sources, in its order; a null entry is skipped. */
-    public static List<Source> list(List<?> entities) {
+    static List<Source> list(List<?> entities) {
         List<Source> out = new ArrayList<>();
         if (entities == null) return out;
         for (Object entity : entities) {
@@ -119,7 +139,7 @@ public final class CvteSources {
      * The drawer's rows: Live TV first, as allInputs() does, then the ports in the firmware's order. What is not a
      * row (MEDIA, the Android layer, and any category outside the Spec's three) is left out.
      */
-    public static List<Source> rows(List<Source> sources) {
+    static List<Source> rows(List<Source> sources) {
         List<Source> out = new ArrayList<>();
         if (sources == null) return out;
         for (Source s : sources) if (s != null && s.liveTv()) out.add(s);

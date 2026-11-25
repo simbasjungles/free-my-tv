@@ -110,6 +110,12 @@ public final class CvteSourcesTest {
         check(!s.connected(), "a port without a signal is not connected");
     }
 
+    /** AC6: without the firmware's library (as in this test JVM) the CVTE path stays off. */
+    private void libraryAbsentKeepsTheCvtePathOff() {
+        check(!CvteSources.firmwarePresent(),
+                "the test JVM has no cn.cvte.tv.api, so the CVTE path must report it is off");
+    }
+
     public static void main(String[] args) {
         CvteSourcesTest t = new CvteSourcesTest();
         t.readsAnEntity();
@@ -119,6 +125,7 @@ public final class CvteSourcesTest {
         t.rowsAreLiveTvThenPorts();
         t.rowsLeaveOutWhatIsNotARow();
         t.disconnectedPortsAreNotConnected();
+        t.libraryAbsentKeepsTheCvtePathOff();
         System.out.println("CvteSourcesTest: ok (" + assertions + " assertions)");
     }
 }
