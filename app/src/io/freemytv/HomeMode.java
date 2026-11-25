@@ -68,9 +68,10 @@ final class HomeMode {
      */
     private static Boolean bootHomeCache;
 
-    static synchronized boolean bootHome() {
+    /** The CVTE flag: true or false once read, null when it can't be read (then the caller checks anyway). */
+    static synchronized Boolean bootHomeKnown() {
         if (bootHomeCache == null) {
-            String value = "";
+            String value;
             try {
                 Process p = new ProcessBuilder("getprop", "ro.CVT_EN_COMMON_HOME_INTENT").redirectErrorStream(true).start();
                 try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()))) {
@@ -79,12 +80,20 @@ final class HomeMode {
                 }
                 p.waitFor();
             } catch (IOException | InterruptedException | RuntimeException e) {
-                value = "";
+                return null;   // not cached: the next call reads it again
             }
-            bootHomeCache = "1".equals(value);
+            bootHomeCache = !BRICKS && "1".equals(value);
         }
         return bootHomeCache;
     }
+
+    static boolean bootHome() {
+        return Boolean.TRUE.equals(bootHomeKnown());
+    }
+
+    /** The query that shows whether the boot intent reaches this app's home screen (BootHome.ready reads it). */
+    static final String BOOT_HOME_QUERY = "cmd package query-activities -a android.intent.action.MAIN"
+            + " -c android.intent.category.HOME -c android.intent.category.COMMON_HOME";
 
     /** Huawei's TVs and boxes, and anything on HarmonyOS (Huawei's BuildEx says so). */
     private static boolean huawei() {
@@ -568,7 +577,8 @@ final class HomeMode {
             done(c, Ui.tr("On Fire TV the Home button belongs to Amazon's home screen. Free My TV stays an app here: open it from your apps."));
             return;
         }
-        if (BRICKS && !bootHome()) {
+        Boolean cvte = bootHomeKnown();
+        if (BRICKS && !Boolean.TRUE.equals(cvte)) {
             done(c, bricksText());
             return;
         }
@@ -578,7 +588,7 @@ final class HomeMode {
         }
         try (Adb adb = connect(c, s)) {
             // CVTE: nothing is turned off unless the boot Home is ready (R7). Checked first, before anything is saved.
-            if (bootHome() && !BootHome.ready(adb.shell("cmd package query-activities -a android.intent.action.MAIN -c android.intent.category.HOME -c android.intent.category.COMMON_HOME"), PKG + ".HomeActivity")) {
+            if (!Boolean.FALSE.equals(cvte) && !BootHome.ready(adb.shell(BOOT_HOME_QUERY), PKG + ".HomeActivity")) {
                 throw new IOException(Ui.tr("this TV's boot screen isn't ready for Free My TV yet, so nothing changed. Keep the TV's own home screen."));
             }
             // The TV's own home screen and screensaver, recorded once (before ours replace them) so "original" restores
@@ -928,6 +938,15 @@ final class HomeMode {
         }
     }
 
+    /** CVTE: the boot Home answers the boot intent right now (read over the TV's own ADB). Unreachable counts as not ready. */
+    private static boolean bootHomeReadyNow(Context c) {
+        try (Adb adb = Adb.connect(c, 10_000, null)) {
+            return BootHome.ready(adb.shell(BOOT_HOME_QUERY), PKG + ".HomeActivity");
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     /**
      * In Free My TV mode, checks that everything is still as we left it (the listed apps off, our home screen and
      * screensaver) and completes whatever is missing, with a notice. Runs after the TV boots (TV updates can turn
@@ -944,6 +963,12 @@ final class HomeMode {
                 save(app, s);
             } catch (JSONException ignored) {}
             if (!FREE.equals(s.optString("mode")) || AMAZON) return;
+            if (bootHome() && !bootHomeReadyNow(app)) {
+                AppLog.w("Free My TV mode where the boot Home isn't ready: back to Original");
+                applyOriginal(app);
+                notice(app, Ui.tr("this TV's boot screen isn't ready for Free My TV yet, so nothing changed. Keep the TV's own home screen."));
+                return;
+            }
             if (BRICKS && !bootHome()) {
                 // Switched by a version that still allowed it here: the TV's own home screen back before the next restart.
                 AppLog.w("Free My TV mode where the switch kept a TV from starting: back to Original");

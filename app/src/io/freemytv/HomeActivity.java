@@ -41,7 +41,7 @@ public class HomeActivity extends Activity {
             // Direct boot (the boot home screen, opção C): a plain screen until the unlock, and nothing that reads
             // credential-protected storage before it.
             getWindow().setBackgroundDrawable(new ColorDrawable(Color.rgb(7, 11, 30)));
-            Unlock.whenUnlocked(this, () -> { if (!isFinishing()) showHome(); });
+            Unlock.whenUnlocked(this, () -> { if (!isFinishing() && !isDestroyed()) showHome(); });
             return;
         }
         showHome();
@@ -52,6 +52,7 @@ public class HomeActivity extends Activity {
         SleepTimer.listen(this);
         SleepTimer.check(this);
         if (Watchdog.crashedTooOften(this)) {
+            ready = true;   // the lifecycle guards must not skip this screen's own calls
             // Don't try to draw again: only show a notice while the main process restores the original home screen.
             HomeMode.requestRevertHome(this);
             TextView t = new TextView(this);
