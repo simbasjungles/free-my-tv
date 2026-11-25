@@ -48,6 +48,7 @@ public class HomeActivity extends Activity {
     }
 
     private void showHome() {
+        App.initUnlocked(this);   // the unlock is here, so the state can be read (see App)
         Watchdog.install(this);
         SleepTimer.listen(this);
         SleepTimer.check(this);
@@ -146,6 +147,7 @@ public class HomeActivity extends Activity {
     /** Home button pressed on the home screen: back to the entry state (focus on the first app, sheet closed). */
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        setIntent(intent);   // before the unlock, showHome reads the intent that came in last
         if (liveDark) {   // Home while Live TV waits for the screen: it counts as a key
             liveWaits = liveDark = false;
             AppLog.w("at power-on: Home came first, no Live TV");

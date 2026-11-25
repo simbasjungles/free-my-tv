@@ -78,9 +78,15 @@ final class HomeMode {
                     String line = r.readLine();
                     value = line == null ? "" : line.trim();
                 }
-                p.waitFor();
-            } catch (IOException | InterruptedException | RuntimeException e) {
+                if (!p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    p.destroy();
+                    return null;
+                }
+            } catch (IOException | RuntimeException e) {
                 return null;   // not cached: the next call reads it again
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
             }
             bootHomeCache = !BRICKS && "1".equals(value);
         }
@@ -938,12 +944,12 @@ final class HomeMode {
         }
     }
 
-    /** CVTE: the boot Home answers the boot intent right now (read over the TV's own ADB). Unreachable counts as not ready. */
-    private static boolean bootHomeReadyNow(Context c) {
+    /** CVTE: does the boot Home answer the boot intent right now (over the TV's own ADB)? Null when it can't be asked. */
+    private static Boolean bootHomeReadyNow(Context c) {
         try (Adb adb = Adb.connect(c, 10_000, null)) {
             return BootHome.ready(adb.shell(BOOT_HOME_QUERY), PKG + ".HomeActivity");
         } catch (IOException e) {
-            return false;
+            return null;
         }
     }
 
@@ -963,7 +969,8 @@ final class HomeMode {
                 save(app, s);
             } catch (JSONException ignored) {}
             if (!FREE.equals(s.optString("mode")) || AMAZON) return;
-            if (bootHome() && !bootHomeReadyNow(app)) {
+            Boolean ready = bootHome() ? bootHomeReadyNow(app) : Boolean.TRUE;
+            if (Boolean.FALSE.equals(ready)) {
                 AppLog.w("Free My TV mode where the boot Home isn't ready: back to Original");
                 applyOriginal(app);
                 notice(app, Ui.tr("this TV's boot screen isn't ready for Free My TV yet, so nothing changed. Keep the TV's own home screen."));
@@ -1145,7 +1152,7 @@ final class HomeMode {
         if (Config.SCREENSAVER && dreamPkg != null && !dreamPkg.equals(PKG) && !dreamPkg.equals(homePkg)) out.add(dreamPkg);
         for (String pkg : DEBLOAT) {
             // CVTE boards keep what their live TV, input and factory menus need (see BootHome.keptOnCvte).
-            if (!(bootHome() && BootHome.keptOnCvte(pkg))) out.add(pkg);
+            if (!(!Boolean.FALSE.equals(bootHomeKnown()) && BootHome.keptOnCvte(pkg))) out.add(pkg);
         }
         if (Config.DISABLE_ASSISTANT) out.addAll(Arrays.asList(ASSISTANT));
         return out;
