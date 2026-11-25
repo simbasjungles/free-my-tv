@@ -71,22 +71,25 @@ final class HomeMode {
     /** The CVTE flag: true or false once read, null when it can't be read (then the caller checks anyway). */
     static synchronized Boolean bootHomeKnown() {
         if (bootHomeCache == null) {
-            String value;
+            String value = "";
+            Process p = null;
             try {
-                Process p = new ProcessBuilder("getprop", "ro.CVT_EN_COMMON_HOME_INTENT").redirectErrorStream(true).start();
+                p = new ProcessBuilder("getprop", "ro.CVT_EN_COMMON_HOME_INTENT").redirectErrorStream(true).start();
+                // Wait first, with a timeout; the output is one short line, so the pipe can't fill up meanwhile.
+                if (!p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS) || p.exitValue() != 0) {
+                    return null;   // not cached: the next call reads it again
+                }
                 try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()))) {
                     String line = r.readLine();
                     value = line == null ? "" : line.trim();
                 }
-                if (!p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) {
-                    p.destroy();
-                    return null;
-                }
             } catch (IOException | RuntimeException e) {
-                return null;   // not cached: the next call reads it again
+                return null;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return null;
+            } finally {
+                if (p != null && p.isAlive()) p.destroy();
             }
             bootHomeCache = !BRICKS && "1".equals(value);
         }
@@ -947,7 +950,10 @@ final class HomeMode {
     /** CVTE: does the boot Home answer the boot intent right now (over the TV's own ADB)? Null when it can't be asked. */
     private static Boolean bootHomeReadyNow(Context c) {
         try (Adb adb = Adb.connect(c, 10_000, null)) {
-            return BootHome.ready(adb.shell(BOOT_HOME_QUERY), PKG + ".HomeActivity");
+            String out = adb.shell(BOOT_HOME_QUERY);
+            // No listing at all means the query didn't run: that is not an answer, so nothing is reverted.
+            if (out == null || !out.contains("ActivityInfo:")) return null;
+            return BootHome.ready(out, PKG + ".HomeActivity");
         } catch (IOException e) {
             return null;
         }

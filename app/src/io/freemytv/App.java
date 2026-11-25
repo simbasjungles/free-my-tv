@@ -13,9 +13,9 @@ public class App extends Application {
     /** Once, after the unlock. Android doesn't order two receivers of ACTION_USER_UNLOCKED, so the home screen calls it too. */
     static synchronized void initUnlocked(Context c) {
         if (initialized) return;
-        initialized = true;
         Prefs.init(c);
         Place.init(c);
+        initialized = true;   // only after both: a failure is tried again
     }
 
     @Override public void onCreate() {
