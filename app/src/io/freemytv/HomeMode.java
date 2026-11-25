@@ -61,6 +61,31 @@ final class HomeMode {
      */
     static final boolean BRICKS = "R3_GTV".equals(Build.DEVICE) || huawei();
 
+    /**
+     * CVTE boards (issue #574, opção C): the firmware sends the boot Home as MAIN + HOME + COMMON_HOME and says so in
+     * ro.CVT_EN_COMMON_HOME_INTENT. Here the switch may turn the stock launcher off, but only when this app's home
+     * screen is direct-boot-aware and answers that intent (BootHome.ready). Other boards keep the refusal above.
+     */
+    private static Boolean bootHomeCache;
+
+    static synchronized boolean bootHome() {
+        if (bootHomeCache == null) {
+            String value = "";
+            try {
+                Process p = new ProcessBuilder("getprop", "ro.CVT_EN_COMMON_HOME_INTENT").redirectErrorStream(true).start();
+                try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()))) {
+                    String line = r.readLine();
+                    value = line == null ? "" : line.trim();
+                }
+                p.waitFor();
+            } catch (IOException | InterruptedException | RuntimeException e) {
+                value = "";
+            }
+            bootHomeCache = "1".equals(value);
+        }
+        return bootHomeCache;
+    }
+
     /** Huawei's TVs and boxes, and anything on HarmonyOS (Huawei's BuildEx says so). */
     private static boolean huawei() {
         if ("HUAWEI".equalsIgnoreCase(Build.MANUFACTURER) || "HUAWEI".equalsIgnoreCase(Build.BRAND)) return true;
@@ -543,7 +568,7 @@ final class HomeMode {
             done(c, Ui.tr("On Fire TV the Home button belongs to Amazon's home screen. Free My TV stays an app here: open it from your apps."));
             return;
         }
-        if (BRICKS) {
+        if (BRICKS && !bootHome()) {
             done(c, bricksText());
             return;
         }
@@ -552,6 +577,10 @@ final class HomeMode {
             return;
         }
         try (Adb adb = connect(c, s)) {
+            // CVTE: nothing is turned off unless the boot Home is ready (R7). Checked first, before anything is saved.
+            if (bootHome() && !BootHome.ready(adb.shell("cmd package query-activities -a android.intent.action.MAIN -c android.intent.category.HOME -c android.intent.category.COMMON_HOME"), PKG + ".HomeActivity")) {
+                throw new IOException(Ui.tr("this TV's boot screen isn't ready for Free My TV yet, so nothing changed. Keep the TV's own home screen."));
+            }
             // The TV's own home screen and screensaver, recorded once (before ours replace them) so "original" restores
             // exactly what was there, on any brand.
             String home = originalHome(s);
@@ -915,7 +944,7 @@ final class HomeMode {
                 save(app, s);
             } catch (JSONException ignored) {}
             if (!FREE.equals(s.optString("mode")) || AMAZON) return;
-            if (BRICKS) {
+            if (BRICKS && !bootHome()) {
                 // Switched by a version that still allowed it here: the TV's own home screen back before the next restart.
                 AppLog.w("Free My TV mode where the switch kept a TV from starting: back to Original");
                 applyOriginal(app);
@@ -1089,7 +1118,10 @@ final class HomeMode {
         String dreamPkg = packageOf(dream);
         // screensaver=false keeps the TV's own screensaver: then it stays on.
         if (Config.SCREENSAVER && dreamPkg != null && !dreamPkg.equals(PKG) && !dreamPkg.equals(homePkg)) out.add(dreamPkg);
-        out.addAll(Arrays.asList(DEBLOAT));
+        for (String pkg : DEBLOAT) {
+            // CVTE boards keep what their live TV, input and factory menus need (see BootHome.keptOnCvte).
+            if (!(bootHome() && BootHome.keptOnCvte(pkg))) out.add(pkg);
+        }
         if (Config.DISABLE_ASSISTANT) out.addAll(Arrays.asList(ASSISTANT));
         return out;
     }

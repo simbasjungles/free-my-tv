@@ -3,6 +3,7 @@ package io.freemytv;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
@@ -31,8 +32,22 @@ public class HomeActivity extends Activity {
     private HomeView home;
     private int prefsVersion = Prefs.version;   // settings changed while we were away: start over
 
+    /** The home screen is drawn: the user is unlocked, so the state in credential-protected storage can be read. */
+    private boolean ready;
+
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (!Unlock.isUnlocked(this)) {
+            // Direct boot (the boot home screen, opção C): a plain screen until the unlock, and nothing that reads
+            // credential-protected storage before it.
+            getWindow().setBackgroundDrawable(new ColorDrawable(Color.rgb(7, 11, 30)));
+            Unlock.whenUnlocked(this, () -> { if (!isFinishing()) showHome(); });
+            return;
+        }
+        showHome();
+    }
+
+    private void showHome() {
         Watchdog.install(this);
         SleepTimer.listen(this);
         SleepTimer.check(this);
@@ -52,8 +67,10 @@ public class HomeActivity extends Activity {
         home = new HomeView(this);
         setContentView(home);
         getWindow().setBackgroundDrawable(null);
+        ready = true;
         if (wantsAllApps(getIntent())) home.showAllApps();
         else if (getIntent().getBooleanExtra(EXTRA_INPUTS, false)) home.showInputs();
+        if (resumed) resumeHome();   // the unlock came while the screen was already in front
         // At power-on "Live TV" (#346): the first time the home screen comes up after a full start, in Free My TV mode.
         if (HomeMode.noteHomeShown(this) && SystemClock.elapsedRealtime() < 240_000 && "live".equals(Prefs.powerOn())) {
             org.json.JSONObject s = HomeMode.state(this);
@@ -92,6 +109,10 @@ public class HomeActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         resumed = true;
+        if (ready) resumeHome();   // before the unlock there is no home screen yet: showHome resumes it
+    }
+
+    private void resumeHome() {
         // TCL's Android 11 records the home activity as translucent (occludesParent=false) whatever its theme says:
         // Android then keeps the app just left visible, and home tasks are layered under all others, so that app stays
         // on screen over ours. Opaque again on every resume (setTranslucent is public from Android 11).
@@ -158,7 +179,7 @@ public class HomeActivity extends Activity {
 
     @Override public void onTrimMemory(int level) {
         super.onTrimMemory(level);
-        if (level >= TRIM_MEMORY_COMPLETE) Recs.get(this).trim();
+        if (ready && level >= TRIM_MEMORY_COMPLETE) Recs.get(this).trim();
     }
 
     /** The key is one of Remote Buttons' rows on this TV. */
@@ -169,6 +190,7 @@ public class HomeActivity extends Activity {
     }
 
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        if (!ready) return super.dispatchKeyEvent(event);   // before the unlock: no screen, no key handling
         if (liveWaits) {
             liveWaits = liveDark = false;
             AppLog.w("at power-on: a key came first (" + KeyEvent.keyCodeToString(event.getKeyCode())
