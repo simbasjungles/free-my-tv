@@ -146,4 +146,18 @@ final class CvteSources {
         for (Source s : sources) if (s != null && s.isPort()) out.add(s);
         return out;
     }
+
+    /** The source a row opens: the tuner for the Live TV row, the port with that key for a port row. */
+    static Source forRow(List<Source> rows, boolean liveTvRow, String key) {
+        if (rows == null) return null;
+        for (Source s : rows) {
+            if (s == null) continue;
+            if (liveTvRow) {
+                if (s.liveTv()) return s;
+            } else if (key != null && key.equals(s.key())) {
+                return s;
+            }
+        }
+        return null;
+    }
 }

@@ -675,6 +675,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         // First time: right away (a cold start opens with the apps already there); missing logos come from reload().
         setShelf(HomeApps.shelf(a, false));
         setStatusItems(statusList(a));
+        HomeApps.whenCvteArrives(this::reloadSoon);   // #577: the CVTE sources arrive after this first draw
         setDrawerItems(drawerList(a));
     }
 

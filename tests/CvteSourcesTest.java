@@ -116,6 +116,17 @@ public final class CvteSourcesTest {
                 "the test JVM has no cn.cvte.tv.api, so the CVTE path must report it is off");
     }
 
+    /** The source a drawer row opens: the tuner for the Live TV row, the port with that key for a port row. */
+    private void findsTheSourceARowOpens() {
+        List<CvteSources.Source> rows = CvteSources.rows(CvteSources.list(measured()));
+        CvteSources.Source live = CvteSources.forRow(rows, true, "live");
+        check(live != null && live.id == 21, "the Live TV row opens the tuner");
+        CvteSources.Source hdmi2 = CvteSources.forRow(rows, false, "hdmi2");
+        check(hdmi2 != null && hdmi2.id == 10, "the HDMI 2 row opens source 10");
+        check(CvteSources.forRow(rows, false, "hdmi9") == null, "a key the firmware does not list opens nothing");
+        check(CvteSources.forRow(null, true, "live") == null, "no list yet (still being read) opens nothing");
+    }
+
     public static void main(String[] args) {
         CvteSourcesTest t = new CvteSourcesTest();
         t.readsAnEntity();
@@ -126,6 +137,7 @@ public final class CvteSourcesTest {
         t.rowsLeaveOutWhatIsNotARow();
         t.disconnectedPortsAreNotConnected();
         t.libraryAbsentKeepsTheCvtePathOff();
+        t.findsTheSourceARowOpens();
         System.out.println("CvteSourcesTest: ok (" + assertions + " assertions)");
     }
 }
