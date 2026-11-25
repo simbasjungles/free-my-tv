@@ -109,6 +109,11 @@
         android:allowBackup="false"
         android:networkSecurityConfig="@xml/network_security_config">
 
+        <!-- The TV API of CVTE boards (#577): the sources the drawer lists and switches. required="false", so the
+             APK still installs on a TV that does not have it, where CvteSources.firmwarePresent() keeps the CVTE
+             path off and today's behaviour stands. -->
+        <uses-library android:name="cn.cvte.tv.api" android:required="false" />
+
         <!-- The app's icon opens the settings (switch between Free My TV and the original home screen). -->
         <activity
             android:name=".SettingsActivity"
