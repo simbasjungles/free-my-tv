@@ -488,6 +488,9 @@ final class HomeApps {
     private static final ComponentName SOURCE_MENU =
             new ComponentName("com.cvte.tv.globalui", "com.cvte.tv.globalui.InputSourceActivity");
 
+    /** What answers MAIN + TV_HOME on these boards: the firmware's own activity, which draws the source (#577). */
+    private static final String CATEGORY_TV_HOME = "android.intent.category.TV_HOME";
+
     private static volatile List<CvteSources.Source> cvte; // the firmware's rows, once read
     private static volatile boolean cvteReading;
     private static long cvteAt;
@@ -558,10 +561,20 @@ final class HomeApps {
         final String label = it.label;
         final Context app = c.getApplicationContext();
         new Thread(() -> {
-            if (CvteApi.select(app, id)) return;
-            AppLog.w("CVTE source " + id + " did not switch");
-            new Handler(Looper.getMainLooper()).post(() -> Toast.makeText(app,
-                    Ui.trf("Couldn't open {app}.", "app", label), Toast.LENGTH_LONG).show());
+            if (!CvteApi.select(app, id)) {
+                AppLog.w("CVTE source " + id + " did not switch");
+                new Handler(Looper.getMainLooper()).post(() -> Toast.makeText(app,
+                        Ui.trf("Couldn't open {app}.", "app", label), Toast.LENGTH_LONG).show());
+                return;
+            }
+            // The switch alone changes the state: the panel stays on the Android layer until the firmware's own TV
+            // activity is in front, which is what its source menu opens right after selecting (#577, issue §2.7).
+            try {
+                app.startActivity(new Intent(Intent.ACTION_MAIN).addCategory(CATEGORY_TV_HOME)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (ActivityNotFoundException | SecurityException e) {
+                AppLog.w("CVTE source shown by the TV activity: " + e.getMessage());
+            }
         }, "cvte-select").start();
         return true;
     }
