@@ -79,8 +79,8 @@ public class SettingsActivity extends Activity {
         return true;
     }
 
-    /** The CVTE sources arriving (#577): redraw this screen, while it is up (#580 review, low 1). */
-    private final Runnable cvteArrived = () -> { if (view != null) view.postInvalidate(); };
+    /** The CVTE sources arriving (#577): judge the rows again and draw them (#580 re-review, low 1). */
+    private final Runnable cvteArrived = () -> { if (view != null) view.post(view::sourcesArrived); };
 
     @Override protected void onResume() {
         super.onResume();
@@ -1201,6 +1201,13 @@ public class SettingsActivity extends Activity {
                 default:
                     return null;
             }
+        }
+
+        /** The CVTE sources arrived (#577): forget what the rows were judged by, so this frame sees them. */
+        void sourcesArrived() {
+            whyRows = null;
+            liveButtonText = null;
+            postInvalidate();
         }
 
         /** Why row `i` can't be used here, for the person to read; null where it works. */
