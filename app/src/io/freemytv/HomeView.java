@@ -421,6 +421,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     private final Runnable reloadSoon = this::reload;
+    /** The debounced reload as one stable instance: the field above runs reload() straight away, which is not what
+     *  a caller on the CVTE read thread may do (#580 re-review, low). */
+    private final Runnable askReload = this::reloadSoon;
     private static final long APPS_MAX_AGE_MS = 15 * 60_000;
     private final LauncherApps launcherApps;
     private boolean appsStale = true;
@@ -675,7 +678,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         // First time: right away (a cold start opens with the apps already there); missing logos come from reload().
         setShelf(HomeApps.shelf(a, false));
         setStatusItems(statusList(a));
-        HomeApps.whenCvteArrives(reloadSoon);   // #577: the CVTE sources arrive after this first draw
+        HomeApps.whenCvteArrives(askReload);   // #577: the CVTE sources arrive after this first draw
         setDrawerItems(drawerList(a));
     }
 
@@ -684,7 +687,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     void resume() {
         if (running) return;
         running = true;
-        HomeApps.whenCvteArrives(reloadSoon);   // told again after a pause (#580 review, low 2)
+        HomeApps.whenCvteArrives(askReload);   // told again after a pause (#580 review, low 2)
         checkNight(false);
         boolean h24 = Ui.h24();
         if (h24 != clock24) {   // 12/24 hours changed (the TV's or the Clock row's): the clock and the drawer's times again
@@ -736,9 +739,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     void pause() {
+        HomeApps.forgetCvteArrives(askReload);   // even a screen destroyed without ever running (#580 re-review)
         if (!running) return;
         running = false;
-        HomeApps.forgetCvteArrives(reloadSoon);   // no redraw asked for a screen that is gone (#580 review, low 2)
         handler.removeCallbacks(bgFollow);
         cancelReorder(true);
         if (recents != null) recents.closeNow();
