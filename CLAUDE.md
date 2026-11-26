@@ -650,8 +650,9 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   exported `com.cvte.tv.api.TV_API_SERVICE` (no permission): `HomeApps.cvteRows()` binds it off the UI thread, once
   per process and at most every 10 s, and `eventSystemInputSourceGetList()` returns `EntityInputSource` — public
   fields `id`, `name`, `category`, `status`, `appPackageName`, no getters — from which `CvteSources` makes the rows;
-  `eventSystemInputSourceSetInputSource(id)` switches, on its own thread, the way the TV's own source menu does. On
-  the measured board: TV 21, AV 1 = 3, HDMI 1 = 9, HDMI 2 = 10, HDMI 3 = 11, with `MEDIA` (the Android layer) not
+  `eventSystemInputSourceSetInputSource(id)` switches, on its own thread, **and then starts `MAIN + TV_HOME`** — the
+  firmware's own `TvSettingActivity`, which is what actually draws the source: the switch alone only changes the
+  state (issue #577 §2.7). On the measured board: TV 21, AV 1 = 3, HDMI 1 = 9, HDMI 2 = 10, HDMI 3 = 11, with `MEDIA` (the Android layer) not
   in the list — but the ids are region-configured, so none is compiled in: the list is read. To measure them again,
   read `adb logcat` while the source menu switches (`TVApiSystemInputSourceImpl::getCurrentInputSource`), or call
   the two methods from a throwaway app that declares the library. `ACTION_TIF_PLAYER` does *not* switch there

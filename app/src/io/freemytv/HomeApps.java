@@ -612,9 +612,6 @@ final class HomeApps {
         } catch (RuntimeException e) {
             return out;
         }
-        // CVTE boards register no TvInputService at all (#577): with no TIF port to read, the ports come from the
-        // firmware's own list, read off the UI thread and kept.
-        if (list.isEmpty()) cvtePorts(c, out, all);
         Collections.sort(list, (a, b) -> a.getId().compareTo(b.getId()));
         // Allwinner's live TV player (HY300 and HY320 projectors) is the only way to the HDMI input on those boards.
         boolean allwinner = allwinnerInputs(c);
@@ -657,6 +654,10 @@ final class HomeApps {
         // MIUI TV knows three HDMI ports; a board reporting a fourth leaves it with no way to be opened (a Redmi TV
         // lists HDMI 4 and answers no number for it), so it isn't shown.
         else if (xiaomiInputs(c)) out.removeIf(it -> !xiaomiPort(it));
+        // CVTE boards register no TvInputService at all (#577): with no TIF port to read, the ports come from the
+        // firmware's own list, read off the UI thread and kept — after the sort and the brand filters above, so the
+        // firmware's own order is what the drawer shows and no TIF rule touches them (#580 review, nit 4).
+        if (list.isEmpty()) cvtePorts(c, out, all);
         return out;
     }
 
@@ -875,9 +876,10 @@ final class HomeApps {
      */
     static Intent liveTv(Context c) {
         PackageManager pm = c.getPackageManager();
-        // CVTE boards (#577): they register no TvInputService, so there is no tuner input to ask for. The firmware's
-        // own list has the tuner and open() switches through its API; this intent is the way to it for whatever
-        // starts Live TV without that switch: the TV's own source menu, where its tuner is the first entry.
+        // CVTE boards (#577): they register no TvInputService, so there is no tuner input to ask for, and the
+        // firmware's own list has the tuner. open() switches through cvteSwitch() before starting anything, so this
+        // is the non-null answer NEED_LIVE_TV and allInputs() look at — never an intent that gets launched
+        // (#580 review, nit 3); the TV's own source menu is what a caller would land on if it ever did.
         if (CvteApi.available()) {
             List<CvteSources.Source> rows = cvteRows(c);
             if (rows == null || CvteSources.forRow(rows, true, "live") == null) return null;
