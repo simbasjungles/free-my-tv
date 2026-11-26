@@ -142,6 +142,19 @@ public final class CvteSourcesTest {
         check(CvteSources.forInputId(null, "10") == null, "no list yet opens nothing");
     }
 
+    /** The precedence the top button needs: its input id first, then the key or the tuner (#580 re-review, nit 7). */
+    private void resolvesByInputIdThenKey() {
+        List<CvteSources.Source> rows = CvteSources.rows(CvteSources.list(measured()));
+        CvteSources.Source button = CvteSources.resolve(rows, false, "top_live", "10");
+        check(button != null && button.id == 10, "the button's inputId decides over the button's own key");
+        CvteSources.Source drawer = CvteSources.resolve(rows, false, "hdmi1", "9");
+        check(drawer != null && drawer.id == 9, "a drawer row agrees on id and key");
+        CvteSources.Source fallback = CvteSources.resolve(rows, false, "hdmi1", "99");
+        check(fallback != null && fallback.id == 9, "an id the firmware does not list falls back to the key");
+        CvteSources.Source tuner = CvteSources.resolve(rows, true, "live", null);
+        check(tuner != null && tuner.id == 21, "the Live TV row carries no id and resolves by category");
+    }
+
     public static void main(String[] args) {
         CvteSourcesTest t = new CvteSourcesTest();
         t.readsAnEntity();
@@ -154,6 +167,7 @@ public final class CvteSourcesTest {
         t.libraryAbsentKeepsTheCvtePathOff();
         t.findsTheSourceARowOpens();
         t.findsTheSourceByInputId();
+        t.resolvesByInputIdThenKey();
         System.out.println("CvteSourcesTest: ok (" + assertions + " assertions)");
     }
 }

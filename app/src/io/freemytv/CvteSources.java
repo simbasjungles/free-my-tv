@@ -161,6 +161,12 @@ final class CvteSources {
         return null;
     }
 
+    /** The source a row opens: its input id first (the top button's choice), then its key or the tuner. */
+    static Source resolve(List<Source> rows, boolean liveTvRow, String key, String inputId) {
+        Source byId = forInputId(rows, inputId);
+        return byId != null ? byId : forRow(rows, liveTvRow, key);
+    }
+
     /** The source a row opens by the input id it carries: the drawer's rows, and the top button's chosen input. */
     static Source forInputId(List<Source> rows, String inputId) {
         if (rows == null || inputId == null || inputId.isEmpty()) return null;
