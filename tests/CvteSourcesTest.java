@@ -145,8 +145,11 @@ public final class CvteSourcesTest {
     /** The precedence the top button needs: its input id first, then the key or the tuner (#580 re-review, nit 7). */
     private void resolvesByInputIdThenKey() {
         List<CvteSources.Source> rows = CvteSources.rows(CvteSources.list(measured()));
-        CvteSources.Source button = CvteSources.resolve(rows, false, "top_live", "10");
-        check(button != null && button.id == 10, "the button's inputId decides over the button's own key");
+        // The top button's key is TOP_LIVE, "live" — the tuner's key too, so a resolve that consulted the key
+        // first would open the tuner, which is exactly what the blocking bug did (#580 re-review 2, low).
+        CvteSources.Source button = CvteSources.resolve(rows, false, "live", "10");
+        check(button != null && button.id == 10,
+                "the button's inputId decides over a key that is the tuner's key as well");
         CvteSources.Source drawer = CvteSources.resolve(rows, false, "hdmi1", "9");
         check(drawer != null && drawer.id == 9, "a drawer row agrees on id and key");
         CvteSources.Source fallback = CvteSources.resolve(rows, false, "hdmi1", "99");
