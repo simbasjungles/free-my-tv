@@ -160,4 +160,13 @@ final class CvteSources {
         }
         return null;
     }
+
+    /** The source a row opens by the input id it carries: the drawer's rows, and the top button's chosen input. */
+    static Source forInputId(List<Source> rows, String inputId) {
+        if (rows == null || inputId == null || inputId.isEmpty()) return null;
+        for (Source s : rows) {
+            if (s != null && inputId.equals(String.valueOf(s.id))) return s;
+        }
+        return null;
+    }
 }

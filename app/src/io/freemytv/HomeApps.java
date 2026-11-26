@@ -555,7 +555,11 @@ final class HomeApps {
      */
     private static boolean cvteSwitch(Context c, Item it) {
         if (!CvteApi.available()) return false;
-        CvteSources.Source found = CvteSources.forRow(cvteRows(c), it.kind == LIVE_TV, it.key);
+        List<CvteSources.Source> rows = cvteRows(c);
+        // The drawer's rows carry the firmware's key; the top button carries the chosen input's inputId under the
+        // button's own key, which Settings saves for the button and is no firmware key (#580 review, blocking).
+        CvteSources.Source found = CvteSources.forInputId(rows, it.inputId);
+        if (found == null) found = CvteSources.forRow(rows, it.kind == LIVE_TV, it.key);
         if (found == null) return false;
         final int id = found.id;
         final String label = it.label;

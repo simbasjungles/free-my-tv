@@ -127,6 +127,21 @@ public final class CvteSourcesTest {
         check(CvteSources.forRow(null, true, "live") == null, "no list yet (still being read) opens nothing");
     }
 
+    /**
+     * The top button carries the chosen input's inputId under the button's own key, which is not a firmware key
+     * (#580 review, blocking): the id has to decide, or the button falls through to the TIF passthrough request.
+     */
+    private void findsTheSourceByInputId() {
+        List<CvteSources.Source> rows = CvteSources.rows(CvteSources.list(measured()));
+        CvteSources.Source hdmi2 = CvteSources.forInputId(rows, "10");
+        check(hdmi2 != null && "HDMI 2".equals(hdmi2.name), "inputId 10 opens HDMI 2");
+        CvteSources.Source tuner = CvteSources.forInputId(rows, "21");
+        check(tuner != null && tuner.liveTv(), "inputId 21 opens the tuner");
+        check(CvteSources.forInputId(rows, "99") == null, "an id the firmware does not list opens nothing");
+        check(CvteSources.forInputId(rows, null) == null, "no id opens nothing");
+        check(CvteSources.forInputId(null, "10") == null, "no list yet opens nothing");
+    }
+
     public static void main(String[] args) {
         CvteSourcesTest t = new CvteSourcesTest();
         t.readsAnEntity();
@@ -138,6 +153,7 @@ public final class CvteSourcesTest {
         t.disconnectedPortsAreNotConnected();
         t.libraryAbsentKeepsTheCvtePathOff();
         t.findsTheSourceARowOpens();
+        t.findsTheSourceByInputId();
         System.out.println("CvteSourcesTest: ok (" + assertions + " assertions)");
     }
 }
