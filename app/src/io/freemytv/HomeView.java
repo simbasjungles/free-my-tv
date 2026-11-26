@@ -693,9 +693,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         if (running) return;
         running = true;
         HomeApps.whenCvteArrives(askReload);   // told again after a pause (#580 review, low 2)
-        int cvteGen = HomeApps.cvteGeneration();
-        if (cvteGen != cvteGenDrawn) askReload.run();   // arrived while this screen was away (#580 re-review 3)
-        cvteGenDrawn = cvteGen;
+        // Only the drawer's own build advances the marker: burning it here would leave a pause inside the debounce
+        // with the reload cancelled and nothing left to ask for (#580 re-review 4, low). The generation rises once
+        // per process, so asking again on every resume cannot loop.
+        if (HomeApps.cvteGeneration() != cvteGenDrawn) askReload.run();
         checkNight(false);
         boolean h24 = Ui.h24();
         if (h24 != clock24) {   // 12/24 hours changed (the TV's or the Clock row's): the clock and the drawer's times again
