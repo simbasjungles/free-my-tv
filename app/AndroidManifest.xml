@@ -109,6 +109,11 @@
         android:allowBackup="false"
         android:networkSecurityConfig="@xml/network_security_config">
 
+        <!-- The TV API of CVTE boards (#577): the sources the drawer lists and switches. required="false", so the
+             APK still installs on a TV that does not have it, where CvteSources.firmwarePresent() keeps the CVTE
+             path off and today's behaviour stands. -->
+        <uses-library android:name="cn.cvte.tv.api" android:required="false" />
+
         <!-- The app's icon opens the settings (switch between Free My TV and the original home screen). -->
         <activity
             android:name=".SettingsActivity"
@@ -145,6 +150,7 @@
             android:name=".HomeActivity"
             android:process=":home"
             android:exported="true"
+            android:directBootAware="true"
             android:label="Free My TV"
             android:launchMode="singleTask"
             android:taskAffinity=""
@@ -158,6 +164,10 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
+                <!-- CVTE firmware (ro.CVT_EN_COMMON_HOME_INTENT=1) sends the boot and Home intent as MAIN + HOME +
+                     COMMON_HOME. Without this category no Home matches at boot once the stock launcher is off, and the
+                     TV stops at its logo (issue #574; CleanYourTV #1201). Same filter, not a second one. -->
+                <category android:name="android.intent.category.COMMON_HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <!-- The remote's Apps button: the system sends ACTION_ALL_APPS to the home app. -->

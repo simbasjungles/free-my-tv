@@ -26,9 +26,13 @@ import android.media.tv.TvContract;
 import android.media.tv.TvInputInfo;
 import android.media.tv.TvInputManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.view.View;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -42,6 +46,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -478,10 +483,126 @@ final class HomeApps {
      * in the TV's settings is used as the label; without one, the name the device reports over HDMI-CEC ("PlayStation 5").
      * The icon follows what that name says the device is (see deviceSymbol).
      */
+    // MARK: - CVTE boards (#577): no TvInputService at all, so the ports come from the firmware's own list
+
+    /** The TV's own source menu, where its firmware lists TV, AV and HDMI (#577). */
+    private static final ComponentName SOURCE_MENU =
+            new ComponentName("com.cvte.tv.globalui", "com.cvte.tv.globalui.InputSourceActivity");
+
+    /** What answers MAIN + TV_HOME on these boards: the firmware's own activity, which draws the source (#577). */
+    private static final String CATEGORY_TV_HOME = "android.intent.category.TV_HOME";
+
+    private static volatile List<CvteSources.Source> cvte; // the firmware's rows, once read
+    private static volatile boolean cvteReading;
+    private static long cvteAt;
+    /** Bumped when the firmware's rows arrive: a screen compares it with the generation its drawer was built
+     *  from, so an arrival that happened while the screen was away still gets drawn (#580 re-review 3, low). */
+    private static volatile int cvteGeneration;
+
+    static int cvteGeneration() {
+        return cvteGeneration;
+    }
+    /** What to run when the CVTE sources arrive: every screen that asked (#580 review, low 1), each told through
+     *  the very runnable it registered, so a screen that went away can take itself out (low 2). */
+    private static final List<Runnable> cvteArrived = new CopyOnWriteArrayList<>();
+
+    static void whenCvteArrives(Runnable r) {
+        if (r != null && !cvteArrived.contains(r)) cvteArrived.add(r);
+    }
+
+    /** A screen leaving stops being told; pass the same runnable it registered. */
+    static void forgetCvteArrives(Runnable r) {
+        cvteArrived.remove(r);
+    }
+
+    /**
+     * The rows a CVTE board's firmware offers, or null while they are still being read. The read binds the TV API
+     * and waits for it, so it runs on its own thread and whoever asks first starts it: one at a time, and at most
+     * every 10 seconds, so a TV that will not answer is asked again instead of being taken for one with no inputs.
+     */
+    static List<CvteSources.Source> cvteRows(Context c) {
+        List<CvteSources.Source> rows = cvte;
+        if (rows != null || !CvteApi.available()) return rows;
+        long now = SystemClock.uptimeMillis();
+        synchronized (HomeApps.class) {
+            if (cvteReading || now - cvteAt < 10_000) return null;
+            cvteReading = true;
+            cvteAt = now;
+        }
+        Context app = c.getApplicationContext();
+        new Thread(() -> {
+            try {
+                List<CvteSources.Source> answer = CvteApi.sources(app);
+                if (answer != null) {
+                    cvte = CvteSources.rows(answer);
+                    cvteGeneration++;
+                    for (Runnable arrived : cvteArrived) arrived.run();
+                }
+            } finally {
+                synchronized (HomeApps.class) {
+                    cvteReading = false;
+                }
+            }
+        }, "cvte-sources").start();
+        return null;
+    }
+
+    /** The ports of a CVTE board (#577), as its own list names them; a source without a name cannot be a row. */
+    private static void cvtePorts(Context c, List<Item> out, boolean all) {
+        List<CvteSources.Source> rows = cvteRows(c);
+        if (rows == null) return;
+        for (CvteSources.Source s : rows) {
+            if (!s.isPort() || s.name == null || s.name.isEmpty()) continue;
+            if (!all && !s.connected()) continue;
+            Item it = shortcut(INPUT, s.key(), s.name, s.connected() ? deviceSymbol(s.name) : "hdmi");
+            it.inputId = String.valueOf(s.id);
+            it.number = s.port() > 0 ? String.valueOf(s.port()) : String.valueOf(s.id);
+            it.connected = s.connected();
+            out.add(it);
+        }
+    }
+
+    /**
+     * A CVTE board (#577): the firmware switches sources itself, through the same API its own source menu calls, so
+     * the row starts no activity. The call binds the TV API and waits, so it runs on its own thread; the row answers
+     * at once, and a refusal shows the same "Couldn't open" toast the other rows show.
+     */
+    private static boolean cvteSwitch(Context c, Item it) {
+        if (!CvteApi.available()) return false;
+        // The drawer's rows carry the firmware's key; the top button carries the chosen input's inputId under the
+        // button's key — TOP_LIVE, "live", which is the tuner's key as well, so the id has to decide (#580 review,
+        // blocking; re-review 2, nit).
+        CvteSources.Source found = CvteSources.resolve(cvteRows(c), it.kind == LIVE_TV, it.key, it.inputId);
+        if (found == null) return false;
+        final int id = found.id;
+        final String label = it.label;
+        final Context app = c.getApplicationContext();
+        new Thread(() -> {
+            if (!CvteApi.select(app, id)) {
+                AppLog.w("CVTE source " + id + " did not switch");
+                new Handler(Looper.getMainLooper()).post(() -> Toast.makeText(app,
+                        Ui.trf("Couldn't open {app}.", "app", label), Toast.LENGTH_LONG).show());
+                return;
+            }
+            // The switch alone changes the state: the panel stays on the Android layer until the firmware's own TV
+            // activity is in front, which is what its source menu opens right after selecting (#577, issue §2.7).
+            try {
+                app.startActivity(new Intent(Intent.ACTION_MAIN).addCategory(CATEGORY_TV_HOME)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (ActivityNotFoundException | SecurityException e) {
+                AppLog.w("CVTE source shown by the TV activity: " + e.getMessage());
+            }
+        }, "cvte-select").start();
+        return true;
+    }
+
     private static List<Item> inputs(Context c, boolean all) {
         List<Item> out = new ArrayList<>();
         TvInputManager tim = (TvInputManager) c.getSystemService(Context.TV_INPUT_SERVICE);
-        if (tim == null) return out;
+        if (tim == null) {
+            cvtePorts(c, out, all);   // a board with no TV input service at all is the CVTE case (#577)
+            return out;
+        }
         List<TvInputInfo> list = new ArrayList<>();
         // A device that talks HDMI-CEC gets its own input, a child of the port's, named after the device: port input id
         // -> that name.
@@ -540,6 +661,10 @@ final class HomeApps {
         // MIUI TV knows three HDMI ports; a board reporting a fourth leaves it with no way to be opened (a Redmi TV
         // lists HDMI 4 and answers no number for it), so it isn't shown.
         else if (xiaomiInputs(c)) out.removeIf(it -> !xiaomiPort(it));
+        // CVTE boards register no TvInputService at all (#577): with no TIF port to read, the ports come from the
+        // firmware's own list, read off the UI thread and kept — after the sort and the brand filters above, so the
+        // firmware's own order is what the drawer shows and no TIF rule touches them (#580 review, nit 4).
+        if (list.isEmpty()) cvtePorts(c, out, all);
         return out;
     }
 
@@ -681,10 +806,12 @@ final class HomeApps {
                 }
                 break;
             case LIVE_TV:
+                if (cvteSwitch(a, it)) return true;
                 intent = liveTv(a);
                 break;
             case INPUT:
                 if (HomeMode.AMAZON && fireInput(a, it)) return true;
+                if (cvteSwitch(a, it)) return true;
                 intent = inputIntent(a, it);
                 break;
             case SETTINGS:
@@ -756,6 +883,15 @@ final class HomeApps {
      */
     static Intent liveTv(Context c) {
         PackageManager pm = c.getPackageManager();
+        // CVTE boards (#577): they register no TvInputService, so there is no tuner input to ask for, and the
+        // firmware's own list has the tuner. open() switches through cvteSwitch() before starting anything, so this
+        // is the non-null answer NEED_LIVE_TV and allInputs() look at — never an intent that gets launched
+        // (#580 review, nit 3); the TV's own source menu is what a caller would land on if it ever did.
+        if (CvteApi.available()) {
+            List<CvteSources.Source> rows = cvteRows(c);
+            if (rows == null || CvteSources.forRow(rows, true, "live") == null) return null;
+            return new Intent().setComponent(SOURCE_MENU);
+        }
         // Fire TV: the antenna (digital terrestrial) entry of Amazon's Live TV, which plays the antenna's channels or
         // opens the channel scan when there are none yet. The channels request would also offer Vewd's HbbTV player,
         // and Live TV on its own plays the last channel, which can be an app's (RaiPlay's).

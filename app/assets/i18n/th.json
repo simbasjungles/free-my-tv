@@ -430,6 +430,7 @@
  "the home screen": "หน้าหลัก",
  "the original home screen": "หน้าหลักเดิม",
  "the screensaver": "สกรีนเซฟเวอร์",
+ "this TV's boot screen isn't ready for Free My TV yet, so nothing changed. Keep the TV's own home screen.": "หน้าจอเริ่มต้นระบบของทีวีเครื่องนี้ยังไม่พร้อมสำหรับ Free My TV จึงไม่มีอะไรเปลี่ยนแปลง ให้คงหน้าจอหลักของทีวีไว้",
  "unexpected reply from ADB": "ได้รับการตอบกลับที่ไม่คาดคิดจาก ADB",
  "unit|Automatic": "อัตโนมัติ",
  "weekday|Fri": "ศ.",

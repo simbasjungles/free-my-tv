@@ -430,6 +430,7 @@
  "the home screen": "главный экран",
  "the original home screen": "заводской главный экран",
  "the screensaver": "заставка",
+ "this TV's boot screen isn't ready for Free My TV yet, so nothing changed. Keep the TV's own home screen.": "экран загрузки этого телевизора ещё не готов для Free My TV, поэтому ничего не изменилось. Оставьте родной домашний экран телевизора.",
  "unexpected reply from ADB": "неожиданный ответ ADB",
  "unit|Automatic": "Автоматически",
  "weekday|Fri": "пт",

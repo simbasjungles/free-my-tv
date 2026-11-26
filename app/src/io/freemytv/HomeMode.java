@@ -61,6 +61,49 @@ final class HomeMode {
      */
     static final boolean BRICKS = "R3_GTV".equals(Build.DEVICE) || huawei();
 
+    /**
+     * CVTE boards (issue #574, opção C): the firmware sends the boot Home as MAIN + HOME + COMMON_HOME and says so in
+     * ro.CVT_EN_COMMON_HOME_INTENT. Here the switch may turn the stock launcher off, but only when this app's home
+     * screen is direct-boot-aware and answers that intent (BootHome.ready). Other boards keep the refusal above.
+     */
+    private static Boolean bootHomeCache;
+
+    /** The CVTE flag: true or false once read, null when it can't be read (then the caller checks anyway). */
+    static synchronized Boolean bootHomeKnown() {
+        if (bootHomeCache == null) {
+            String value = "";
+            Process p = null;
+            try {
+                p = new ProcessBuilder("getprop", "ro.CVT_EN_COMMON_HOME_INTENT").redirectErrorStream(true).start();
+                // Wait first, with a timeout; the output is one short line, so the pipe can't fill up meanwhile.
+                if (!p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS) || p.exitValue() != 0) {
+                    return null;   // not cached: the next call reads it again
+                }
+                try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()))) {
+                    String line = r.readLine();
+                    value = line == null ? "" : line.trim();
+                }
+            } catch (IOException | RuntimeException e) {
+                return null;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            } finally {
+                if (p != null && p.isAlive()) p.destroy();
+            }
+            bootHomeCache = !BRICKS && "1".equals(value);
+        }
+        return bootHomeCache;
+    }
+
+    static boolean bootHome() {
+        return Boolean.TRUE.equals(bootHomeKnown());
+    }
+
+    /** The query that shows whether the boot intent reaches this app's home screen (BootHome.ready reads it). */
+    static final String BOOT_HOME_QUERY = "cmd package query-activities -a android.intent.action.MAIN"
+            + " -c android.intent.category.HOME -c android.intent.category.COMMON_HOME";
+
     /** Huawei's TVs and boxes, and anything on HarmonyOS (Huawei's BuildEx says so). */
     private static boolean huawei() {
         if ("HUAWEI".equalsIgnoreCase(Build.MANUFACTURER) || "HUAWEI".equalsIgnoreCase(Build.BRAND)) return true;
@@ -543,7 +586,8 @@ final class HomeMode {
             done(c, Ui.tr("On Fire TV the Home button belongs to Amazon's home screen. Free My TV stays an app here: open it from your apps."));
             return;
         }
-        if (BRICKS) {
+        Boolean cvte = bootHomeKnown();
+        if (BRICKS && !Boolean.TRUE.equals(cvte)) {
             done(c, bricksText());
             return;
         }
@@ -552,6 +596,10 @@ final class HomeMode {
             return;
         }
         try (Adb adb = connect(c, s)) {
+            // CVTE: nothing is turned off unless the boot Home is ready (R7). Checked first, before anything is saved.
+            if (!Boolean.FALSE.equals(cvte) && !BootHome.ready(adb.shell(BOOT_HOME_QUERY), PKG + ".HomeActivity")) {
+                throw new IOException(Ui.tr("this TV's boot screen isn't ready for Free My TV yet, so nothing changed. Keep the TV's own home screen."));
+            }
             // The TV's own home screen and screensaver, recorded once (before ours replace them) so "original" restores
             // exactly what was there, on any brand.
             String home = originalHome(s);
@@ -899,6 +947,18 @@ final class HomeMode {
         }
     }
 
+    /** CVTE: does the boot Home answer the boot intent right now (over the TV's own ADB)? Null when it can't be asked. */
+    private static Boolean bootHomeReadyNow(Context c) {
+        try (Adb adb = Adb.connect(c, 10_000, null)) {
+            String out = adb.shell(BOOT_HOME_QUERY);
+            // No listing at all means the query didn't run: that is not an answer, so nothing is reverted.
+            if (out == null || !out.contains("ActivityInfo:")) return null;
+            return BootHome.ready(out, PKG + ".HomeActivity");
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
     /**
      * In Free My TV mode, checks that everything is still as we left it (the listed apps off, our home screen and
      * screensaver) and completes whatever is missing, with a notice. Runs after the TV boots (TV updates can turn
@@ -915,7 +975,14 @@ final class HomeMode {
                 save(app, s);
             } catch (JSONException ignored) {}
             if (!FREE.equals(s.optString("mode")) || AMAZON) return;
-            if (BRICKS) {
+            Boolean ready = bootHome() ? bootHomeReadyNow(app) : Boolean.TRUE;
+            if (Boolean.FALSE.equals(ready)) {
+                AppLog.w("Free My TV mode where the boot Home isn't ready: back to Original");
+                applyOriginal(app);
+                notice(app, Ui.tr("this TV's boot screen isn't ready for Free My TV yet, so nothing changed. Keep the TV's own home screen."));
+                return;
+            }
+            if (BRICKS && !bootHome()) {
                 // Switched by a version that still allowed it here: the TV's own home screen back before the next restart.
                 AppLog.w("Free My TV mode where the switch kept a TV from starting: back to Original");
                 applyOriginal(app);
@@ -1089,7 +1156,10 @@ final class HomeMode {
         String dreamPkg = packageOf(dream);
         // screensaver=false keeps the TV's own screensaver: then it stays on.
         if (Config.SCREENSAVER && dreamPkg != null && !dreamPkg.equals(PKG) && !dreamPkg.equals(homePkg)) out.add(dreamPkg);
-        out.addAll(Arrays.asList(DEBLOAT));
+        for (String pkg : DEBLOAT) {
+            // CVTE boards keep what their live TV, input and factory menus need (see BootHome.keptOnCvte).
+            if (!(!Boolean.FALSE.equals(bootHomeKnown()) && BootHome.keptOnCvte(pkg))) out.add(pkg);
+        }
         if (Config.DISABLE_ASSISTANT) out.addAll(Arrays.asList(ASSISTANT));
         return out;
     }

@@ -643,6 +643,22 @@ entries; its system pieces are in `PROTECTED`. USB debugging opens ADB on 5555 t
   times out waiting for input data and queues later requests. Live TV opens `com.amazon.tv.livetv/.DttIconWrapperActivity`, the antenna's entry.
   A Fire OS TV restarts quietly into standby when turned off (QHB) once it booted from power; after a reboot from
   software (`adb reboot`) every power-off restarts it with the screen on, until it's unplugged for 30 seconds.
+- CVTE boards (HiSilicon: HQ Screen / Belmicro HQS32NKHM, `TP.SK529ST.PB852A`, Android 14, #577) register no
+  `TvInputService` at all: `dumpsys tv_input` is empty, so `TvInputManager` sees no port and no tuner, Settings >
+  Inputs says *Unavailable* and the drawer has no rows. The TV's own list lives in the shared library
+  `cn.cvte.tv.api` (`/system/framework/cn.cvte.tv.api.jar`, declared `uses-library required="false"`), behind its
+  exported `com.cvte.tv.api.TV_API_SERVICE` (no permission): `HomeApps.cvteRows()` binds it off the UI thread, once
+  per process and at most every 10 s, and `eventSystemInputSourceGetList()` returns `EntityInputSource` — public
+  fields `id`, `name`, `category`, `status`, `appPackageName`, no getters — from which `CvteSources` makes the rows;
+  `eventSystemInputSourceSetInputSource(id)` switches, on its own thread, **and then starts `MAIN + TV_HOME`** — the
+  firmware's own `TvSettingActivity`, which is what actually draws the source: the switch alone only changes the
+  state (issue #577 §2.7). On the measured board: TV 21, AV 1 = 3, HDMI 1 = 9, HDMI 2 = 10, HDMI 3 = 11, with `MEDIA` (the Android layer) not
+  in the list — but the ids are region-configured, so none is compiled in: the list is read. To measure them again,
+  read `adb logcat` while the source menu switches (`TVApiSystemInputSourceImpl::getCurrentInputSource`), or call
+  the two methods from a throwaway app that declares the library. `ACTION_TIF_PLAYER` does *not* switch there
+  (`tune()` needs a TIF input id and aborts on `Device_Id_UnKnown`): the cleanyourtv recipe only works on CVTE
+  boards that do have a TIF, like the Amlogic Vision one. The remote's Input key stays with the TV — its firmware
+  filter opens `com.cvte.tv.globalui/.InputSourceActivity`, which takes no extra.
 - Realtek TVs on Hikeen boards (Romsat `D50A114D-U-T2-S`, KIVI; Android 9 tested; their `com.hikeen.*` apps tell
   them) force-stop the app in front as they go to standby (a hook in ActivityManager), so the TV woke on Realtek's
   black `FallbackHome` until Home was pressed, and nothing in the app survives the force-stop (#367).
