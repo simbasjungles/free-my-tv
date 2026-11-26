@@ -495,6 +495,13 @@ final class HomeApps {
     private static volatile List<CvteSources.Source> cvte; // the firmware's rows, once read
     private static volatile boolean cvteReading;
     private static long cvteAt;
+    /** Bumped when the firmware's rows arrive: a screen compares it with the generation its drawer was built
+     *  from, so an arrival that happened while the screen was away still gets drawn (#580 re-review 3, low). */
+    private static volatile int cvteGeneration;
+
+    static int cvteGeneration() {
+        return cvteGeneration;
+    }
     /** What to run when the CVTE sources arrive: every screen that asked (#580 review, low 1), each told through
      *  the very runnable it registered, so a screen that went away can take itself out (low 2). */
     private static final List<Runnable> cvteArrived = new CopyOnWriteArrayList<>();
@@ -528,6 +535,7 @@ final class HomeApps {
                 List<CvteSources.Source> answer = CvteApi.sources(app);
                 if (answer != null) {
                     cvte = CvteSources.rows(answer);
+                    cvteGeneration++;
                     for (Runnable arrived : cvteArrived) arrived.run();
                 }
             } finally {

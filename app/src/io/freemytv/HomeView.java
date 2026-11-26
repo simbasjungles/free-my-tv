@@ -424,13 +424,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     /** The debounced reload as one stable instance: the field above runs reload() straight away, which is not what
      *  a caller on the CVTE read thread may do (#580 re-review, low). */
     private final Runnable askReload = this::reloadSoon;
-    /** The CVTE sources arriving: redraw now, or remember it for the next resume when this screen is not showing —
-     *  an arrival during a pause told nobody, and resume() may skip the reload while the burst guard holds. */
-    private final Runnable cvteArrived = () -> {
-        if (running) askReload.run();
-        else cvteArrivedWhilePaused = true;
-    };
-    private boolean cvteArrivedWhilePaused;
+    /** The generation of the CVTE rows this drawer was built from, compared with the firmware's on resume: a flag
+     *  set by the callback could never fire while paused, because pause() unregisters it first (#580 re-review 3,
+     *  low). Written and read on the main thread only. */
+    private int cvteGenDrawn;
     private static final long APPS_MAX_AGE_MS = 15 * 60_000;
     private final LauncherApps launcherApps;
     private boolean appsStale = true;
@@ -685,8 +682,9 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
         // First time: right away (a cold start opens with the apps already there); missing logos come from reload().
         setShelf(HomeApps.shelf(a, false));
         setStatusItems(statusList(a));
-        HomeApps.whenCvteArrives(cvteArrived);   // #577: the CVTE sources arrive after this first draw
+        HomeApps.whenCvteArrives(askReload);   // #577: the CVTE sources arrive after this first draw
         setDrawerItems(drawerList(a));
+        cvteGenDrawn = HomeApps.cvteGeneration();
     }
 
     // MARK: - Lifecycle (called by HomeActivity)
@@ -694,11 +692,10 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     void resume() {
         if (running) return;
         running = true;
-        HomeApps.whenCvteArrives(cvteArrived);   // told again after a pause (#580 review, low 2)
-        if (cvteArrivedWhilePaused) {   // they arrived while no one was looking (#580 re-review 2, nit)
-            cvteArrivedWhilePaused = false;
-            askReload.run();
-        }
+        HomeApps.whenCvteArrives(askReload);   // told again after a pause (#580 review, low 2)
+        int cvteGen = HomeApps.cvteGeneration();
+        if (cvteGen != cvteGenDrawn) askReload.run();   // arrived while this screen was away (#580 re-review 3)
+        cvteGenDrawn = cvteGen;
         checkNight(false);
         boolean h24 = Ui.h24();
         if (h24 != clock24) {   // 12/24 hours changed (the TV's or the Clock row's): the clock and the drawer's times again
@@ -750,7 +747,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
     }
 
     void pause() {
-        HomeApps.forgetCvteArrives(cvteArrived);   // even a screen destroyed without ever running (#580 re-review)
+        HomeApps.forgetCvteArrives(askReload);   // even a screen destroyed without ever running (#580 re-review)
         if (!running) return;
         running = false;
         handler.removeCallbacks(bgFollow);
@@ -2765,6 +2762,7 @@ final class HomeView extends ViewGroup implements Choreographer.FrameCallback, H
                 if (apps && keepOrder) appsStale = true;
                 setStatusItems(st);
                 setDrawerItems(d);
+                cvteGenDrawn = HomeApps.cvteGeneration();   // this drawer was built from these rows
                 if (o != null && !sheetOpen) setOthers(o);
                 else if (o != null) appsStale = true;   // All Apps is open: its list comes next time
             });
