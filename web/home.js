@@ -696,6 +696,9 @@
     drawerItems.push({label: tr('All Apps'), symbol: 'apps', run: openApps});
     drawerItems.push({label: tr('Home Settings'), symbol: 'settings', run: openSettings});
     if (TV.canOpenSettings) drawerItems.push({label: tr('TV Settings'), symbol: 'tv_settings', run: tvSettings});
+    // samsung_hub_shortcut: where Free My TV is the TV's Home app (set with a tool like Vetro or AeroTizen), the Home
+    // key no longer opens Smart Hub, so the drawer keeps a way to it. A product name: not translated.
+    if (CONFIG.smartHub && TV.name === 'tizen') drawerItems.push({label: 'Smart Hub', symbol: 'home', run: launcher('com.samsung.tv.csfs', 'Smart Hub')});
     var n = drawerItems.length, gap = 18, groupGap = 56, groups = drawerInputs > 0 && drawerInputs < n ? 2 : 1;
     var tw = Math.min(230, (1760 - Math.max(0, n - groups) * gap - (groups - 1) * groupGap) / Math.max(1, n));
     var xPos = 80;
