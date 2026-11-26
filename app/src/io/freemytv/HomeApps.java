@@ -562,7 +562,8 @@ final class HomeApps {
     private static boolean cvteSwitch(Context c, Item it) {
         if (!CvteApi.available()) return false;
         // The drawer's rows carry the firmware's key; the top button carries the chosen input's inputId under the
-        // button's own key, which Settings saves for the button and is no firmware key (#580 review, blocking).
+        // button's key — TOP_LIVE, "live", which is the tuner's key as well, so the id has to decide (#580 review,
+        // blocking; re-review 2, nit).
         CvteSources.Source found = CvteSources.resolve(cvteRows(c), it.kind == LIVE_TV, it.key, it.inputId);
         if (found == null) return false;
         final int id = found.id;
