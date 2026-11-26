@@ -593,9 +593,97 @@
   // As HomeView's bgFollow: the background follows the focused pick.
   var BG_FOLLOW_MS = 500, bgTimer = 0;
 
+  // MARK: - Style: ambient
+  // The ambient style paints the focused shelf app's colour into the same tiny canvas the picks' photos use: stretched
+  // to the screen it is a soft glow for the cost of a 48x27 drawing, and the switch is one opacity fade.
+
+  var ambTimer = 0;
+  var BRAND = [[/netflix/i, '#B1060F'], [/youtube music/i, '#C4001A'], [/youtube kids/i, '#C4001A'], [/youtube/i, '#C4001A'],
+    [/spotify/i, '#1DB954'], [/zee ?5/i, '#8230C6'], [/fancode/i, '#FF5A1F'], [/sony ?liv/i, '#E8A200'],
+    [/hotstar|jiocinema/i, '#1F3FBF'], [/prime video|amazon/i, '#1A78D8'], [/disney/i, '#113CCF'], [/\bmax\b|hbo/i, '#5822B4'],
+    [/samsung tv plus|tvplus/i, '#1428A0'], [/apple tv/i, '#5A5A64'], [/plex/i, '#E5A00D']];
+
+  function lookGlow() { return Prefs.look() === 'ambient'; }
+
+  function hexRgb(h) { return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]; }
+
+  /** The focused shelf app's colour: its brand where it is known (black tiles have none of their own), else the tile's. */
+  function brandOf(i) {
+    var a = shelf[i];
+    if (!a) return null;
+    var name = (a.title || '') + ' ' + (a.id || '');
+    for (var k = 0; k < BRAND.length; k++) if (BRAND[k][0].test(name)) return hexRgb(BRAND[k][1]);
+    var t = $('tiles').children[i];
+    if (!t) return null;
+    var cs = window.getComputedStyle(t), m = (cs.backgroundImage + ' ' + cs.backgroundColor).match(/rgba?\(([^)]+)\)/g) || [];
+    for (var j = 0; j < m.length; j++) {
+      var p = m[j].replace(/rgba?\(|\)/g, '').split(',');
+      var rgb = [parseFloat(p[0]), parseFloat(p[1]), parseFloat(p[2])];
+      if ((p.length < 4 || parseFloat(p[3]) > 0.5) && rgb[0] + rgb[1] + rgb[2] > 60) return rgb;
+    }
+    return null;
+  }
+
+  /** Half the brand, half the night: never brighter than the tiles, so text and focus keep their contrast. */
+  function paintGlow(rgb) {
+    var key = 'ambient:' + rgb.join(',');
+    if (key === bgUrl) return;
+    bgUrl = key;
+    var next = bgFront === 'bgA' ? 'bgB' : 'bgA', canvas = $(next), ctx = canvas.getContext('2d');
+    var peak = [Math.round(rgb[0] * 0.5 + 10 * 0.5), Math.round(rgb[1] * 0.5 + 14 * 0.5), Math.round(rgb[2] * 0.5 + 26 * 0.5)].join(',');
+    ctx.fillStyle = '#070A12';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    var g = ctx.createRadialGradient(14, 20, 0, 14, 20, 40);
+    g.addColorStop(0, 'rgba(' + peak + ',1)');
+    g.addColorStop(0.6, 'rgba(' + peak + ',0.35)');
+    g.addColorStop(1, 'rgba(' + peak + ',0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    setClass(canvas, 'on', true);
+    setClass($(bgFront), 'on', false);
+    bgFront = next;
+  }
+
+  /** On the shelf, the focused app's colour once the focus rests (holding Right paints once); anywhere else, calm. */
+  function glowSoon(now) {
+    clearTimeout(ambTimer);
+    if (st.zone !== Z.SHELF) { if (bgUrl && bgUrl.indexOf('ambient:') === 0) backdrop(null); return; }
+    var run = function () { var c = brandOf(st.shelf); if (c) paintGlow(c); };
+    if (now) run(); else ambTimer = setTimeout(run, 150);
+  }
+
+  /** Home Settings > Style, applied at once: classes on the body for the look, the ambient glow on or off. */
+  var LOOKS = ['classic', 'ambient', 'aurora', 'midnight', 'royal', 'ember', 'ocean', 'stadium', 'neon', 'paper'];
+  /** A style's name, in the person's language. */
+  function lookName(look) {
+    switch (look) {
+      case 'ambient': return tr('style|Ambient');
+      case 'aurora': return tr('style|Aurora');
+      case 'midnight': return tr('style|Midnight');
+      case 'royal': return tr('style|Royal');
+      case 'ember': return tr('style|Ember');
+      case 'ocean': return tr('style|Ocean');
+      case 'stadium': return tr('style|Stadium');
+      case 'neon': return tr('style|Neon');
+      case 'paper': return tr('style|Paper (bright room)');
+      default: return tr('style|Classic');
+    }
+  }
+
+  function applyLook() {
+    var look = Prefs.look();
+    if (LOOKS.indexOf(look) < 0) look = 'classic';
+    for (var i = 0; i < LOOKS.length; i++) setClass(body, 'look-' + LOOKS[i], LOOKS[i] === look);
+    setClass(body, 'look-aurora', look === 'aurora' || look === 'ambient');   // ambient is aurora plus the glow
+    checkNight();
+    if (look === 'ambient') glowSoon(true);
+    else { if (bgUrl && bgUrl.indexOf('ambient:') === 0) backdrop(null); followSoon(); }
+  }
+
   /** The focused pick's photo as the background once the focus has rested on it: a quick run along the row fades once. */
   function followSoon() {
     clearTimeout(bgTimer);
+    if (lookGlow() && st.zone !== Z.CARDS) { glowSoon(false); return; }
     bgTimer = setTimeout(function () {
       if (cards.length) backdrop(Data.image(cards[Math.min(st.card, cards.length - 1)].backdrop, 'w300'));
     }, BG_FOLLOW_MS);
@@ -885,7 +973,7 @@
   // MARK: - Home Settings
 
   function settingRows() {
-    var unit = Prefs.temperature(), theme = Prefs.theme(), clock = Prefs.clockFormat();
+    var unit = Prefs.temperature(), theme = Prefs.theme(), clock = Prefs.clockFormat(), look = Prefs.look();
     var auto = tr('Automatic'), picked = pickedLanguage();
     var rows = [
       {label: tr('Language'), value: picked === 'auto' ? auto : I18N.languageName(picked), opens: true, language: true,
@@ -894,6 +982,8 @@
         step: function (d) { cycle('temperature', ['auto', 'C', 'F'], unit, d); renderPanels(); }},
       {label: tr('Theme'), value: theme === 'light' ? tr('Light') : theme === 'dark' ? tr('Dark') : auto,
         step: function (d) { cycle('theme', ['auto', 'light', 'dark'], theme, d); checkNight(); }},
+      {label: tr('Style'), value: lookName(look),
+        step: function (d) { cycle('look', LOOKS, look, d); applyLook(); }},
       {label: tr('Clock'), value: clock === '24' ? tr('24 hours') : clock === '12' ? tr('12 hours') : auto,
         step: function (d) {
           cycle('clockFormat', ['auto', '24', '12'], clock, d);
@@ -1728,7 +1818,8 @@
   var lastNight = null;
 
   function checkNight() {
-    var night = Data.isNight(Date.now());
+    // Classic follows Home Settings > Theme; Paper is the light style; every other style is a dark one.
+    var look = Prefs.look(), night = look === 'paper' ? false : look === 'classic' || LOOKS.indexOf(look) < 0 ? Data.isNight(Date.now()) : true;
     setClass(body, 'night', night);
     if (night === lastNight) return;
     lastNight = night;
@@ -1986,11 +2077,17 @@
     idleAt = Date.now();
     TV.noteChannel();   // back from the viewer: the antenna channel it played, for Live TV
     if (TV.name === 'tizen') { renderClock(); checkNight(); applyDim(); }   // what resting() left as it was
+    if (lookGlow()) {   // back on Home: the colour at once, no fade
+      setClass($('sky'), 'instant', true);
+      glowSoon(true);
+      setTimeout(function () { setClass($('sky'), 'instant', false); }, 60);
+    }
     loadApps(function () { renderShelf(); renderDrawer(); updateFocus(); Data.refresh(); });
   });
 
   I18N.set(Prefs.language());
   direction();
+  applyLook();
   I18N.setClock(Prefs.clockFormat());
   checkNight();   // now, from the last forecast: not after the TV lists its apps, with the day look until then
   // LG's screensaver waits only when ours will show: not under a sheet (ours waits there), and not without photos.
