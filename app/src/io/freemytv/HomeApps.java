@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -494,11 +495,17 @@ final class HomeApps {
     private static volatile List<CvteSources.Source> cvte; // the firmware's rows, once read
     private static volatile boolean cvteReading;
     private static long cvteAt;
-    private static Runnable cvteArrived;
+    /** What to run when the CVTE sources arrive: every screen that asked (#580 review, low 1), each told through
+     *  the very runnable it registered, so a screen that went away can take itself out (low 2). */
+    private static final List<Runnable> cvteArrived = new CopyOnWriteArrayList<>();
 
-    /** What to run when the CVTE sources arrive: the home screen drawing itself again. */
     static void whenCvteArrives(Runnable r) {
-        cvteArrived = r;
+        if (r != null && !cvteArrived.contains(r)) cvteArrived.add(r);
+    }
+
+    /** A screen leaving stops being told; pass the same runnable it registered. */
+    static void forgetCvteArrives(Runnable r) {
+        cvteArrived.remove(r);
     }
 
     /**
@@ -521,8 +528,7 @@ final class HomeApps {
                 List<CvteSources.Source> answer = CvteApi.sources(app);
                 if (answer != null) {
                     cvte = CvteSources.rows(answer);
-                    Runnable arrived = cvteArrived;
-                    if (arrived != null) arrived.run();
+                    for (Runnable arrived : cvteArrived) arrived.run();
                 }
             } finally {
                 synchronized (HomeApps.class) {

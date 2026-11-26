@@ -79,10 +79,14 @@ public class SettingsActivity extends Activity {
         return true;
     }
 
+    /** The CVTE sources arriving (#577): redraw this screen, while it is up (#580 review, low 1). */
+    private final Runnable cvteArrived = () -> { if (view != null) view.postInvalidate(); };
+
     @Override protected void onResume() {
         super.onResume();
         if (view == null) return;
         view.resume();
+        HomeApps.whenCvteArrives(cvteArrived);
         // From ADB: am start -n io.freemytv/.SettingsActivity --ez screensaver true (straight to the preview).
         if (preview == null && getIntent().getBooleanExtra("screensaver", false)) {
             getIntent().removeExtra("screensaver");
@@ -98,6 +102,7 @@ public class SettingsActivity extends Activity {
     }
 
     @Override protected void onPause() {
+        HomeApps.forgetCvteArrives(cvteArrived);
         closePreview();     // before pausing the view: closing the preview resumes it (view.resume)
         if (view != null) view.pause();
         super.onPause();
