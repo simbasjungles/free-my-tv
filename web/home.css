@@ -390,6 +390,23 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 }
 .tile.focus { -webkit-transform: scale(1.2); transform: scale(1.2); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34); z-index: 2; }
 .tile.focus::after { opacity: 1; }
+/* A white edge on the focused tile, faded in like the sheen: on a dark shelf a black Netflix or YouTube tile otherwise
+   shows focus by its size alone. Opacity only, so nothing repaints while focus moves. The styles below tint it. */
+.tile::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 22px;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.92);
+  opacity: 0;
+  z-index: 1;
+  -webkit-transition: opacity 0.17s;
+  transition: opacity 0.17s;
+}
+.tile.focus::before { opacity: 1; }
 .night .tile { box-shadow: 0 4px 22px rgba(0, 0, 0, 0.3); }
 .night .tile.focus { box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6); }
 .more { position: absolute; width: 17px; height: 17px; color: rgba(0, 0, 0, 0.6); }
@@ -703,3 +720,140 @@ body.rtl { font-family: 'Inter', 'Noto Sans Arabic', 'SamsungOne', 'Segoe UI', T
 .rtl #ambient .clock { left: auto; right: 96px; }
 .rtl #ambient .date { left: auto; right: 108px; }
 .rtl #ambient .side { right: auto; left: 108px; text-align: left; }
+
+/* MARK: - Styles (Home Settings > Style). Classic is everything above; these only add to it. All static: painted once,
+   nothing animates but opacity. */
+
+/* Aurora: a deep colour field instead of flat black, dark glass with a hairline edge, rounder tiles. */
+.look-aurora.night #sky .night {
+  background:
+    radial-gradient(1100px 720px at 14% 8%, rgba(88, 101, 242, 0.30), rgba(88, 101, 242, 0) 70%),
+    radial-gradient(900px 650px at 92% 16%, rgba(214, 72, 160, 0.18), rgba(214, 72, 160, 0) 70%),
+    radial-gradient(1300px 800px at 55% 118%, rgba(24, 170, 190, 0.20), rgba(24, 170, 190, 0) 70%),
+    linear-gradient(160deg, #0B1020 0%, #070A14 58%, #04060C 100%);
+}
+.look-aurora.night #sky .veil { background: rgba(5, 7, 14, 0.30); }
+.look-aurora #sky::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 320px;
+  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.45));
+}
+.look-aurora.night #platter {
+  background: rgba(9, 11, 19, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.11);
+}
+.look-aurora .tile, .look-aurora .tile::before { border-radius: 28px; }
+.look-aurora.night .round { background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10); }
+.look-aurora.night .round.focus { background: #FFF; }
+.look-aurora.night .glass { background: rgba(255, 255, 255, 0.055); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.look-aurora.night .key.focus { background: #FFF; }
+.look-aurora.night #clock .date, .look-aurora.night #clock .wx, .look-aurora.night .row-title { color: rgba(255, 255, 255, 0.72); }
+
+/* Ambient: the canvas glow shows through a lighter veil and fades in 300 ms; back on Home it is there at once. */
+.look-ambient.night #sky .veil { background: rgba(5, 7, 14, 0.16); }
+.look-ambient #sky canvas { -webkit-transition: opacity 0.3s ease-out; transition: opacity 0.3s ease-out; }
+#sky.instant canvas { -webkit-transition: none; transition: none; }
+
+/* More styles: each one is a body class; same layout, only colour, material and shape change. */
+
+/* Midnight: pure black, tiles float, the rest step back */
+.look-midnight.night #sky .night { background: #000000; }
+.look-midnight.night #sky .veil { background: rgba(0, 0, 0, 0); }
+.look-midnight #platter { display: none; }
+.look-midnight .tile, .look-midnight .tile::before { border-radius: 20px; }
+.look-midnight .tile::before { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.95); }
+.look-midnight .tile { opacity: 0.82; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16); }
+.look-midnight .tile.focus { opacity: 1; }
+.look-midnight.night .round { background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 0 0 1px #1E2026; }
+.look-midnight.night .round.focus { background: #FFF;  }
+.look-midnight.night .glass { background: #0E0F12; box-shadow: inset 0 0 0 1px #1E2026; }
+.look-midnight.night #clock { color: #FFFFFF; }
+.look-midnight.night #clock .date, .look-midnight.night #clock .wx, .look-midnight.night .row-title { color: #8A8F98; }
+
+/* Ember: warm, evening, cosy */
+.look-ember.night #sky .night { background: radial-gradient(1000px 720px at 10% 100%, #5A1E0E, rgba(90, 30, 14, 0) 70%), radial-gradient(900px 700px at 100% 30%, #3A0F24, rgba(58, 15, 36, 0) 70%), #0D0706; }
+.look-ember.night #sky .veil { background: rgba(0, 0, 0, 0.12); }
+.look-ember.night #platter { background: rgba(24, 12, 10, 0.6); box-shadow: inset 0 0 0 1px rgba(255, 200, 160, 0.14); }
+.look-ember .tile, .look-ember .tile::before { border-radius: 28px; }
+.look-ember .tile::before { box-shadow: inset 0 0 0 3px #FFD9B8; }
+.look-ember.night .round { background: rgba(255, 220, 200, 0.08); box-shadow: inset 0 0 0 1px rgba(255, 200, 160, 0.12); }
+.look-ember.night .round.focus { background: #FFF;  }
+.look-ember.night .glass { background: rgba(255, 220, 200, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 200, 160, 0.12); }
+.look-ember.night #clock { color: #FFF4EA; }
+.look-ember.night #clock .date, .look-ember.night #clock .wx, .look-ember.night .row-title { color: #C9A893; }
+
+/* Graphite: neutral, quiet, pro */
+.look-graphite.night #sky .night { background: linear-gradient(#1E1F22, #0F1012); }
+.look-graphite.night #sky .veil { background: rgba(0, 0, 0, 0.12); }
+.look-graphite.night #platter { background: #24262B; box-shadow: inset 0 0 0 1px #3A3B40; }
+.look-graphite .tile, .look-graphite .tile::before { border-radius: 16px; }
+.look-graphite .tile::before { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.95); }
+.look-graphite.night .round { background: #24262B; box-shadow: inset 0 0 0 1px #34363C; }
+.look-graphite.night .round.focus { background: #FFF;  }
+.look-graphite.night .glass { background: #1E2024; box-shadow: inset 0 0 0 1px #34363C; }
+.look-graphite.night #clock { color: #F2F4F7; }
+.look-graphite.night #clock .date, .look-graphite.night #clock .wx, .look-graphite.night .row-title { color: #9EA4AE; }
+
+/* Neon: electric, night, gaming */
+.look-neon.night #sky .night { background: radial-gradient(900px 700px at 10% 20%, #2B0A5C, rgba(43, 10, 92, 0) 70%), radial-gradient(900px 700px at 95% 85%, #003B5C, rgba(0, 59, 92, 0) 70%), #05030D; }
+.look-neon.night #sky .veil { background: rgba(0, 0, 0, 0.12); }
+.look-neon.night #platter { background: rgba(10, 6, 24, 0.62); box-shadow: inset 0 0 0 1px rgba(124, 77, 255, 0.45); }
+.look-neon .tile, .look-neon .tile::before { border-radius: 24px; }
+.look-neon .tile::before { box-shadow: inset 0 0 0 3px #D6FAFF; }
+.look-neon.night .round { background: rgba(124, 77, 255, 0.12); box-shadow: inset 0 0 0 1px rgba(124, 77, 255, 0.25); }
+.look-neon.night .round.focus { background: #FFF;  }
+.look-neon.night .glass { background: rgba(124, 77, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(124, 77, 255, 0.25); }
+.look-neon.night #clock { color: #FFFFFF; }
+.look-neon.night #clock .date, .look-neon.night #clock .wx, .look-neon.night .row-title { color: #B39DFF; }
+
+/* Paper: light, fresh, daytime */
+.look-paper #sky .day { background: linear-gradient(#E6E3DC, #D8D4CB); }
+.look-paper #sky .veil { background: rgba(0, 0, 0, 0); }   /* the day haze would lift it back towards white */
+.look-paper #platter { background: rgba(29, 29, 31, 0.92); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10); }
+.look-paper .tile, .look-paper .tile::before { border-radius: 24px; }
+.look-paper .tile::before { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.95); }
+.look-paper .round { background: #FFFFFF; box-shadow: inset 0 0 0 1px #D5D8DE; }
+.look-paper .round.focus { background: #111318; color: #FFF; }
+.look-paper .glass { background: #FFFFFF; box-shadow: inset 0 0 0 1px #D5D8DE; }
+.look-paper #clock { color: #111318; }
+.look-paper #clock .date, .look-paper #clock .wx, .look-paper .row-title { color: #5B6270; }
+
+/* Stadium: sporty, bold, floodlit */
+.look-stadium.night #sky .night { background: radial-gradient(1100px 720px at 85% 0%, #0F5A34, rgba(15, 90, 52, 0) 70%), linear-gradient(#062A1A, #04110C); }
+.look-stadium.night #sky .veil { background: rgba(0, 0, 0, 0.12); }
+.look-stadium.night #platter { background: rgba(4, 20, 14, 0.65); box-shadow: inset 0 0 0 1px rgba(120, 255, 170, 0.16); }
+.look-stadium .tile, .look-stadium .tile::before { border-radius: 12px; }
+.look-stadium .tile::before { box-shadow: inset 0 0 0 3px #EEFFC2; }
+.look-stadium.night .round { background: rgba(120, 255, 170, 0.08); box-shadow: inset 0 0 0 1px rgba(120, 255, 170, 0.14); }
+.look-stadium.night .round.focus { background: #FFF;  }
+.look-stadium.night .glass { background: rgba(120, 255, 170, 0.05); box-shadow: inset 0 0 0 1px rgba(120, 255, 170, 0.14); }
+.look-stadium.night #clock { color: #FFFFFF; }
+.look-stadium.night #clock .date, .look-stadium.night #clock .wx, .look-stadium.night .row-title { color: #A9D4BC; }
+
+/* Ocean: cool, clear, calm */
+.look-ocean.night #sky .night { background: radial-gradient(1000px 700px at 15% 10%, #0B4A4F, rgba(11, 74, 79, 0) 70%), linear-gradient(#052628, #03141A); }
+.look-ocean.night #sky .veil { background: rgba(0, 0, 0, 0.12); }
+.look-ocean.night #platter { background: rgba(8, 18, 32, 0.6); box-shadow: inset 0 0 0 1px rgba(120, 190, 255, 0.14); }
+.look-ocean .tile, .look-ocean .tile::before { border-radius: 32px; }
+.look-ocean .tile::before { box-shadow: inset 0 0 0 3px #D2F4F4; }
+.look-ocean.night .round { background: rgba(120, 190, 255, 0.08); box-shadow: inset 0 0 0 1px rgba(120, 190, 255, 0.12); }
+.look-ocean.night .round.focus { background: #FFF;  }
+.look-ocean.night .glass { background: rgba(120, 190, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(120, 190, 255, 0.12); }
+.look-ocean.night #clock { color: #FFFFFF; }
+.look-ocean.night #clock .date, .look-ocean.night #clock .wx, .look-ocean.night .row-title { color: #A8D8D8; }
+
+/* Royal: rich, festive, gold */
+.look-royal.night #sky .night { background: radial-gradient(1000px 750px at 8% 30%, #3B1466, rgba(59, 20, 102, 0) 70%), radial-gradient(900px 700px at 95% 75%, #6A1238, rgba(106, 18, 56, 0) 70%), #0C0614; }
+.look-royal.night #sky .veil { background: rgba(0, 0, 0, 0.12); }
+.look-royal.night #platter { background: rgba(16, 8, 24, 0.6); box-shadow: inset 0 0 0 1px rgba(255, 210, 120, 0.18); }
+.look-royal .tile, .look-royal .tile::before { border-radius: 28px; }
+.look-royal .tile::before { box-shadow: inset 0 0 0 3px #FFE9B0; }
+.look-royal.night .round { background: rgba(255, 210, 120, 0.08); box-shadow: inset 0 0 0 1px rgba(255, 210, 120, 0.14); }
+.look-royal.night .round.focus { background: #FFF;  }
+.look-royal.night .glass { background: rgba(255, 210, 120, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 210, 120, 0.14); }
+.look-royal.night #clock { color: #FFF8E7; }
+.look-royal.night #clock .date, .look-royal.night #clock .wx, .look-royal.night .row-title { color: #C7AFCF; }
